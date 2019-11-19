@@ -4,7 +4,7 @@ Helipad is an agent-based modeling framework for Python. It differs from other f
 
 Documentation is a work in progress, and can be found at http://helipad-docs.nfshost.com/
 
-##How to use
+## How to use
 
 	from model import Helipad
 	heli = Helipad()
@@ -15,21 +15,23 @@ Documentation is a work in progress, and can be found at http://helipad-docs.nfs
 
 See the documentation and the included sample models for more usage details.
 
-##Requirements
+## Requirements
 
 Helipad requires Python 3.6. Previous versions do not preserve dict order, so you may get unexpected results. Python 2 is not supported.
 
 The following libraries are required:
+
 * Tkinter (for the user interface)
 * Colour (for the user interface)
 * Matplotlib (for plotting the time series output)
 * Pandas (for data collection)
 
 The following libraries are optional but recommended:
+
 * Readline (for the debug console)
 * Code (for the debug console)
 * Pyobjc (for Mac interface niceties)
 
-##Version History
+## Version History
 
 * 0.1: Initial release

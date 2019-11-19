@@ -1,4 +1,4 @@
-# For instructions on how to run, see http://cameronharwick.com/running-a-python-abm/
+# For instructions on how to run, see https://cameronharwick.com/running-a-python-abm/
 # Download the paper at https://ssrn.com/abstract=2545488
 # 
 # #Differences from the NetLogo version:
@@ -454,16 +454,16 @@ def shock_everyn(n):
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-# heli.registerShock('rbal', shock, shock_randn(2), paramType='breed', obj='dwarf')
+heli.registerShock('rbd', shock, shock_randn(2), paramType='breed', obj='dwarf')
 
 #Shock the money supply
 def mshock(v):
-	return v*2
-	# pct = random.normal(1, 15)
-	# m = v * (1+pct/100)
-	# if m < 10000: m = 10000		#Things get weird when there's a money shortage
-	# return m
-# heli.registerShock('M0', mshock, shock_randn(2))
-# heli.registerShock('M0', mshock, shock_everyn(700))
+	# return v*2
+	pct = random.normal(1, 15)
+	m = v * (1+pct/100)
+	if m < 10000: m = 10000		#Things get weird when there's a money shortage
+	return m
+heli.registerShock('M0', mshock, shock_randn(2))
+heli.registerShock('M0', mshock, shock_everyn(700))
 
 heli.launchGUI()

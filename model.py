@@ -193,7 +193,7 @@ class Helipad():
 			self.data.addReporter('r', self.data.bankReporter('realInterest'))
 			self.data.addReporter('inflation', self.data.bankReporter('inflation'))
 			self.data.addReporter('withdrawals', self.data.bankReporter('lastWithdrawal'))
-			self.data.addReporter('M2', self.data.bankReporter('M2'))
+			self.data.addReporter('M2', self.data.cbReporter('M2'))
 
 			self.addSeries('money', 'defaults', 'Defaults', 'CC0000')
 			self.addSeries('money', 'M2', 'Money Supply', '000000')
@@ -576,6 +576,9 @@ class Helipad():
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
 		l = len(self.breeds)
+		if (l==0): #Make explicit breed declaration optional
+			self.addBreed('agent', '000000')
+			l=1
 		self.params['agents'][1]['opts'] = {'low': l, 'high': 100*l, 'step': l}
 		self.params['agents'][0] = 50*l
 		self.params['agents'][1]['dflt'] = 50*l
