@@ -1,4 +1,4 @@
-# For instructions on how to run, see http://cameronharwick.com/running-a-python-abm/
+# For instructions on how to run, see https://cameronharwick.com/running-a-python-abm/
 # Download the paper at https://ssrn.com/abstract=2545488
 # 
 # #Differences from the NetLogo version:
@@ -44,7 +44,7 @@ heli.order = 'random'
 #Callback for the dist parameter
 def bankChecks(gui, val=None):
 	nobank = gui.model.param('dist')!='omo'
-	gui.model.param('banks', 0 if nobank else 1)
+	gui.model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		gui.checks[i].set(False)
 		gui.checks[i].disabled(nobank)
@@ -60,7 +60,7 @@ heli.addHook('GUIPostInit', bankChecks)	#Set the disabled checkmarks on initiali
 
 def storeUpdater(model, var, val):
 	if model.hasModel:
-		for s in model.stores:
+		for s in model.agents['store']:
 			setattr(s, var, val)
 
 def ngdpUpdater(model, var, val):
@@ -70,7 +70,7 @@ def rbalUpdater(model, var, breed, val):
 	if model.hasModel:
 		beta = val/(1+val)
 			
-		for a in model.agents:
+		for a in model.agents['agent']:
 			if hasattr(a, 'utility') and a.breed == breed:
 				a.utility.coeffs['rbal'] = beta
 				a.utility.coeffs['good'] = 1-beta
@@ -85,8 +85,8 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 	'omo': 'Open Market Operation'
 }, runtime=False, callback=bankCheckWrapper)
 
-heli.params['banks'][1]['type'] = 'hidden'
-heli.params['stores'][1]['type'] = 'hidden'
+heli.params['agents_bank'][1]['type'] = 'hidden'
+heli.params['agents_store'][1]['type'] = 'hidden'
 
 heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
 heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1}, callback=storeUpdater)
@@ -159,7 +159,7 @@ def agentInit(agent, model):
 	agent.expCons = model.goodParam('prod', agent.item)
 	
 	#Set to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
-	agent.cash = model.stores[0].price[AgentGoods[agent.breed]] * rbaltodemand(agent.breed)(model)
+	agent.cash = model.agents['store'][0].price[AgentGoods[agent.breed]] * rbaltodemand(agent.breed)(model)
 	
 heli.addHook('agentInit', agentInit)
 
@@ -212,7 +212,7 @@ def storeInit(store, model):
 		store.lastShortage[good] = 0
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-		store.price[good] = (model.param('M0')/model.param('agents')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b) for b in model.breeds])))
+		store.price[good] = (model.param('M0')/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b) for b in model.breeds])))
 	
 	if hasattr(store, 'bank'):
 		store.pavg = 0
@@ -221,7 +221,7 @@ def storeInit(store, model):
 heli.addHook('storeInit', storeInit)
 
 def storeStep(store, model, stage):
-	N = model.param('agents')
+	N = model.param('agents_agent')
 		
 	#Calculate wages
 	bal = store.balance
@@ -233,7 +233,7 @@ def storeStep(store, model, stage):
 	
 	#Hire labor
 	labor, tPrice = 0, 0
-	for a in model.agents:
+	for a in model.agents['agent']:
 		if not isinstance(a, hAgent): continue
 		
 		#Pay agents
@@ -356,7 +356,7 @@ def cbStep(cb, model, stage):
 		expand = 0
 		if cb.inflation: expand = M0(model) * cb.inflation
 		if cb.ngdpTarget: expand = cb.ngdpTarget - cb.ngdpAvg
-		if model.param('banks') > 0: expand *= mean([b.reserveRatio for b in model.banks])
+		if model.param('agents_bank') > 0: expand *= mean([b.reserveRatio for b in model.agents['bank']])
 		if expand != 0: cb.expand(expand)
 heli.addHook('cbStep', cbStep)
 
@@ -374,7 +374,7 @@ def bankStep(bank, model, stage):
 	#Pay interest on deposits
 	lia = bank.liabilities
 	profit = bank.assets - lia
-	if profit > model.param('agents'):
+	if profit > model.param('agents_agent'):
 		print('Disbursing profit of $',profit)
 		for id, a in bank.accounts.items():
 			bank.accounts[id] += profit/lia * a
@@ -416,7 +416,7 @@ def modelPostStep(model):
 	#Reset per-period variables
 	#Can't replace these with getLast because these are what feed into getLast
 	#Put this after the intertemporal transactions since that needs lastDemand
-	for s in model.stores:
+	for s in model.agents['store']:
 		for i in model.goods:
 			s.lastDemand[i] = 0
 			s.lastShortage[i] = 0
@@ -454,16 +454,16 @@ def shock_everyn(n):
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-# heli.registerShock('rbal', shock, shock_randn(2), paramType='breed', obj='dwarf')
+heli.registerShock('rbd', shock, shock_randn(2), paramType='breed', obj='dwarf')
 
 #Shock the money supply
 def mshock(v):
-	return v*2
-	# pct = random.normal(1, 15)
-	# m = v * (1+pct/100)
-	# if m < 10000: m = 10000		#Things get weird when there's a money shortage
-	# return m
-# heli.registerShock('M0', mshock, shock_randn(2))
-# heli.registerShock('M0', mshock, shock_everyn(700))
+	# return v*2
+	pct = random.normal(1, 15)
+	m = v * (1+pct/100)
+	if m < 10000: m = 10000		#Things get weird when there's a money shortage
+	return m
+heli.registerShock('M0', mshock, shock_randn(2))
+heli.registerShock('M0', mshock, shock_everyn(700))
 
 heli.launchGUI()

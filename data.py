@@ -95,7 +95,7 @@ class Data():
 		
 		def reporter(model):
 			u = []
-			array = getattr(model, obj+'s')
+			array = model.agents[obj]
 			
 			for agent in array:
 				if narrow is not None and obj=='agent' and agent.breed != narrow: continue

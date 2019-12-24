@@ -27,7 +27,7 @@ matplotlib.use('TkAgg')
 
 from gui import GUI
 from data import Data
-from agent import *
+import agent
 
 Item = namedtuple('Item', ['color', 'color2'])
 Series = namedtuple('Series', ['reporter', 'label', 'color', 'style', 'subseries'])
@@ -41,6 +41,8 @@ class Helipad():
 		self.root.resizable(0,0)
 		self.data = Data(self)
 		
+		self.agents = {}
+		self.primplurs = {}
 		self.params = {}		#Global parameters
 		self.breeds = {}		#List of breeds
 		self.breedParams = {}	#Per-breed parameters
@@ -54,9 +56,9 @@ class Helipad():
 		self.hasModel = False	#Have we initialized?
 		
 		#Default parameters
-		self.addParameter('agents', 'Number of Agents', 'slider', dflt=50, opts={'low': 1, 'high': 100, 'step': 1}, callback=self.nUpdater)
-		self.addParameter('banks', 'Number of Banks', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 1}, callback=self.nUpdater)
-		self.addParameter('stores', 'Number of Stores', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 1}, callback=self.nUpdater)
+		self.addPrimitive('bank', dflt=1, low=0, high=10)
+		self.addPrimitive('store', dflt=1, low=0, high=10)
+		self.addPrimitive('agent', dflt=50, low=1, high=100)
 		self.addParameter('M0', 'Base Money Supply', 'hidden', dflt=120000, callback=self.updateM0)
 		
 		#Plot categories
@@ -75,6 +77,12 @@ class Helipad():
 		}
 		for name, label in plotList.items(): self.addPlot(name, label, logscale=True if name=='ratios' else False)
 		self.defaultPlots = ['prices', 'inventory', 'ratios']
+	
+	def addPrimitive(self, name, plural=None, dflt=50, low=1, high=100, step=1, hidden=False):
+		if not plural: plural = name+'s'
+		self.primplurs[name] = plural
+		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step}, callback=self.nUpdater)
+		self.agents[name] = []
 			
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, logscale=False):
@@ -184,7 +192,7 @@ class Helipad():
 			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 		
 		#Don't bother keeping track of the bank-specific variables unless the banking system is there
-		if self.param('banks') > 0:
+		if self.param('agents_bank') > 0:
 			self.data.addReporter('defaults', self.data.bankReporter('defaultTotal'))
 			self.data.addReporter('debt', self.data.bankReporter('loans'))
 			self.data.addReporter('reserveRatio', self.data.bankReporter('reserveRatio'))
@@ -193,7 +201,7 @@ class Helipad():
 			self.data.addReporter('r', self.data.bankReporter('realInterest'))
 			self.data.addReporter('inflation', self.data.bankReporter('inflation'))
 			self.data.addReporter('withdrawals', self.data.bankReporter('lastWithdrawal'))
-			self.data.addReporter('M2', self.data.bankReporter('M2'))
+			self.data.addReporter('M2', self.data.cbReporter('M2'))
 
 			self.addSeries('money', 'defaults', 'Defaults', 'CC0000')
 			self.addSeries('money', 'M2', 'Money Supply', '000000')
@@ -215,13 +223,10 @@ class Helipad():
 		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
-		self.banks = []
-		self.stores = []
-		self.agents = []
-		self.nUpdater(self, 'banks', self.param('banks'))
-		self.nUpdater(self, 'stores', self.param('stores'))
-		self.cb = CentralBank(0, self)
-		self.nUpdater(self, 'agents', self.param('agents'))
+		for prim in self.agents.keys():
+			print('creating',self.param('agents_'+prim),self.primplurs[prim])
+			self.nUpdater(self, prim, self.param('agents_'+prim))
+		self.cb = agent.CentralBank(0, self)
 		
 		self.doHooks('modelPostSetup', [self])
 			
@@ -429,18 +434,16 @@ class Helipad():
 				self.updateVar(v, newval, updateGUI=True)
 				# print("Period",self.t,"shocking",shock['var'],"to",newval)
 		
-		types = ['agents', 'stores', 'banks']
-		
 		#Shuffle or sort agents as necessary
-		for t in types:
-			if self.order == 'random': shuffle(getattr(self, t))
-			o = self.doHooks([t+'Order', 'order'], [getattr(self, t), self])	#Individual and global order hooks 
-			if o is not None: setattr(self, t, o)
+		for t, lst in self.agents.items():
+			if self.order == 'random': shuffle(lst)
+			o = self.doHooks([t+'Order', 'order'], [lst, self])	#Individual and global order hooks 
+			if o is not None: self.agents[t] = o
 			
 		for self.stage in range(1, self.stages+1):
 			self.doHooks('modelStep', [self, self.stage])
-			for t in types:
-				for a in getattr(self, t):
+			for t in self.agents.values():
+				for a in t:
 					a.step(self.stage)
 			self.cb.step(self.stage)					#Step the central bank last
 		
@@ -477,8 +480,9 @@ class Helipad():
 	@property
 	def allagents(self):
 		agents = {}
-		for a in self.agents + self.stores + self.banks:
-			agents[a.unique_id] = a
+		for k, l in self.agents.items():
+			for a in l:
+				agents[a.unique_id] = a
 		return agents
 	
 	# CALLBACKS FOR DEFAULT PARAMETERS
@@ -487,9 +491,10 @@ class Helipad():
 		if self.hasModel and var == 'M0':
 			self.cb.M0 = val
 	
+	#Model param redundant, strictly speaking, but it's necessary to make the signature match the other callbacks, where it is necessary
 	def nUpdater(self, model, var, val):
 		if not self.hasModel: return
-		array = getattr(self, var)
+		array = self.agents[var]
 		diff = val - len(array)
 
 		#Add agents
@@ -499,16 +504,16 @@ class Helipad():
 				if a.unique_id > maxid: maxid = a.unique_id #Figure out maximum existing ID
 			for i in range(0, int(diff)):
 				maxid += 1
-				if var == 'agents':
+				if var == 'agent':
 					if 'decideBreed' in self.hooks:
 						breed = self.doHooks('decideBreed', [maxid, self])
 						if not breed in self.breeds: raise ValueError('Breed '+breed+' has not been registered')
 					else: breed = list(self.breeds.keys())[i%len(self.breeds)]
-					new = hAgent(breed, maxid, self)
-				elif var == 'banks': new = Bank(maxid, self)
-				elif var == 'stores': new = Store(maxid, self)
+					new = agent.hAgent(breed, maxid, self)
+				else: new = getattr(agent, var.title())(maxid, self)
 				array.append(new)
-
+		
+		#Remove agents
 		elif diff < 0:
 			shuffle(array) #Delete agents at random
 			
@@ -516,7 +521,7 @@ class Helipad():
 			if var=='agents': 
 				n = {}
 				for x in self.breeds: n[x]=0
-				for a in self.agents:
+				for a in self.agents['agent']:
 					if n[a.breed] < -diff:
 						n[a.breed] += 1
 						a.die()
@@ -532,16 +537,16 @@ class Helipad():
 	#
 	
 	#Return agents of a type if string; return specific agent with ID otherwise
-	def agent(self, var):
+	def agent(self, var, primitive='agent'):
 		if isinstance(var, str):
 			agents = []
-			for a in self.agents:
+			for a in self.agents[primitive]:
 				if a.breed == var:
 					agents.append(a)
 			return agents
 			
 		else:
-			for a in self.agents:
+			for a in self.allagents:
 				if a.unique_id == var:
 					return a
 		
@@ -549,7 +554,7 @@ class Helipad():
 		
 	#Returns summary statistics on an agent variable at a single point in time
 	def summary(self, var, type=False):
-		agents = self.agents if not type else self.agent(type)
+		agents = self.agents['agent'] if not type else self.agent(type)
 		data = []
 		for a in agents: data.append(getattr(a, var))
 		data = pandas.Series(data) #Gives us nice statistical functions
@@ -576,9 +581,9 @@ class Helipad():
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
 		l = len(self.breeds)
-		self.params['agents'][1]['opts'] = {'low': l, 'high': 100*l, 'step': l}
-		self.params['agents'][0] = 50*l
-		self.params['agents'][1]['dflt'] = 50*l
+		self.params['agents_agent'][1]['opts'] = {'low': l, 'high': 100*l, 'step': l}
+		self.params['agents_agent'][0] = 50*l
+		self.params['agents_agent'][1]['dflt'] = 50*l
 		
 		if self.param('M0') == False:
 			for i in ['prices', 'ratios', 'money','debt','rr','i','ngdp']:

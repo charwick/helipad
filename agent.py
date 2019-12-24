@@ -13,14 +13,14 @@ class MoneyUser():
 		self.unique_id = int(id)
 		self.model = model
 		self.cash = 0
-		if model.param('banks') > 0:
+		if model.param('agents_bank') > 0:
 			self.chooseBank()
 		self.dead = False
 		
 		self.model.doHooks('moneyUserInit', [self, self.model])
 		
 	def chooseBank(self):
-		self.bank = choice(self.model.banks) #Generalize this…
+		self.bank = choice(self.model.agents['bank']) #Generalize this…
 		self.bank.setupAccount(self)
 	
 	def step(self, stage):
@@ -68,7 +68,7 @@ class hAgent(MoneyUser):
 		
 		self.breed = breed
 		if model.param('M0'):
-			self.cash = model.param('M0')/model.param('agents')	#Initial cash endowment
+			self.cash = model.param('M0')/model.param('agents_agent')	#Initial cash endowment
 		self.chooseStore()
 		
 		self.age = 0
@@ -86,11 +86,11 @@ class hAgent(MoneyUser):
 	#Function assigning an agent to a store
 	#The agentChooseStore filter should assign a Store object to the agent's 'store' property
 	def chooseStore(self):
-		self.model.doHooks('agentChooseStore', [self, self.model, self.model.stores])
+		self.model.doHooks('agentChooseStore', [self, self.model, self.model.agents['store']])
 	
 	def reproduce(self, funcs={}):
 		maxid = 0
-		for a in self.model.agents:
+		for a in self.model.agents['agent']:
 			if a.unique_id > maxid:
 				maxid = a.unique_id
 		newagent = hAgent(self.breed, maxid+1, self.model)
@@ -114,20 +114,20 @@ class hAgent(MoneyUser):
 		
 		newagent.unique_id = maxid+1
 		newagent.parent = self
-		self.model.agents.append(newagent)
-		self.model.param('agents', self.model.param('agents')+1)
+		self.model.agents['agent'].append(newagent)
+		self.model.param('agents_agent', self.model.param('agents_agent')+1)
 		
 		self.model.doHooks('agentReproduce', [self, newagent, self.model])
 	
 	def die(self):
-		self.model.agents.remove(self)
-		self.model.param('agents', self.model.param('agents')-1)
+		self.model.agents['agent'].remove(self)
+		self.model.param('agents_agent', self.model.param('agents_agent')-1)
 		self.model.doHooks('agentDie', [self])
 		super().die()
 	
 	@property
 	def debt(self):
-		if self.model.param('banks') == 0: return 0
+		if self.model.param('agents_bank') == 0: return 0
 		return self.bank.credit[self.unique_id].owe
 
 class Store(MoneyUser):
@@ -172,7 +172,7 @@ class Store(MoneyUser):
 		return q
 	
 	def die(self):
-		self.model.stores.remove(self)
+		self.model.agents['store'].remove(self)
 		self.model.doHooks('storeDie', [self])
 		super().die()
 
@@ -194,7 +194,7 @@ class CentralBank(MoneyUser):
 		if stage == self.model.stages:
 			self.ngdp = 0
 			for good in self.model.goods:
-				for s in self.model.stores:
+				for s in self.model.agents['store']:
 					self.ngdp += s.price[good] * s.lastDemand[good]
 			if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 			self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
@@ -204,27 +204,27 @@ class CentralBank(MoneyUser):
 	def expand(self, amount):
 		
 		#Deposit with each bank in proportion to their liabilities
-		if self.model.param('banks') > 0:
+		if self.model.param('agents_bank') > 0:
 			self.cash += amount
 			denom = 0
-			for b in self.model.banks:
+			for b in self.model.agents['bank']:
 				denom += b.liabilities
-			for b in self.model.banks:
+			for b in self.model.agents['bank']:
 				r = b.reserves
 				a = amount * b.liabilities/denom
 				if -a > r: a = -r + 1
 				b.deposit(self, a)
 				
 		elif self.model.param('dist') == 'lump':
-			amt = amount/self.model.param('agents')
-			for a in self.model.agents:
+			amt = amount/self.model.param('agents_agent')
+			for a in self.model.agents['agent']:
 				a.payTo(amt)
 		else:
 			M0 = self.M0
-			for a in self.model.agents:
+			for a in self.model.agents['agent']:
 				a.payTo(a.cash/M0 * amount)
 		
-			for s in self.model.stores:
+			for s in self.model.agents['store']:
 				s.payTo(s.cash/M0 * amount)
 		
 		#Update model parameter, bypassing the param() function
@@ -233,9 +233,9 @@ class CentralBank(MoneyUser):
 	@property
 	def M0(self):
 		total = 0
-		for s in self.model.stores: total += s.cash
-		for a in self.model.agents: total += a.cash
-		if self.model.param('banks') > 0: total += self.bank.reserves
+		for s in self.model.agents['store']: total += s.cash
+		for a in self.model.agents['agent']: total += a.cash
+		if self.model.param('agents_bank') > 0: total += self.bank.reserves
 		return total
 	
 	@M0.setter
@@ -244,11 +244,11 @@ class CentralBank(MoneyUser):
 	
 	@property
 	def M2(self):
-		if self.model.param('banks') == 0: return self.M0
+		if self.model.param('agents_bank') == 0: return self.M0
 	
 		total = self.bank.reserves
-		for a in self.model.agents: total += a.balance
-		for s in self.model.stores: total += s.balance
+		for a in self.model.agents['agent']: total += a.balance
+		for s in self.model.agents['store']: total += s.balance
 		return total
 	
 	#Price level
@@ -257,7 +257,7 @@ class CentralBank(MoneyUser):
 	def P(self):
 		denom = 0
 		numer = 0
-		for s in self.model.stores:
+		for s in self.model.agents['store']:
 			volume = sum(list(s.lastDemand.values()))
 			numer += mean(array(list(s.price.values()))) * volume
 			denom += volume
@@ -441,6 +441,6 @@ class Bank():
 		self.model.doHooks('bankStep', [self, self.model, stage])
 	
 	def die(self):
-		self.model.banks.remove(self)
+		self.model.agents['bank'].remove(self)
 		self.model.doHooks('bankDie', [self])
 		super().die()
