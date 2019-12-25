@@ -26,6 +26,8 @@ heli.addHook('agentInit', agentInit)
 def agentStep(agent, model, stage):
 	if agent.lastPeriod == model.t: return #Already traded
 	partner = choice(model.agents);
+	while partner.lastPeriod == model.t: partner = choice(model.agents); #Don't trade with someone who's already traded
+	
 	
 	# Trade here
 	
@@ -34,3 +36,4 @@ def agentStep(agent, model, stage):
 	
 heli.addHook('agentStep', agentStep)
 
+heli.launchGUI()
