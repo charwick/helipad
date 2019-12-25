@@ -42,10 +42,8 @@ class Helipad():
 		self.data = Data(self)
 		
 		self.agents = {}
-		self.primplurs = {}
+		self.primitives = {}
 		self.params = {}		#Global parameters
-		self.breeds = {}		#List of breeds
-		self.breedParams = {}	#Per-breed parameters
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
@@ -80,7 +78,11 @@ class Helipad():
 	
 	def addPrimitive(self, name, plural=None, dflt=50, low=1, high=100, step=1, hidden=False):
 		if not plural: plural = name+'s'
-		self.primplurs[name] = plural
+		self.primitives[name] = {
+			'plural': plural,
+			'breeds': {},
+			'breedParams': {}
+		}
 		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step}, callback=self.nUpdater)
 		self.agents[name] = []
 			
@@ -103,10 +105,10 @@ class Helipad():
 	def addSeries(self, plot, reporter, label, color, style='-'):
 		if isinstance(color, Color): color = color.hex_l.replace('#','')
 		if not plot in self.plots:
-			raise KeyError('Plot '+plot+' does not exist. Be sure to register plots before adding series.')
+			raise KeyError('Plot \''+plot+'\' does not exist. Be sure to register plots before adding series.')
 		#Check against columns and not reporters so percentiles work
 		if not callable(reporter) and not reporter in self.data.all:
-			raise KeyError('Reporter '+reporter+' does not exist. Be sure to register reporters before adding series.')
+			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
 		
 		#Add subsidiary series (e.g. percentile bars)
 		subseries = []
@@ -131,8 +133,6 @@ class Helipad():
 		self.doHooks('modelPreSetup', [self])
 		self.t = 0
 		
-		if len(self.breeds)==0: self.addBreed('agent', '000000')
-		
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
 		
@@ -143,19 +143,21 @@ class Helipad():
 		# self.data.addReporter('utilityStd', self.data.agentReporter('utils', None, 'std'))
 		self.data.addReporter('ngdp', self.data.cbReporter('ngdp'))
 		
-		def pReporter(n, paramType=None, obj=None):
+		def pReporter(n, paramType=None, obj=None, prim=None):
 			def reporter(model):
-				return model.param(n, paramType=paramType, obj=obj)
+				return model.param(n, paramType=paramType, obj=obj, prim=prim)
 			return reporter
 		
-		#Keept track of parameters
-		for t in ['breed', 'good']:
-			for item, i in getattr(self, t+'s').items():				#Cycle through breeds/goods
-				for n,p in getattr(self, t+'Params').items():			#Cycle through parameters
-					if p[1]['type'] == 'hidden': continue				#Skip hidden parameters
-					def reporter(model):
-						return model.param(n, paramType=t, obj=item)
-					self.data.addReporter(n+'-'+item, pReporter(n, paramType=t, obj=item))
+		#Keep track of parameters
+		for item, i in self.goods.items():				#Cycle through goods
+			for n,p in self.goodParams.items():			#Cycle through parameters
+				if p[1]['type'] == 'hidden': continue	#Skip hidden parameters
+				self.data.addReporter(n+'-'+item, pReporter(n, paramType='good', obj=item))
+		for prim, pdata in self.primitives.items():			#Cycle through primitives
+			for breed, i in pdata['breeds'].items():		#Cycle through breeds
+				for n,p in pdata['breedParams'].items():	#Cycle through parameters
+					if p[1]['type'] == 'hidden': continue	#Skip hidden parameters
+					self.data.addReporter(prim+'_'+n+'-'+item, pReporter(n, paramType='breed', obj=breed, prim=prim))
 		for n,p in self.params.items():									#Cycle through parameters
 			if p[1]['type'] == 'hidden': continue						#Skip hidden parameters
 			self.data.addReporter(n, pReporter(n))
@@ -172,7 +174,7 @@ class Helipad():
 		
 		#Per-breed series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in self.breeds.items():
+		for breed, b in self.primitives['agent']['breeds'].items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
@@ -192,7 +194,7 @@ class Helipad():
 			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 		
 		#Don't bother keeping track of the bank-specific variables unless the banking system is there
-		if self.param('agents_bank') > 0:
+		if 'bank' in self.primitives and self.param('agents_bank') > 0:
 			self.data.addReporter('defaults', self.data.bankReporter('defaultTotal'))
 			self.data.addReporter('debt', self.data.bankReporter('loans'))
 			self.data.addReporter('reserveRatio', self.data.bankReporter('reserveRatio'))
@@ -223,8 +225,7 @@ class Helipad():
 		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
-		for prim in self.agents.keys():
-			print('creating',self.param('agents_'+prim),self.primplurs[prim])
+		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
 		self.cb = agent.CentralBank(0, self)
 		
@@ -237,11 +238,11 @@ class Helipad():
 	# dflt (required): The default value
 	# opts (required): Type-specific options
 	
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None):
+	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
 		if paramType is None: params=self.params
-		elif paramType=='breed': params=self.breedParams
+		elif paramType=='breed': params=self.primitives[prim]['breedParams']
 		elif paramType=='good': params=self.goodParams
-		else: raise ValueError('Invalid object '+paramType)
+		else: raise ValueError('Invalid object \''+paramType+'\'')
 		
 		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding...', None, 2)
 		
@@ -261,7 +262,7 @@ class Helipad():
 		#Global slider:					int → int
 	
 		if paramType is not None:
-			keys = self.breeds if paramType=='breed' else self.goods
+			keys = self.primitives[prim]['breeds'] if paramType=='breed' else self.goods
 			if type == 'menu':
 				deflt = {b:StringVar() for b in keys}
 				if isinstance(dflt, dict):
@@ -307,18 +308,25 @@ class Helipad():
 			'desc': desc
 		}]
 	
-	def addBreedParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None):
-		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc)
+	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
+		if prim is None:
+			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim)
 	
 	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None):
 		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc)
 	
 	#Get or set a parameter, depending on whether there are two or three arguments
 	#Everything past the third argument is for internal use only
-	def param(self, name, val=None, paramType=None, obj=None):
+	def param(self, name, val=None, paramType=None, obj=None, prim=None):
 		if paramType is None:		params=self.params
-		elif paramType=='breed':	params=self.breedParams
 		elif paramType=='good':		params=self.goodParams
+		elif paramType=='breed':
+			if prim is None:
+				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+			params=self.primitives[prim]['breedParams']
 		
 		if not name in params:
 			if paramType is None: paramType = ''
@@ -352,17 +360,25 @@ class Helipad():
 			else:
 				return params[name][0] if paramType is None or obj is None else params[name][0][obj]
 	
-	def breedParam(self, name, breed=None, val=None):
-		return self.param(name, val, paramType='breed', obj=breed)
+	def breedParam(self, name, breed=None, val=None, prim=None):
+		if prim is None:
+			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+		return self.param(name, val, paramType='breed', obj=breed, prim=prim)
 	
-	def goodParam(self, name, good=None, val=None):
+	def goodParam(self, name, good=None, val=None, **kwargs):
 		return self.param(name, val, paramType='good', obj=good)
 	
 	#For adding breeds and goods
 	#Should not be called directly
-	def addItem(self, obj, name, color):
-		itemDict = getattr(self, obj+'s')
-		paramDict = getattr(self, obj+'Params')
+	def addItem(self, obj, name, color, prim=''):
+		if obj=='good':
+			itemDict = self.goods
+			paramDict = self.goodParams
+		elif obj=='breed': 
+			itemDict = self.primitives[prim]['breeds']
+			paramDict = self.primitives[prim]['breedParams']
+		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'');
 		
 		if name in itemDict:
 			warnings.warn(obj+' \''+name+'\' already defined. Overriding...', None, 2)
@@ -383,8 +399,11 @@ class Helipad():
 			else:
 				paramDict[k][0][name] = paramDict[k][1].dflt
 	
-	def addBreed(self, name, color):
-		self.addItem('breed', name, color)
+	def addBreed(self, name, color, prim=None):
+		if prim is None:
+			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+			else: raise KeyError('Breed must specify which primitive it belongs to')
+		self.addItem('breed', name, color, prim=prim)
 		
 	def addGood(self, name, color):
 		self.addItem('good', name, color)
@@ -410,13 +429,14 @@ class Helipad():
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
 	#The variable is shocked when timerFunc returns true
-	def registerShock(self, var, valFunc, timerFunc, paramType=None, obj=None):
+	def registerShock(self, var, valFunc, timerFunc, paramType=None, obj=None, prim=None):
 		self.shocks.append({
 			'var': var,
 			'valFunc': valFunc,
 			'timerFunc': timerFunc,
 			'paramType': paramType,
-			'obj': obj
+			'obj': obj,
+			'prim': prim
 		})		
 				
 	def step(self):
@@ -426,9 +446,12 @@ class Helipad():
 		#Shock variables at the beginning of the period
 		for shock in self.shocks:
 			if shock['timerFunc'](self.t):
-				newval = shock['valFunc'](self.param(shock['var'], paramType=shock['paramType'], obj=shock['obj']))	#Pass in current value
+				newval = shock['valFunc'](self.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
 				
-				if shock['paramType'] is not None and shock['obj'] is not None: v=shock['paramType']+'-'+shock['var']+'-'+shock['obj']
+				if shock['paramType'] is not None and shock['obj'] is not None:
+					begin = shock['paramType']
+					if shock['prim'] is not None: begin += '_'+shock['prim']
+					v=begin+'-'+shock['var']+'-'+shock['obj']
 				else: v=shock['var']
 					
 				self.updateVar(v, newval, updateGUI=True)
@@ -464,11 +487,20 @@ class Helipad():
 		if '-' in var:
 			#Names like obj-var-item, i.e. good-prod-axe
 			obj, var, item = var.split('-')	#Per-object variables
-			itemDict = getattr(self, obj+'s')
-			paramDict = getattr(self, obj+'Params')
-			setget = getattr(self, obj+'Param')
+			if '_' in obj: obj, prim = obj.split('_')
+			else: prim = None
+			
+			if obj == 'good':
+				itemDict = self.goods
+				paramDict = self.goodParams
+				setget = self.goodParam
+			elif obj == 'breed':
+				itemDict = self.primitives[prim]['breeds']
+				paramDict = self.primitives[prim]['breedParams']
+				setget = self.breedParam
+			else: raise ValueError('Invalid object type')
 			if var in paramDict:
-				setget(var, item, newval)
+				setget(var, item, newval, prim=prim)
 			if 'callback' in paramDict[var][1] and callable(paramDict[var][1]['callback']):
 				paramDict[var][1]['callback'](self, var, item, newval)
 		else:
@@ -492,9 +524,9 @@ class Helipad():
 			self.cb.M0 = val
 	
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the other callbacks, where it is necessary
-	def nUpdater(self, model, var, val):
+	def nUpdater(self, model, prim, val):
 		if not self.hasModel: return
-		array = self.agents[var]
+		array = self.agents[prim]
 		diff = val - len(array)
 
 		#Add agents
@@ -504,13 +536,14 @@ class Helipad():
 				if a.unique_id > maxid: maxid = a.unique_id #Figure out maximum existing ID
 			for i in range(0, int(diff)):
 				maxid += 1
-				if var == 'agent':
-					if 'decideBreed' in self.hooks:
-						breed = self.doHooks('decideBreed', [maxid, self])
-						if not breed in self.breeds: raise ValueError('Breed '+breed+' has not been registered')
-					else: breed = list(self.breeds.keys())[i%len(self.breeds)]
-					new = agent.hAgent(breed, maxid, self)
-				else: new = getattr(agent, var.title())(maxid, self)
+				if 'decideBreed_'+prim in self.hooks:
+					breed = self.doHooks('decideBreed_'+prim, [maxid, self.primitives[prim]['breeds'].keys(), self])
+				elif 'decideBreed' in self.hooks:
+					breed = self.doHooks('decideBreed', [maxid, self.primitives[prim]['breeds'].keys(), self])
+				else: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
+				if not breed in self.primitives[prim]['breeds']:
+					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
+				new = getattr(agent, prim.title())(breed, maxid, self)
 				array.append(new)
 		
 		#Remove agents
@@ -518,18 +551,12 @@ class Helipad():
 			shuffle(array) #Delete agents at random
 			
 			#Remove agents, maintaining the proportion between breeds
-			if var=='agents': 
-				n = {}
-				for x in self.breeds: n[x]=0
-				for a in self.agents['agent']:
-					if n[a.breed] < -diff:
-						n[a.breed] += 1
-						a.die()
-					else: continue
-			
-			else:
-				for i in range(-diff):
-					array[-1].die()
+			n = {x: 0 for x in self.primitives[prim]['breeds'].keys()}
+			for a in self.agents[prim]:
+				if n[a.breed] < -diff:
+					n[a.breed] += 1
+					a.die()
+				else: continue
 		
 	#
 	# DEBUG FUNCTIONS
@@ -578,12 +605,19 @@ class Helipad():
 		#Callback takes one parameter, model object
 		self.doHooks('GUIPreLaunch', [self])
 		
+		#Blank breeds for any primitives not otherwise specified
+		for k,p in self.primitives.items():
+			if len(p['breeds'])==0: self.addBreed('', '000000', prim=k)
+		
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
-		l = len(self.breeds)
-		self.params['agents_agent'][1]['opts'] = {'low': l, 'high': 100*l, 'step': l}
-		self.params['agents_agent'][0] = 50*l
-		self.params['agents_agent'][1]['dflt'] = 50*l
+		for k,p in self.primitives.items():
+			l = len(p['breeds'])
+			self.params['agents_'+k][1]['opts']['low'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
+			self.params['agents_'+k][1]['opts']['high'] = makeDivisible(self.params['agents_'+k][1]['opts']['high'], l, 'max')
+			self.params['agents_'+k][1]['opts']['step'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
+			self.params['agents_'+k][0] = makeDivisible(self.params['agents_'+k][0], l, 'max')
+			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
 		if self.param('M0') == False:
 			for i in ['prices', 'ratios', 'money','debt','rr','i','ngdp']:
@@ -614,4 +648,6 @@ def lighten(color):
 	c = Color(color)
 	c2 = Color(hue=c.hue, saturation=c.saturation, luminance=.66+c.luminance/3)
 	return c2.hex_l.replace('#','')
-	
+
+def makeDivisible(n, div, c='min'):
+	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)

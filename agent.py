@@ -13,7 +13,7 @@ class MoneyUser():
 		self.unique_id = int(id)
 		self.model = model
 		self.cash = 0
-		if model.param('agents_bank') > 0:
+		if 'bank' in model.primitives and model.param('agents_bank') > 0:
 			self.chooseBank()
 		self.dead = False
 		
@@ -62,7 +62,7 @@ class MoneyUser():
 		return bal
 		
 #Customers
-class hAgent(MoneyUser):
+class Agent(MoneyUser):
 	def __init__(self, breed, id, model):
 		super().__init__(id, model)
 		
@@ -93,7 +93,7 @@ class hAgent(MoneyUser):
 		for a in self.model.agents['agent']:
 			if a.unique_id > maxid:
 				maxid = a.unique_id
-		newagent = hAgent(self.breed, maxid+1, self.model)
+		newagent = Agent(self.breed, maxid+1, self.model)
 		
 		#Copy all writeable parameters and update those specified in the funcs argument
 		params = [a for a in dir(self) if not (a.startswith('__') or callable(getattr(self,a)))]
@@ -127,14 +127,15 @@ class hAgent(MoneyUser):
 	
 	@property
 	def debt(self):
-		if self.model.param('agents_bank') == 0: return 0
+		if not 'bank' in self.model.primitives or self.model.param('agents_bank') == 0: return 0
 		return self.bank.credit[self.unique_id].owe
 
 class Store(MoneyUser):
 	
-	def __init__(self, id, model):
+	def __init__(self, breed, id, model):
 		super().__init__(id, model)
 		
+		self.breed = breed
 		self.price = {}
 		self.inventory = {}
 		self.lastDemand = {}		#Aggregate effective demand for each good, not including shortages
@@ -204,7 +205,7 @@ class CentralBank(MoneyUser):
 	def expand(self, amount):
 		
 		#Deposit with each bank in proportion to their liabilities
-		if self.model.param('agents_bank') > 0:
+		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0:
 			self.cash += amount
 			denom = 0
 			for b in self.model.agents['bank']:
@@ -235,7 +236,7 @@ class CentralBank(MoneyUser):
 		total = 0
 		for s in self.model.agents['store']: total += s.cash
 		for a in self.model.agents['agent']: total += a.cash
-		if self.model.param('agents_bank') > 0: total += self.bank.reserves
+		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0: total += self.bank.reserves
 		return total
 	
 	@M0.setter
@@ -244,7 +245,7 @@ class CentralBank(MoneyUser):
 	
 	@property
 	def M2(self):
-		if self.model.param('agents_bank') == 0: return self.M0
+		if 'bank' not in self.model.primitives or self.model.param('agents_bank') == 0: return self.M0
 	
 		total = self.bank.reserves
 		for a in self.model.agents['agent']: total += a.balance
@@ -313,7 +314,8 @@ class Loan():
 		self.model.doHooks('loanStep', [self, self.model, stage])
 
 class Bank():
-	def __init__(self, id, model):
+	def __init__(self, breed, id, model):
+		self.breed = breed
 		self.unique_id = id
 		self.model = model
 		self.dead = False

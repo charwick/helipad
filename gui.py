@@ -64,11 +64,7 @@ class GUI():
 		fnum += 1
 		
 		#Item parameter sliders
-		for obj in ['breed', 'good']:
-			itemDict = getattr(self.model, obj+'s')
-			paramDict = getattr(self.model, obj+'Params')
-			setget = getattr(self.model, obj+'Param')
-			
+		def buildSlider(itemDict, paramDict, setget, obj, prim=None):
 			for k, var in paramDict.items():
 				if var[1]['type'] != 'check':
 					bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
@@ -88,7 +84,7 @@ class GUI():
 						self.sliders[bname].variable = paramDict[k][0][name] #Keep track of this because it doesn't pass the value to the callback
 					elif var[1]['type'] == 'slider':
 						self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=self.setVar(bname), bg=bgcolors[fnum%2])
-						self.sliders[bname].set(setget(k, name))
+						self.sliders[bname].set(setget(k, name, prim=prim))
 				
 					self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
 					if hasPmw and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
@@ -100,6 +96,12 @@ class GUI():
 					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
+				
+		buildSlider(model.goods, model.goodParams, model.goodParam, 'good')
+		fnum += 1
+		for p,v in model.primitives.items():
+			if v['breedParams'] != {}:
+				buildSlider(v['breeds'], v['breedParams'], model.breedParam, 'breed_'+p, prim=p)
 				fnum += 1
 		
 		#Parameter sliders

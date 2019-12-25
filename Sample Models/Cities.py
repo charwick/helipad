@@ -13,16 +13,14 @@ heli = Helipad()
 # CONFIGURATION
 #================
 
+#We don't need banks or stores. To do: make this unnecessary
+del heli.primitives['bank']
+del heli.primitives['store']
+
 heli.addBreed('urban', 'CC0000')
 heli.addBreed('rural', '00CC00')
 heli.addGood('consumption', '000000')
 
-#We don't need banks or stores
-heli.params['agents_bank'][1]['type'] = 'hidden'
-heli.params['agents_store'][1]['type'] = 'hidden'
-heli.params['agents_agent'][1]['type'] = 'hidden'
-heli.param('agents_bank', 0)
-heli.param('agents_store', 0)
 heli.param('M0', False) #Non-monetary economy
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
 heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
@@ -54,10 +52,10 @@ heli.land = {k: Land(k) for k in ['urban', 'rural']}
 #This is here to make sure that the agents param gets reset at the beginning of each run
 #Otherwise the parameter persists between runs
 def modelPreSetup(model):
-	model.movers = {b:0 for b in model.breeds}
-	model.births = {b:0 for b in model.breeds}
+	model.movers = {b:0 for b in heli.primitives['agent']['breeds']}
+	model.births = {b:0 for b in heli.primitives['agent']['breeds']}
 	model.param('agents_agent', 150)
-	for b in model.breeds:
+	for b in heli.primitives['agent']['breeds']:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
 heli.addHook('modelPreSetup', modelPreSetup)
@@ -142,7 +140,7 @@ heli.addHook('agentReproduce', agentReproduce)
 def modelPostStep(model):
 	if len(model.agents['agent']) == 0: model.gui.pause()
 	else:
-		for b in model.breeds:
+		for b in model.primitives['agent']['breeds']:
 			pop = len(model.agent(b))
 			if pop > 0:
 				setattr(model,'moverate'+b, model.movers[b]/pop)
@@ -151,7 +149,7 @@ def modelPostStep(model):
 				model.births[b] = 0
 heli.addHook('modelPostStep', modelPostStep)
 
-def decideBreed(id, model):
+def decideBreed(id, choices, model):
 	return 'rural';
 heli.addHook('decideBreed', decideBreed)
 
@@ -196,7 +194,7 @@ heli.data.addReporter('hsum', HSum)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
 heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
 
-for breed, d in heli.breeds.items():
+for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])
 	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', breed, 'gmean', percentiles=[25,75]))
 	heli.data.addReporter(breed+'Wage', perCapGdp(heli, breed))

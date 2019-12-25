@@ -17,7 +17,7 @@ import pandas
 
 from model import Helipad
 from math import sqrt
-from agent import * #Necessary for callback to figure out if is instance of hAgent
+from agent import * #Necessary for callback to figure out if is instance of Agent
 heli = Helipad()
 
 #===============
@@ -34,7 +34,7 @@ breeds = [
 ]
 AgentGoods = {}
 for b in breeds:
-	heli.addBreed(b[0], b[2])
+	heli.addBreed(b[0], b[2], prim='agent')
 	heli.addGood(b[1], b[2])
 	AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
 
@@ -96,13 +96,13 @@ heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low
 #Doesn't really affect anything though – even utility – so don't bother exposing it
 heli.addParameter('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
 
-heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':0, 'high': 50, 'step': 1}, callback=rbalUpdater)
+heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':0, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
 heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
 
 #Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
 def rbaltodemand(breed):
 	def reporter(model):
-		rbd = model.breedParam('rbd', breed)
+		rbd = model.breedParam('rbd', breed, prim='agent')
 		beta = rbd/(1+rbd)
 		
 		return (beta/(1-beta)) * len(model.goods) * sqrt(model.goodParam('prod',AgentGoods[breed])) / sum([1/sqrt(pr) for pr in model.goodParam('prod').values()])
@@ -115,8 +115,8 @@ heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
 heli.defaultPlots.append('rbal')
-heli.addSeries('capital', lambda: 1/len(heli.breeds), '', 'CCCCCC')
-for breed, d in heli.breeds.items():
+heli.addSeries('capital', lambda: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
+for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', breed, 'sum'))
 	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.storeReporter('wage')(model) / heli.data.storeReporter('price', b.good)(model))
@@ -150,7 +150,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 from agent import CES
 def agentInit(agent, model):
 	agent.item = AgentGoods[agent.breed]
-	rbd = model.breedParam('rbd', agent.breed)
+	rbd = model.breedParam('rbd', agent.breed, prim='agent')
 	beta = rbd/(rbd+1)
 	agent.utility = CES(['good','rbal'], agent.model.param('sigma'), {'good': 1-beta, 'rbal': beta })
 	
@@ -193,7 +193,7 @@ def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0
 	return agent.balance/agent.store.price[agent.item] #Cheating here to assume a single store...
 	# return agent.balance/agent.model.cb.P
-hAgent.realBalances = property(realBalances)	
+Agent.realBalances = property(realBalances)	
 
 #
 # Store
@@ -212,7 +212,7 @@ def storeInit(store, model):
 		store.lastShortage[good] = 0
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-		store.price[good] = (model.param('M0')/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b) for b in model.breeds])))
+		store.price[good] = (model.param('M0')/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
 	
 	if hasattr(store, 'bank'):
 		store.pavg = 0
@@ -234,7 +234,7 @@ def storeStep(store, model, stage):
 	#Hire labor
 	labor, tPrice = 0, 0
 	for a in model.agents['agent']:
-		if not isinstance(a, hAgent): continue
+		if not isinstance(a, Agent): continue
 		
 		#Pay agents
 		#Wage shocks (give them something to smooth with the banking system)
@@ -454,7 +454,7 @@ def shock_everyn(n):
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-heli.registerShock('rbd', shock, shock_randn(2), paramType='breed', obj='dwarf')
+heli.registerShock('rbd', shock, shock_randn(2), paramType='breed', obj='dwarf', prim='agent')
 
 #Shock the money supply
 def mshock(v):

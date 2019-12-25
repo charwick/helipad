@@ -78,29 +78,29 @@ class Data():
 		return reporter
 	
 	def agentReporter(self, key, breed=None, stat='mean', **kwargs):
-		return self.nReporter(key, 'agent', breed, stat, **kwargs)
+		return self.nReporter(key, 'agent', breed=breed, stat=stat, **kwargs)
 	
 	def storeReporter(self, key, item=None, stat='mean', **kwargs):
-		return self.nReporter(key, 'store', item, stat, **kwargs)
+		return self.nReporter(key, 'store', narrow=item, stat=stat, **kwargs)
 	
 	def bankReporter(self, key, stat='mean', **kwargs):
 		return self.nReporter(key, 'bank', stat=stat, **kwargs)
 	
-	def nReporter(self, key, obj, narrow=None, stat='mean', **kwargs):
+	def nReporter(self, key, prim, breed=None, narrow=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
 			subplots = {}
 			for p in kwargs['percentiles']:
-				subplots[p] = getattr(self, obj+'Reporter')(key, narrow, stat='percentile-'+str(p))
+				subplots[p] = getattr(self, prim+'Reporter')(key, narrow, stat='percentile-'+str(p))
 		else: subplots = None
 		
 		def reporter(model):
 			u = []
-			array = model.agents[obj]
+			array = model.agents[prim]
 			
 			for agent in array:
-				if narrow is not None and obj=='agent' and agent.breed != narrow: continue
+				if breed is not None and agent.breed != breed: continue
 				v = getattr(agent, key)
-				if obj == 'store' and narrow is not None: v = v[narrow]
+				if prim == 'store' and narrow is not None: v = v[narrow] #Narrow to goods. Hackish…
 				u.append(v)
 			if not u: return 0
 			elif stat=='sum':	return sum(u)
