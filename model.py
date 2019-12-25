@@ -528,6 +528,8 @@ class Helipad():
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the other callbacks, where it is necessary
 	def nUpdater(self, model, prim, val):
 		if not self.hasModel: return
+		
+		if 'agents_' in prim: prim = prim.split('_')[1] #Because updateVar will pass agents_{prim}
 		array = self.agents[prim]
 		diff = val - len(array)
 

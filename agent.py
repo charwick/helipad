@@ -8,46 +8,25 @@ from numpy import *
 from utility import *
 
 #Everybody who uses money, in this case all agents including the store and bank
-class MoneyUser():	
+class MoneyUser():
 	def __init__(self, id, model):
 		self.unique_id = int(id)
 		self.model = model
 		self.cash = 0
-		if 'bank' in model.primitives and model.param('agents_bank') > 0:
-			self.chooseBank()
 		self.dead = False
 		
 		self.model.doHooks('moneyUserInit', [self, self.model])
-		
-	def chooseBank(self):
-		self.bank = choice(self.model.agents['bank']) #Generalize this…
-		self.bank.setupAccount(self)
 	
 	def step(self, stage):
-		if hasattr(self, 'bank') and self.bank.dead: self.chooseBank()
 		self.model.doHooks('moneyUserStep', [self, self.model, stage])
-	
-	def payTo(self, amount):
-		self.cash += amount
 	
 	def pay(self, recipient, amount):
 		if amount > self.balance: amount = self.balance #Budget constraint
-			
-		#Use the bank if the bank exists
-		if hasattr(self, 'bank'):
-			bal = self.bank.balance(self)
-			# origamt = amount
-			if amount > bal: #In there are not enough funds
-				trans = bal
-				amount -= bal
-			else:
-				trans = amount
-				amount = 0
-			self.bank.transfer(self, recipient, trans)
-		
-		#If the bank doesn't exist, or if there's cash, pay in base money
+		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])
+		if amount_ is not None: amount = amount_
+				
 		if amount > 0:
-			recipient.payTo(amount)
+			recipient.cash += amount
 			self.cash -= amount
 	
 	def die(self):
@@ -57,8 +36,9 @@ class MoneyUser():
 	@property		#Nominal
 	def balance(self):
 		bal = self.cash
-		if hasattr(self, 'bank'):
-			bal += self.bank.balance(self)
+		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
+		if bal_ is not None: bal = bal_
+		
 		return bal
 		
 #Customers
@@ -219,14 +199,14 @@ class CentralBank(MoneyUser):
 		elif self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('agents_agent')
 			for a in self.model.agents['agent']:
-				a.payTo(amt)
+				a.cash += amt
 		else:
 			M0 = self.M0
 			for a in self.model.agents['agent']:
-				a.payTo(a.cash/M0 * amount)
+				a.cash += a.cash/M0 * amount
 		
 			for s in self.model.agents['store']:
-				s.payTo(s.cash/M0 * amount)
+				s.cash += s.cash/M0 * amount
 		
 		#Update model parameter, bypassing the param() function
 		self.model.params['M0'][0] = self.M0
@@ -378,7 +358,7 @@ class Bank():
 		# if self.reserves > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.reserves*100,"% of reserves")
 		
 		if amt > customer.cash: amt = customer.cash
-		customer.payTo(-amt)						#Charge customer
+		customer.cash -= amt						#Charge customer
 		self.reserves += amt						#Deposit cash
 		self.accounts[customer.unique_id] += amt	#Credit account
 		
@@ -445,4 +425,4 @@ class Bank():
 	def die(self):
 		self.model.agents['bank'].remove(self)
 		self.model.doHooks('bankDie', [self])
-		super().die()
+		self.dead = True

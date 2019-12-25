@@ -148,6 +148,14 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 #
 
 from agent import CES
+
+#Choose a bank if necessary
+def moneyUserInit(agent, model):
+	if model.param('agents_bank') > 0:
+		agent.bank = choice(model.agents['bank'])
+		agent.bank.setupAccount(agent)
+heli.addHook('moneyUserInit', moneyUserInit)
+
 def agentInit(agent, model):
 	agent.item = AgentGoods[agent.breed]
 	rbd = model.breedParam('rbd', agent.breed, prim='agent')
@@ -193,7 +201,27 @@ def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0
 	return agent.balance/agent.store.price[agent.item] #Cheating here to assume a single store...
 	# return agent.balance/agent.model.cb.P
-Agent.realBalances = property(realBalances)	
+Agent.realBalances = property(realBalances)
+
+#Use the bank if the bank exists
+def pay(agent, recipient, amount, model):
+	if hasattr(agent, 'bank'):
+		bal = agent.bank.balance(agent)
+		# origamt = amount
+		if amount > bal: #If there are not enough funds
+			trans = bal
+			amount -= bal
+		else:
+			trans = amount
+			amount = 0
+		agent.bank.transfer(agent, recipient, trans)
+		return amount #Should be zero. Anything leftover gets paid in cash
+heli.addHook('pay', pay)
+
+def checkBalance(agent, balance, model):
+	if hasattr(agent, 'bank'):
+		bal += agent.bank.balance(agent)
+		return bal
 
 #
 # Store
