@@ -54,9 +54,9 @@ class Helipad():
 		self.hasModel = False	#Have we initialized?
 		
 		#Default parameters
-		self.addPrimitive('bank', dflt=1, low=0, high=10)
-		self.addPrimitive('store', dflt=1, low=0, high=10)
-		self.addPrimitive('agent', dflt=50, low=1, high=100)
+		self.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
+		self.addPrimitive('bank', dflt=1, low=0, high=10, priority=1)
+		self.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
 		self.addParameter('M0', 'Base Money Supply', 'hidden', dflt=120000, callback=self.updateM0)
 		
 		#Plot categories
@@ -76,10 +76,11 @@ class Helipad():
 		for name, label in plotList.items(): self.addPlot(name, label, logscale=True if name=='ratios' else False)
 		self.defaultPlots = ['prices', 'inventory', 'ratios']
 	
-	def addPrimitive(self, name, plural=None, dflt=50, low=1, high=100, step=1, hidden=False):
+	def addPrimitive(self, name, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if not plural: plural = name+'s'
 		self.primitives[name] = {
 			'plural': plural,
+			'priority': priority,
 			'breeds': {},
 			'breedParams': {}
 		}
@@ -225,6 +226,7 @@ class Helipad():
 		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
+		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1]['priority'])} #Sort by priority
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
 		self.cb = agent.CentralBank(0, self)

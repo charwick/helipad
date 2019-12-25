@@ -31,6 +31,7 @@ The following libraries are optional but recommended:
 * Readline (for the debug console)
 * Code (for the debug console)
 * Pyobjc (for Mac interface niceties)
+* PMW (for tooltips)
 
 ## Version History
 
