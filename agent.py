@@ -49,7 +49,6 @@ class Agent(MoneyUser):
 		self.breed = breed
 		if model.param('M0'):
 			self.cash = model.param('M0')/model.param('agents_agent')	#Initial cash endowment
-		self.chooseStore()
 		
 		self.age = 0
 		self.utils = 0
@@ -59,14 +58,8 @@ class Agent(MoneyUser):
 	
 	def step(self, stage):
 		super().step(stage)
-		if hasattr(self, 'store') and self.store.dead: self.chooseStore()	
 		self.model.doHooks('agentStep', [self, self.model, stage])
 		self.age += 1
-	
-	#Function assigning an agent to a store
-	#The agentChooseStore filter should assign a Store object to the agent's 'store' property
-	def chooseStore(self):
-		self.model.doHooks('agentChooseStore', [self, self.model, self.model.agents['store']])
 	
 	def reproduce(self, funcs={}):
 		maxid = 0
@@ -214,9 +207,10 @@ class CentralBank(MoneyUser):
 	@property
 	def M0(self):
 		total = 0
-		for s in self.model.agents['store']: total += s.cash
-		for a in self.model.agents['agent']: total += a.cash
-		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0: total += self.bank.reserves
+		for lst in self.model.agents.values():
+			for a in lst:
+				if hasattr(a, 'cash'): total += a.cash
+				elif hasattr(a, 'reserves'): total += a.reserves
 		return total
 	
 	@M0.setter

@@ -9,8 +9,6 @@
 #
 #TODO: Interface for system shocks?
 #TODO: Use multiprocessing to run the graphing in a different process (and/or convert to Java)
-#
-# Requires at least Python 3
 
 from collections import namedtuple
 import pandas
@@ -23,6 +21,10 @@ heli = Helipad()
 #===============
 # CONFIGURATION
 #===============
+
+heli.addPrimitive('bank', dflt=1, low=0, high=10, priority=1)
+heli.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
+heli.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
 
 # Configure how many breeds there are and what good each consumes
 # In this model, goods and breeds correspond, but they don't necessarily have to
@@ -114,17 +116,21 @@ heli.addPlot('shortage', 'Shortages', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
+heli.addPlot('debt', 'Debt')
+heli.addPlot('rr', 'Reserve Ratio')
+heli.addPlot('i', 'Interest Rate')
+
 heli.defaultPlots.append('rbal')
 heli.addSeries('capital', lambda: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
-	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', breed, 'sum'))
-	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.storeReporter('wage')(model) / heli.data.storeReporter('price', b.good)(model))
-	# heli.data.addReporter('expWage', heli.data.agentReporter('expWage'))
-	heli.data.addReporter('rBal-'+breed, heli.data.agentReporter('realBalances', breed))
-	heli.data.addReporter('shortage-'+AgentGoods[breed], heli.data.storeReporter('lastShortage', AgentGoods[breed]))
-	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.storeReporter('invTarget', AgentGoods[breed]))
-	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.storeReporter('portion', AgentGoods[breed]))
+	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
+	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', narrow=b.good)(model))
+	# heli.data.addReporter('expWage', heli.data.agentReporter('expWage', 'agent'))
+	heli.data.addReporter('rBal-'+breed, heli.data.agentReporter('realBalances', 'agent', breed=breed))
+	heli.data.addReporter('shortage-'+AgentGoods[breed], heli.data.agentReporter('lastShortage', 'store', narrow=AgentGoods[breed]))
+	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', narrow=AgentGoods[breed]))
+	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', narrow=AgentGoods[breed]))
 	
 	heli.addSeries('demand', 'eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
 	heli.addSeries('shortage', 'shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', heli.goods[AgentGoods[breed]].color)
@@ -134,14 +140,43 @@ for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.addSeries('capital', 'portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
 	# heli.addSeries('Wage', 'expWage', 'Expected Wage', '999999')
 
-heli.data.addReporter('StoreCashDemand', heli.data.storeReporter('cashDemand'))
+heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
+heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
 heli.addSeries('money', 'StoreCashDemand', 'Store Cash Demand', 'CCCCCC')
-heli.data.addReporter('wage', heli.data.storeReporter('wage'))
+heli.data.addReporter('wage', heli.data.agentReporter('wage', 'store'))
 heli.addSeries('wage', 'wage', 'Wage', '000000')
 
 #================
 # AGENT BEHAVIOR
 #================
+
+#
+# General
+#
+
+#Don't bother keeping track of the bank-specific variables unless the banking system is there
+#Do this here rather than at the beginning so we can decide at runtime
+def modelPreSetup(model):
+	if 'bank' in model.primitives and model.param('agents_bank') > 0:
+		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
+		model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
+		model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
+		model.data.addReporter('targetRR', model.data.agentReporter('targetRR', 'bank'))
+		model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
+		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
+		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
+		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
+		model.data.addReporter('M2', model.data.cbReporter('M2'))
+
+		model.addSeries('money', 'defaults', 'Defaults', 'CC0000')
+		model.addSeries('money', 'M2', 'Money Supply', '000000')
+		model.addSeries('debt', 'debt', 'Outstanding Debt', '000000')
+		model.addSeries('rr', 'targetRR', 'Target', '777777')
+		model.addSeries('rr', 'reserveRatio', 'Reserve Ratio', '000000')
+		model.addSeries('i', 'i', 'Nominal interest', '000000')
+		model.addSeries('i', 'r', 'Real interest', '0000CC')
+		model.addSeries('i', 'inflation', 'Inflation', 'CC0000')
+heli.addHook('modelPreSetup', modelPreSetup)
 
 #
 # Agents
@@ -157,6 +192,7 @@ def moneyUserInit(agent, model):
 heli.addHook('moneyUserInit', moneyUserInit)
 
 def agentInit(agent, model):
+	agent.store = choice(model.agents['store'])
 	agent.item = AgentGoods[agent.breed]
 	rbd = model.breedParam('rbd', agent.breed, prim='agent')
 	beta = rbd/(rbd+1)
@@ -191,11 +227,6 @@ def agentStep(agent, model, stage):
 	if hasattr(agent, 'bank'):
 		agent.bank.deposit(agent, agent.cash)
 heli.addHook('agentStep', agentStep)
-
-#Only one store so just pick it
-def agentChooseStore(agent, model, stores):
-	agent.store = choice(stores)
-heli.addHook('agentChooseStore', agentChooseStore)
 
 def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0

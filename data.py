@@ -69,7 +69,7 @@ class Data():
 
 	def ratioReporter(self, item1, item2):
 		def reporter(model):
-			return self.storeReporter('price', item1)(model)/self.storeReporter('price', item2)(model)
+			return self.agentReporter('price', 'store', narrow=item1)(model)/self.agentReporter('price', 'store', narrow=item2)(model)
 		return reporter
 	
 	def cbReporter(self, key):
@@ -77,20 +77,11 @@ class Data():
 			return getattr(model.cb, key)
 		return reporter
 	
-	def agentReporter(self, key, breed=None, stat='mean', **kwargs):
-		return self.nReporter(key, 'agent', breed=breed, stat=stat, **kwargs)
-	
-	def storeReporter(self, key, item=None, stat='mean', **kwargs):
-		return self.nReporter(key, 'store', narrow=item, stat=stat, **kwargs)
-	
-	def bankReporter(self, key, stat='mean', **kwargs):
-		return self.nReporter(key, 'bank', stat=stat, **kwargs)
-	
-	def nReporter(self, key, prim, breed=None, narrow=None, stat='mean', **kwargs):
+	def agentReporter(self, key, prim, breed=None, narrow=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
 			subplots = {}
 			for p in kwargs['percentiles']:
-				subplots[p] = getattr(self, prim+'Reporter')(key, narrow, stat='percentile-'+str(p))
+				subplots[p] = self.agentReporter(key, prim, breed=breed, narrow=narrow, stat='percentile-'+str(p))
 		else: subplots = None
 		
 		def reporter(model):

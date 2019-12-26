@@ -35,7 +35,7 @@ Plot = namedtuple('Plot', ['label', 'series', 'logscale'])
 
 class Helipad():
 	def __init__(self):
-		# Got to initialize Tkinter first in order for StringVar() and such to work…
+		# Got to initialize Tkinter first in order for StringVar() and such to work
 		self.root = Tk()
 		self.root.title('Control Panel')
 		self.root.resizable(0,0)
@@ -54,9 +54,7 @@ class Helipad():
 		self.hasModel = False	#Have we initialized?
 		
 		#Default parameters
-		self.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
-		self.addPrimitive('bank', dflt=1, low=0, high=10, priority=1)
-		self.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
+		self.addPrimitive('agent', dflt=50, low=1, high=100)
 		self.addParameter('M0', 'Base Money Supply', 'hidden', dflt=120000, callback=self.updateM0)
 		
 		#Plot categories
@@ -68,10 +66,7 @@ class Helipad():
 			'demand': 'Demand',
 			'money': 'Money',
 			'ngdp': 'NGDP',
-			'utility': 'Utility',
-			'debt': 'Debt',
-			'rr': 'Reserve Ratio',
-			'i': 'Interest Rate'
+			'utility': 'Utility'
 		}
 		for name, label in plotList.items(): self.addPlot(name, label, logscale=True if name=='ratios' else False)
 		self.defaultPlots = ['prices', 'inventory', 'ratios']
@@ -90,7 +85,8 @@ class Helipad():
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, logscale=False):
 		plot = Plot(label, [], logscale)
-		if position is None: self.plots[name] = plot
+		if position is None or position > len(self.plots):
+			self.plots[name] = plot
 		else:		#Reconstruct the dict because there's no insert method...
 			newplots, i = ({}, 1)
 			for k,v in self.plots.items():
@@ -140,9 +136,8 @@ class Helipad():
 		self.data.reset()
 		
 		#Unconditional variables to report
-		# self.data.addReporter('utility', self.data.agentReporter('utils'))
-		# self.data.addReporter('utilityStd', self.data.agentReporter('utils', None, 'std'))
-		self.data.addReporter('ngdp', self.data.cbReporter('ngdp'))
+		# self.data.addReporter('utility', self.data.agentReporter('utils', 'agent'))
+		# self.data.addReporter('utilityStd', self.data.agentReporter('utils', 'agent', stat='std'))
 		
 		def pReporter(n, paramType=None, obj=None, prim=None):
 			def reporter(model):
@@ -159,14 +154,14 @@ class Helipad():
 				for n,p in pdata['breedParams'].items():	#Cycle through parameters
 					if p[1]['type'] == 'hidden': continue	#Skip hidden parameters
 					self.data.addReporter(prim+'_'+n+'-'+item, pReporter(n, paramType='breed', obj=breed, prim=prim))
-		for n,p in self.params.items():									#Cycle through parameters
-			if p[1]['type'] == 'hidden': continue						#Skip hidden parameters
+		for n,p in self.params.items():							#Cycle through parameters
+			if p[1]['type'] == 'hidden': continue				#Skip hidden parameters
 			self.data.addReporter(n, pReporter(n))
 
 		if (self.param('M0') != False):
+			self.data.addReporter('ngdp', self.data.cbReporter('ngdp'))
 			self.data.addReporter('M0', self.data.cbReporter('M0'))
 			self.data.addReporter('P', self.data.cbReporter('P'))
-			self.data.addReporter('storeCash', self.data.storeReporter('balance'))
 
 			self.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 			self.addSeries('money', 'M0', 'Monetary Base', '0000CC')
@@ -176,52 +171,31 @@ class Helipad():
 		#Per-breed series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in self.primitives['agent']['breeds'].items():
-			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', breed))
+			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', 'agent', breed=breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
 		# Per-good series and reporters
-		goods = []
-		for good, g in self.goods.items():
-			goods.append(good) #Keep track of this for the combinations below
-			self.data.addReporter('inv-'+good, self.data.storeReporter('inventory', good))
-			self.data.addReporter('demand-'+good, self.data.storeReporter('lastDemand', good))
-			if self.param('M0') != False:
-				self.data.addReporter('price-'+good, self.data.storeReporter('price', good))
-				self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
+		if 'store' in self.primitives:
+			goods = self.goods.keys()
+			for good, g in self.goods.items():
+				self.data.addReporter('inv-'+good, self.data.agentReporter('inventory', 'store', narrow=good))
+				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', narrow=good))
+				if self.param('M0') != False:
+					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', narrow=good))
+					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
-		# Separate from the above to make sure actual values draw above target values
-		for good, g in self.goods.items():
-			if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
-			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
+			# Separate from the above to make sure actual values draw above target values
+			for good, g in self.goods.items():
+				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
+				if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 		
-		#Don't bother keeping track of the bank-specific variables unless the banking system is there
-		if 'bank' in self.primitives and self.param('agents_bank') > 0:
-			self.data.addReporter('defaults', self.data.bankReporter('defaultTotal'))
-			self.data.addReporter('debt', self.data.bankReporter('loans'))
-			self.data.addReporter('reserveRatio', self.data.bankReporter('reserveRatio'))
-			self.data.addReporter('targetRR', self.data.bankReporter('targetRR'))
-			self.data.addReporter('i', self.data.bankReporter('i'))
-			self.data.addReporter('r', self.data.bankReporter('realInterest'))
-			self.data.addReporter('inflation', self.data.bankReporter('inflation'))
-			self.data.addReporter('withdrawals', self.data.bankReporter('lastWithdrawal'))
-			self.data.addReporter('M2', self.data.cbReporter('M2'))
-
-			self.addSeries('money', 'defaults', 'Defaults', 'CC0000')
-			self.addSeries('money', 'M2', 'Money Supply', '000000')
-			self.addSeries('debt', 'debt', 'Outstanding Debt', '000000')
-			self.addSeries('rr', 'targetRR', 'Target', '777777')
-			self.addSeries('rr', 'reserveRatio', 'Reserve Ratio', '000000')
-			self.addSeries('i', 'i', 'Nominal interest', '000000')
-			self.addSeries('i', 'r', 'Real interest', '0000CC')
-			self.addSeries('i', 'inflation', 'Inflation', 'CC0000')
-		
-		#Price ratios, color halfway between
-		if (self.param('M0') != False):
-			for r in combinations(goods, 2):
-				self.data.addReporter('ratio-'+r[0]+'-'+r[1], self.data.ratioReporter(r[0], r[1]))
-				c1, c2 = self.goods[r[0]].color, self.goods[r[1]].color
-				c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
-				self.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
+			#Price ratios, color halfway between
+			if (self.param('M0') != False):
+				for r in combinations(goods, 2):
+					self.data.addReporter('ratio-'+r[0]+'-'+r[1], self.data.ratioReporter(r[0], r[1]))
+					c1, c2 = self.goods[r[0]].color, self.goods[r[1]].color
+					c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
+					self.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
 				
 		self.hasModel = True #Declare before instantiating agents
 		
@@ -229,7 +203,8 @@ class Helipad():
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1]['priority'])} #Sort by priority
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
-		self.cb = agent.CentralBank(0, self)
+		if (self.param('M0') != False):
+			self.cb = agent.CentralBank(0, self)
 		
 		self.doHooks('modelPostSetup', [self])
 			
@@ -470,7 +445,7 @@ class Helipad():
 			for t in self.agents.values():
 				for a in t:
 					a.step(self.stage)
-			self.cb.step(self.stage)					#Step the central bank last
+			if hasattr(self, 'cb'): self.cb.step(self.stage)	#Step the central bank last
 		
 		self.data.collect(self)
 		self.doHooks('modelPostStep', [self])
@@ -624,7 +599,7 @@ class Helipad():
 			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
 		if self.param('M0') == False:
-			for i in ['prices', 'ratios', 'money','debt','rr','i','ngdp']:
+			for i in ['prices', 'ratios', 'money','ngdp']:
 				del self.plots[i]
 				
 		self.gui = GUI(self.root, self)

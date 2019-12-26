@@ -223,7 +223,7 @@ class GUI():
 		start = time.time()
 		while self.running:
 			for t in range(self.updateEvery):
-				self.M0 = self.model.cb.M0 #Necessary for shocks
+				if (self.model.param('M0') != False): self.M0 = self.model.cb.M0 #Necessary for shocks
 				self.model.step()
 	
 			#Update graphs

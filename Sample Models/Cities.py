@@ -13,10 +13,6 @@ heli = Helipad()
 # CONFIGURATION
 #================
 
-#We don't need banks or stores. To do: make this unnecessary
-del heli.primitives['bank']
-del heli.primitives['store']
-
 heli.addBreed('urban', 'CC0000')
 heli.addBreed('rural', '00CC00')
 heli.addGood('consumption', '000000')
@@ -160,8 +156,7 @@ heli.addHook('decideBreed', decideBreed)
 def urbanPop(model):
 	u=0
 	for a in model.agents['agent']:
-		if a.breed == 'urban':
-			u += 1
+		if a.breed == 'urban': u += 1
 	return u
 	
 def ruralPop(model):
@@ -196,9 +191,9 @@ heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
 
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])
-	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', breed, 'gmean', percentiles=[25,75]))
+	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', 'agent', breed=breed, stat='gmean', percentiles=[25,75]))
 	heli.data.addReporter(breed+'Wage', perCapGdp(heli, breed))
-	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', breed, 'gmean'))
+	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', 'agent', breed=breed, stat='gmean'))
 	heli.data.addReporter(breed+'moveRate', heli.data.modelReporter('moverate'+breed), smooth=0.98)
 	heli.data.addReporter(breed+'birthrate', heli.data.modelReporter('birthrate'+breed), smooth=0.98)
 	heli.addSeries('pop', breed+'Pop', breed.title()+' Population', d.color)
