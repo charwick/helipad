@@ -78,7 +78,7 @@ heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low
 #Doesn't really affect anything though – even utility – so don't bother exposing it
 heli.addParameter('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
 
-heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':0, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
+heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':1, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
 heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
 
 #Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
@@ -110,7 +110,7 @@ for breed, d in heli.primitives['agent']['breeds'].items():
 	
 	heli.addSeries('demand', 'eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
 	heli.addSeries('shortage', 'shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', heli.goods[AgentGoods[breed]].color)
-	heli.addSeries('rbal', 'rbalDemand-'+breed, breed.title()+ 'Target Balances', d.color2)
+	heli.addSeries('rbal', 'rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
 	heli.addSeries('rbal', 'rBal-'+breed, breed.title()+ 'Real Balances', d.color)
 	heli.addSeries('inventory', 'invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
 	heli.addSeries('capital', 'portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
@@ -308,7 +308,7 @@ def shock_everyn(n):
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-heli.registerShock('rbd', shock, shock_randn(2), paramType='breed', obj='dwarf', prim='agent')
+heli.registerShock('Dwarf real balances', 'rbd', shock, shock_randn(2), paramType='breed', obj='dwarf', prim='agent')
 
 #Shock the money supply
 def mshock(v):
@@ -317,7 +317,7 @@ def mshock(v):
 	m = v * (1+pct/100)
 	if m < 10000: m = 10000		#Things get weird when there's a money shortage
 	return m
-heli.registerShock('M0', mshock, shock_randn(2))
-heli.registerShock('M0', mshock, shock_everyn(700))
+heli.registerShock('M0 (2% prob)', 'M0', mshock, shock_randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+# heli.registerShock('M0 (every 700 periods)', 'M0', mshock, shock_everyn(700))
 
 heli.launchGUI()

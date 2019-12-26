@@ -144,6 +144,20 @@ class GUI():
 		frame7.sub_frame.columnconfigure(2,weight=1)
 		frame7.pack(fill="x", side=TOP)
 		
+		if len(self.model.shocks) > 0:
+			fnum += 1
+			self.shockChecks = {}
+			self.shockVars = {}
+			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			for shock in self.model.shocks.values():
+				self.shockVars[shock['name']] = BooleanVar()
+				self.shockVars[shock['name']].set(shock['active'])
+				self.shockChecks[shock['name']] = Checkbutton(frame8.sub_frame, text=shock['name'], var=self.shockVars[shock['name']], onvalue=True, offvalue=False, command=self.activateShock(shock['name']), bg=bgcolors[fnum%2], anchor=W)
+				if hasPmw and shock['desc'] is not None:
+					self.balloon.bind(self.shockChecks[shock['name']], shock['desc'])
+				self.shockChecks[shock['name']].pack(fill=BOTH)
+			frame8.pack(fill="x", side=TOP)
+		
 		#Set application name
 		if sys.platform=='darwin':
 			if importlib.util.find_spec("Foundation") is not None:
@@ -186,6 +200,12 @@ class GUI():
 			
 			self.model.updateVar(vname, val)
 		return sv
+	
+	def activateShock(self, name):
+		def asCallback(val=None):
+			val = self.shockVars[name].get()
+			self.model.shocks[name]['active'] = val
+		return asCallback
 	
 	#Start a new model
 	def prepare_plots(self):

@@ -48,7 +48,7 @@ class Helipad():
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
 		self.buttons = []
-		self.shocks = []
+		self.shocks = {}
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
@@ -406,23 +406,26 @@ class Helipad():
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
 	#The variable is shocked when timerFunc returns true
-	def registerShock(self, var, valFunc, timerFunc, paramType=None, obj=None, prim=None):
-		self.shocks.append({
+	def registerShock(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
+		self.shocks[name] = {
+			'name': name,
+			'desc': desc,
 			'var': var,
 			'valFunc': valFunc,
 			'timerFunc': timerFunc,
 			'paramType': paramType,
 			'obj': obj,
-			'prim': prim
-		})		
+			'prim': prim,
+			'active': active,
+		}
 				
 	def step(self):
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
 		
 		#Shock variables at the beginning of the period
-		for shock in self.shocks:
-			if shock['timerFunc'](self.t):
+		for shock in self.shocks.values():
+			if shock['active'] and shock['timerFunc'](self.t):
 				newval = shock['valFunc'](self.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
 				
 				if shock['paramType'] is not None and shock['obj'] is not None:
