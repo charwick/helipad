@@ -3,6 +3,7 @@
 # 
 # #Differences from the NetLogo version:
 # -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
+# -Banking model exists and is somewhat stable
 # -Code is refactored to make it simple to add agent classes
 # -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 #
@@ -21,6 +22,7 @@ heli = Helipad()
 # CONFIGURATION
 #===============
 
+heli.addPrimitive('bank', dflt=1, low=0, high=10, priority=1)
 heli.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
 heli.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
 
@@ -39,6 +41,22 @@ for b in breeds:
 	AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
 
 heli.order = 'random'
+
+#Disable the irrelevant checkboxes if the banking model isn't selected
+#Callback for the dist parameter
+def bankChecks(gui, val=None):
+	nobank = gui.model.param('dist')!='omo'
+	gui.model.param('agents_bank', 0 if nobank else 1)
+	for i in ['debt', 'rr', 'i']:
+		gui.checks[i].set(False)
+		gui.checks[i].disabled(nobank)
+
+#Since the param callback takes different parameters than the GUI callback
+def bankCheckWrapper(model, var, val):
+	bankChecks(model.gui, val)
+
+heli.addHook('terminate', bankChecks)		#Reset the disabled checkmarks when terminating a model
+heli.addHook('GUIPostInit', bankChecks)	#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
 
@@ -64,10 +82,12 @@ def rbalUpdater(model, var, breed, val):
 #Each parameter requires a corresponding routine in Helicopter.updateVar()
 heli.addParameter('ngdpTarget', 'NGDP Target', 'check', dflt=False, callback=ngdpUpdater)
 heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
-	'prop': 'Proportional',
-	'lump': 'Lump Sum'
-}, runtime=False)
+	'prop': 'Helicopter/Proportional',
+	'lump': 'Helicopter/Lump Sum',
+	'omo': 'Open Market Operation'
+}, runtime=False, callback=bankCheckWrapper)
 
+heli.params['agents_bank'][1]['type'] = 'hidden'
 heli.params['agents_store'][1]['type'] = 'hidden'
 
 heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
@@ -96,6 +116,10 @@ heli.addPlot('shortage', 'Shortages', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
+heli.addPlot('debt', 'Debt')
+heli.addPlot('rr', 'Reserve Ratio')
+heli.addPlot('i', 'Interest Rate')
+
 heli.defaultPlots.append('rbal')
 heli.addSeries('capital', lambda: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
 for breed, d in heli.primitives['agent']['breeds'].items():
@@ -127,10 +151,45 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 #================
 
 #
+# General
+#
+
+#Don't bother keeping track of the bank-specific variables unless the banking system is there
+#Do this here rather than at the beginning so we can decide at runtime
+def modelPreSetup(model):
+	if 'bank' in model.primitives and model.param('agents_bank') > 0:
+		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
+		model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
+		model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
+		model.data.addReporter('targetRR', model.data.agentReporter('targetRR', 'bank'))
+		model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
+		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
+		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
+		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
+		model.data.addReporter('M2', model.data.cbReporter('M2'))
+
+		model.addSeries('money', 'defaults', 'Defaults', 'CC0000')
+		model.addSeries('money', 'M2', 'Money Supply', '000000')
+		model.addSeries('debt', 'debt', 'Outstanding Debt', '000000')
+		model.addSeries('rr', 'targetRR', 'Target', '777777')
+		model.addSeries('rr', 'reserveRatio', 'Reserve Ratio', '000000')
+		model.addSeries('i', 'i', 'Nominal interest', '000000')
+		model.addSeries('i', 'r', 'Real interest', '0000CC')
+		model.addSeries('i', 'inflation', 'Inflation', 'CC0000')
+heli.addHook('modelPreSetup', modelPreSetup)
+
+#
 # Agents
 #
 
 from agent import CES
+
+#Choose a bank if necessary
+def moneyUserInit(agent, model):
+	if model.param('agents_bank') > 0:
+		agent.bank = choice(model.agents['bank'])
+		agent.bank.setupAccount(agent)
+heli.addHook('moneyUserInit', moneyUserInit)
 
 def agentInit(agent, model):
 	agent.store = choice(model.agents['store'])
@@ -164,6 +223,9 @@ def agentStep(agent, model, stage):
 	if negadjust > basicq: negadjust = basicq
 	agent.expCons = (19 * agent.expCons + basicq-negadjust)/20		#Set expected consumption as a decaying average of consumption history
 	
+	#Deposit cash in the bank at the end of each period
+	if hasattr(agent, 'bank'):
+		agent.bank.deposit(agent, agent.cash)
 heli.addHook('agentStep', agentStep)
 
 def realBalances(agent):
@@ -171,6 +233,26 @@ def realBalances(agent):
 	return agent.balance/agent.store.price[agent.item] #Cheating here to assume a single store...
 	# return agent.balance/agent.model.cb.P
 Agent.realBalances = property(realBalances)
+
+#Use the bank if the bank exists
+def pay(agent, recipient, amount, model):
+	if hasattr(agent, 'bank'):
+		bal = agent.bank.balance(agent)
+		# origamt = amount
+		if amount > bal: #If there are not enough funds
+			trans = bal
+			amount -= bal
+		else:
+			trans = amount
+			amount = 0
+		agent.bank.transfer(agent, recipient, trans)
+		return amount #Should be zero. Anything leftover gets paid in cash
+heli.addHook('pay', pay)
+
+def checkBalance(agent, balance, model):
+	if hasattr(agent, 'bank'):
+		bal += agent.bank.balance(agent)
+		return bal
 
 #
 # Store
@@ -190,7 +272,11 @@ def storeInit(store, model):
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
 		store.price[good] = (model.param('M0')/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
-
+	
+	if hasattr(store, 'bank'):
+		store.pavg = 0
+		store.projects = []
+		store.defaults = 0
 heli.addHook('storeInit', storeInit)
 
 def storeStep(store, model, stage):
@@ -210,7 +296,7 @@ def storeStep(store, model, stage):
 		if not isinstance(a, Agent): continue
 		
 		#Pay agents
-		#Wage shocks
+		#Wage shocks (give them something to smooth with the banking system)
 		if store.wage < 0: store.wage = 0
 		wage = random.normal(store.wage, store.wage/2 + 0.1)	#Can't have zero stdev
 		wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
@@ -246,6 +332,72 @@ def storeStep(store, model, stage):
 		#Produce stuff
 		store.portion[i] = (model.param('kImmob') * store.portion[i] + store.price[i]/tPrice) / (model.param('kImmob') + 1)	#Calculate capital allocation
 		store.inventory[i] = store.inventory[i] + store.portion[i] * labor * model.goodParam('prod',i)
+	
+	#Intertemporal transactions
+	if hasattr(store, 'bank') and model.t > 0:
+		#Ok, just stipulate some demand for credit, we'll worry about microfoundations later
+		store.bank.amortize(store, store.bank.credit[store.unique_id].owe/1.5)
+		store.bank.borrow(store, store.model.cb.ngdp * (1-store.bank.i))
+		
+		# store.pavg = (model.cb.P + 2*store.pavg)/3	#Relatively short rolling average price level
+		# expRRev = model.cb.ngdp/store.pavg			#Since the store's nominal revenue is NGDP
+		#
+		# #Borrow in real terms, since—with a constant money supply—nominal borrowing will never be viable except at zero interest
+		# #Generate an investment opportunity
+		# prodinc = random.normal(1.5, 0.5)	# % increase in productivity
+		# if prodinc < 0: prodinc = 0
+		# time = int(random.normal(20, 5))	# Expected periods until completion
+		# if time < 1: time = 1
+		# cost = random.normal(5,2)			#Expected cost as a percentage of expected revenue/period
+		# if cost < 0.1: cost = 0.1
+		# cost = 0.01*cost*expRRev
+		#
+		# #Calculate expected present value
+		# r = store.bank.i - store.bank.inflation
+		# pval = 1/(1+r)**time * (0.01*prodinc*expRRev/r)
+		#
+		# #Borrow the money
+		# if pval > cost:
+		# 	print('Borrowing $',cost,'for present value is',pval,', r is',r)
+		# 	store.bank.borrow(store, cost)
+		# 	store.projects.append({
+		# 		'prodinc': prodinc,
+		# 		'amt': cost*expRRev,
+		# 		'exprrev': expRRev,
+		# 		'end': store.model.t + time,
+		# 		'completed': False
+		# 	})
+		# else: print('Did not borrow. Cost is',cost,', present value is',pval,', r is',r)
+		#
+		# amortized = 0
+		# for p in store.projects:
+		#
+		# 	#Pay back previous projects out of new earnings
+		# 	if expRRev > p['exprrev'] + amortized/store.model.cb.P:
+		# 		amt = (expRRev - p['exprrev'])*store.model.cb.P - amortized	#Nominal
+		# 		if amt > p['amt']: amt = p['amt']
+		# 		print('Amortizing $',amt)
+		# 		store.bank.amortize(store, amt)
+		# 		p['amt'] -= amt
+		# 		amortized += amt/store.model.cb.P
+		#
+		# 	#Realize investment projects and increase productivity
+		# 	if not p['completed'] and store.model.t >= p['end']-1 and random.randint(0,100) < 25:
+		# 		print('Completing project, increasing productivity by',p['prodinc'],'%')
+		# 		for g in store.price:
+		# 			store.model.goodParam('prod', g, store.model.goodParam('prod',g)*(1+p['prodinc']))
+		# 		p['completed'] = True
+		#
+		# 	#Default if it takes more than 20 periods past the expected date to pay back
+		# 	if store.model.t > p['end']+20:
+		# 		print('Defaulting $',p['amt'])
+		# 		store.defaults += p['amt']
+		# 		store.projects.remove(p)
+		#
+		# 	#Remove if paid off and completed
+		# 	if p['completed'] and p['amt'] <= 0:
+		# 		print('Project completed and paid off')
+		# 		store.projects.remove(p)
 			
 heli.addHook('storeStep', storeStep)
 
@@ -263,8 +415,61 @@ def cbStep(cb, model, stage):
 		expand = 0
 		if cb.inflation: expand = M0(model) * cb.inflation
 		if cb.ngdpTarget: expand = cb.ngdpTarget - cb.ngdpAvg
+		if model.param('agents_bank') > 0: expand *= mean([b.reserveRatio for b in model.agents['bank']])
 		if expand != 0: cb.expand(expand)
 heli.addHook('cbStep', cbStep)
+
+#
+# Bank
+#
+
+def bankInit(bank, model):
+	bank.dif = 0			#How much credit was rationed
+	bank.defaultTotal = 0
+	bank.pLast = 50 		#Initial price level, equal to average of initial prices
+heli.addHook('bankInit', bankInit)
+
+def bankStep(bank, model, stage):
+	#Pay interest on deposits
+	lia = bank.liabilities
+	profit = bank.assets - lia
+	if profit > model.param('agents_agent'):
+		print('Disbursing profit of $',profit)
+		for id, a in bank.accounts.items():
+			bank.accounts[id] += profit/lia * a
+		
+	# #Set target reserve ratio
+	# wd = model.data.getLast('withdrawals', 50)
+	# mn, st = wd.mean(), wd.std()
+	# if isnan(mn) or isnan(st): mn, st = .1, .1
+	# ttargetRR = (mn + 2 * st) / lia
+	# bank.targetRR = (bank.targetRR + 49*ttargetRR)/50
+	
+	#Calculate inflation as the unweighted average price change over all goods
+	if model.t >= 2:
+		inflation = model.cb.P/bank.pLast - 1
+		bank.pLast = model.cb.P	#Remember the price from this period before altering it for the next period
+		bank.inflation = (19 * bank.inflation + inflation) / 20		#Decaying average
+	
+	#Set interest rate and/or minimum repayment schedule
+	#Count potential borrowing in the interest rate adjustment
+	targeti = bank.i * bank.targetRR / (bank.reserveRatio)
+	
+	#Adjust in proportion to the rate of reserve change
+	#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
+	if model.t > 2:
+		deltaReserves = (bank.lastReserves - bank.reserves)/model.cb.P
+		targeti *= (1 + deltaReserves/(20 ** model.param('pSmooth')))
+	bank.i = (bank.i * 24 + targeti)/25										#Interest rate stickiness
+	
+	bank.lastReserves = bank.reserves
+			
+	#Upper and lower interest rate bounds
+	if bank.i > 1 + bank.inflation: bank.i = 1 + bank.inflation				#interest rate cap at 100%
+	if bank.i < bank.inflation + 0.005: bank.i = bank.inflation + 0.005		#no negative real rates
+	if bank.i < 0.005: bank.i = 0.005										#no negative nominal rates
+	
+heli.addHook('bankStep', bankStep)
 
 def modelPostStep(model):
 	#Reset per-period variables
