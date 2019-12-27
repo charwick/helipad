@@ -54,7 +54,7 @@ class Helipad():
 		self.hasModel = False	#Have we initialized?
 		
 		#Default parameters
-		self.addPrimitive('agent', dflt=50, low=1, high=100)
+		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
 		self.addParameter('M0', 'Base Money Supply', 'hidden', dflt=120000, callback=self.updateM0)
 		
 		#Plot categories
@@ -71,9 +71,10 @@ class Helipad():
 		for name, label in plotList.items(): self.addPlot(name, label, logscale=True if name=='ratios' else False)
 		self.defaultPlots = ['prices', 'inventory', 'ratios']
 	
-	def addPrimitive(self, name, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
+	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if not plural: plural = name+'s'
 		self.primitives[name] = {
+			'class': class_,
 			'plural': plural,
 			'priority': priority,
 			'breeds': {},
@@ -416,7 +417,7 @@ class Helipad():
 			'paramType': paramType,
 			'obj': obj,
 			'prim': prim,
-			'active': active,
+			'active': active
 		}
 				
 	def step(self):
@@ -525,7 +526,7 @@ class Helipad():
 				else: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
 				if not breed in self.primitives[prim]['breeds']:
 					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
-				new = getattr(agent, prim.title())(breed, maxid, self)
+				new = self.primitives[prim]['class'](breed, maxid, self)
 				array.append(new)
 		
 		#Remove agents

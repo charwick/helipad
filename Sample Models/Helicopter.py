@@ -21,8 +21,8 @@ heli = Helipad()
 # CONFIGURATION
 #===============
 
-heli.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
-heli.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
+heli.addPrimitive('store', Store, dflt=1, low=0, high=10, priority=2)
+heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 
 # Configure how many breeds there are and what good each consumes
 # In this model, goods and breeds correspond, but they don't necessarily have to

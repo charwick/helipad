@@ -18,13 +18,199 @@ from math import sqrt
 from agent import * #Necessary for callback to figure out if is instance of Agent
 heli = Helipad()
 
+#========
+# THE BANK PRIMITIVE
+#========
+
+#Have to specify this first for it to be available…
+class Bank():
+	def __init__(self, breed, id, model):
+		self.breed = breed
+		self.unique_id = id
+		self.model = model
+		self.dead = False
+		
+		self.reserves = 0
+		self.i = .1				#Per-period interest rate
+		self.targetRR = 0.25
+		self.lastWithdrawal = 0
+		self.inflation = 0
+		self.accounts = {}		#Liabilities
+		self.credit = {}		#Assets
+		
+		self.model.doHooks('bankInit', [self, model])
+		
+			
+	def balance(self, customer):
+		if customer.unique_id in self.accounts: return self.accounts[customer.unique_id]
+		else: return 0
+	
+	def setupAccount(self, customer):
+		if customer.unique_id in self.accounts: return False		#If you already have an account
+		self.accounts[customer.unique_id] = 0						#Liabilities
+		self.credit[customer.unique_id] = Loan(customer, self)		#Assets
+	
+	#Assets and liabilities should return the same thing
+	#Any difference gets disbursed as interest on deposits
+	@property
+	def assets(self):
+		a = self.reserves
+		for uid, l in self.credit.items():
+			a += l.owe
+		return a
+	
+	@property
+	def liabilities(self):
+		return sum(list(self.accounts.values())) #Values returns a dict_values object, not a list. So wrap it in list()
+	
+	@property
+	def loans(self):
+		return self.assets - self.reserves
+	
+	@property
+	def reserveRatio(self):
+		l = self.liabilities
+		if l == 0: return 1
+		else: return self.reserves / l
+		
+	@property
+	def realInterest(self):
+		return self.i - self.inflation
+	
+	@realInterest.setter
+	def realInterest(self, value):
+		self.i = value + self.inflation
+	
+	def deposit(self, customer, amt):
+		if amt == 0: return 0
+		if -amt > self.reserves: amt = 0.1 - self.reserves
+		# print('Reserves are $', self.reserves)
+		# if self.reserves > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.reserves*100,"% of reserves")
+		
+		if amt > customer.cash: amt = customer.cash
+		customer.cash -= amt						#Charge customer
+		self.reserves += amt						#Deposit cash
+		self.accounts[customer.unique_id] += amt	#Credit account
+		
+		# print('Now reserves are $',self.reserves)
+		
+		return amt
+	
+	def withdraw(self, customer, amt):
+		self.deposit(customer, -amt)
+		self.lastWithdrawal += amt
+	
+	def transfer(self, customer, recipient, amt):		
+		if self.accounts[customer.unique_id] < amt: amt = self.accounts[customer.unique_id]
+		self.accounts[customer.unique_id] -= amt
+		self.accounts[recipient.unique_id] += amt
+		return amt
+	
+	def borrow(self, customer, amt):
+		if amt < 0.01: return 0 #Skip blanks and float errors
+		l = self.credit[customer.unique_id]
+				
+		#Refinance anything with a higher interest rate
+		for n,loan in enumerate(l.loans):
+			if loan['i'] >= self.i:
+				amt += loan['amount']
+				del l.loans[n]
+				
+		#Increase assets
+		l.loans.append({
+			'amount': amt,
+			'i': self.i
+		})
+		
+		self.accounts[customer.unique_id] += amt	#Increase liabilities
+		
+		return amt									#How much you actually borrowed
+	
+	#Returns the amount you actually pay – the lesser of amt or your outstanding balance
+	def amortize(self, customer, amt):
+		if amt < 0.001: return 0			#Skip blanks and float errors
+		l = self.credit[customer.unique_id]	#Your loan object
+		l.amortizeAmt += amt				#Count it toward minimum repayment
+		leftover = amt
+			
+		#Reduce assets; amortize in the order borrowed
+		while leftover > 0 and len(l.loans) > 0:
+			if leftover >= l.loans[0]['amount']:
+				leftover -= l.loans[0]['amount']
+				del l.loans[0]
+			else:
+				l.loans[0]['amount'] -= leftover
+				leftover = 0
+			
+		self.accounts[customer.unique_id] -= (amt - leftover)	#Reduce liabilities
+		
+		return amt - leftover									#How much you amortized
+	
+	def step(self, stage):
+		self.lastWithdrawal = 0
+		for l in self.credit: self.credit[l].step(stage)
+				
+		self.model.doHooks('bankStep', [self, self.model, stage])
+	
+	def die(self):
+		self.model.agents['bank'].remove(self)
+		self.model.doHooks('bankDie', [self])
+		self.dead = True
+
+class Loan():
+	def __init__(self, customer, bank):
+		self.customer = customer
+		self.bank = bank
+		self.model = bank.model
+		self.loans = []
+		self.amortizeAmt = 0
+		self.model.doHooks('loanInit', [self, customer])
+	
+	@property
+	def owe(self):
+		amt = 0
+		for l in self.loans: amt += l['amount']
+		return amt
+	
+	def step(self, stage):
+		#Charge the minimum repayment if the agent hasn't already amortized more than that amount
+		minRepay = 0
+		for l in self.loans:
+			iLoan = l['amount'] * l['i']
+			minRepay += iLoan				#You have to pay at least the interest each period
+			l['amount'] += iLoan			#Roll over the remainder at the original interest rate
+		
+		#If they haven't paid the minimum this period, charge it
+		amtz = minRepay - self.amortizeAmt
+		defaulted = False
+		if amtz > 0:
+			if amtz > self.bank.accounts[self.customer.unique_id]:	#Can't charge them more than they have in the bank
+				defaulted = True
+				amtz = self.bank.accounts[self.customer.unique_id]
+				# print(self.model.t, ': Agent', self.customer.unique_id, 'defaulted $', self.owe - amtz)
+			self.bank.amortize(self.customer, amtz)
+			if defaulted:
+				for n, l in enumerate(self.loans):
+					self.loans[n]['amount'] /= 2
+					self.bank.defaultTotal += l['amount']/2
+					##Cap defaults at the loan amount. Otherwise if i>1, defaulting results in negative debt
+					# if l['i'] >= 1:
+					# 	self.bank.defaultTotal += l['amount']
+					# 	del self.loans[n]
+					# else:
+					# 	l['amount'] -= l['amount'] * l['i']
+					# 	self.bank.defaultTotal += l['amount'] * l['i']
+				
+		self.amortizeAmt = 0
+		self.model.doHooks('loanStep', [self, self.model, stage])
+
 #===============
 # CONFIGURATION
 #===============
 
-heli.addPrimitive('bank', dflt=1, low=0, high=10, priority=1)
-heli.addPrimitive('store', dflt=1, low=0, high=10, priority=2)
-heli.addPrimitive('agent', dflt=50, low=1, high=100, priority=3)
+heli.addPrimitive('bank', Bank, dflt=1, low=0, high=10, priority=1)
+heli.addPrimitive('store', Store, dflt=1, low=0, high=10, priority=2)
+heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 
 # Configure how many breeds there are and what good each consumes
 # In this model, goods and breeds correspond, but they don't necessarily have to
