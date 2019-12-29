@@ -69,7 +69,7 @@ class Data():
 
 	def ratioReporter(self, item1, item2):
 		def reporter(model):
-			return self.agentReporter('price', 'store', narrow=item1)(model)/self.agentReporter('price', 'store', narrow=item2)(model)
+			return self.agentReporter('price', 'store', good=item1)(model)/self.agentReporter('price', 'store', good=item2)(model)
 		return reporter
 	
 	def cbReporter(self, key):
@@ -77,11 +77,11 @@ class Data():
 			return getattr(model.cb, key)
 		return reporter
 	
-	def agentReporter(self, key, prim, breed=None, narrow=None, stat='mean', **kwargs):
+	def agentReporter(self, key, prim, breed=None, good=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
 			subplots = {}
 			for p in kwargs['percentiles']:
-				subplots[p] = self.agentReporter(key, prim, breed=breed, narrow=narrow, stat='percentile-'+str(p))
+				subplots[p] = self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p))
 		else: subplots = None
 		
 		def reporter(model):
@@ -91,7 +91,7 @@ class Data():
 			for agent in array:
 				if breed is not None and agent.breed != breed: continue
 				v = getattr(agent, key)
-				if prim == 'store' and narrow is not None: v = v[narrow] #Narrow to goods. Hackish…
+				if good is not None: v = v[good] #Narrow to goods. Hackish…
 				u.append(v)
 			if not u: return 0
 			elif stat=='sum':	return sum(u)

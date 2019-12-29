@@ -179,10 +179,10 @@ class Helipad():
 		if 'store' in self.primitives:
 			goods = self.goods.keys()
 			for good, g in self.goods.items():
-				self.data.addReporter('inv-'+good, self.data.agentReporter('inventory', 'store', narrow=good))
-				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', narrow=good))
+				self.data.addReporter('inv-'+good, self.data.agentReporter('inventory', 'store', good=good))
+				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', good=good))
 				if self.param('M0') != False:
-					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', narrow=good))
+					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
 					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
 			# Separate from the above to make sure actual values draw above target values
@@ -544,7 +544,7 @@ class Helipad():
 	# Only call from the console, not in the code
 	#
 	
-	#Return agents of a type if string; return specific agent with ID otherwise
+	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive='agent'):
 		if isinstance(var, str):
 			agents = []
@@ -552,11 +552,8 @@ class Helipad():
 				if a.breed == var:
 					agents.append(a)
 			return agents
-			
 		else:
-			for a in self.allagents:
-				if a.unique_id == var:
-					return a
+			return self.allagents[var]
 		
 		return None #If nobody matched
 		

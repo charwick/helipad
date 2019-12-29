@@ -340,12 +340,12 @@ heli.addSeries('capital', lambda: 1/len(heli.primitives['agent']['breeds']), '',
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
-	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', narrow=b.good)(model))
+	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', good=b.good)(model))
 	# heli.data.addReporter('expWage', heli.data.agentReporter('expWage', 'agent'))
 	heli.data.addReporter('rBal-'+breed, heli.data.agentReporter('realBalances', 'agent', breed=breed))
-	heli.data.addReporter('shortage-'+AgentGoods[breed], heli.data.agentReporter('lastShortage', 'store', narrow=AgentGoods[breed]))
-	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', narrow=AgentGoods[breed]))
-	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', narrow=AgentGoods[breed]))
+	heli.data.addReporter('shortage-'+AgentGoods[breed], heli.data.agentReporter('lastShortage', 'store', good=AgentGoods[breed]))
+	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', good=AgentGoods[breed]))
+	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
 	
 	heli.addSeries('demand', 'eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
 	heli.addSeries('shortage', 'shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', heli.goods[AgentGoods[breed]].color)
@@ -466,8 +466,9 @@ heli.addHook('pay', pay)
 
 def checkBalance(agent, balance, model):
 	if hasattr(agent, 'bank'):
-		bal += agent.bank.balance(agent)
-		return bal
+		balance += agent.bank.balance(agent)
+		return balance
+heli.addHook('checkBalance', checkBalance)
 
 #
 # Store
@@ -550,7 +551,7 @@ def storeStep(store, model, stage):
 	
 	#Intertemporal transactions
 	if hasattr(store, 'bank') and model.t > 0:
-		#Ok, just stipulate some demand for credit, we'll worry about microfoundations later
+		#Just stipulate some demand for credit, we'll worry about microfoundations later
 		store.bank.amortize(store, store.bank.credit[store.unique_id].owe/1.5)
 		store.bank.borrow(store, store.model.cb.ngdp * (1-store.bank.i))
 		
