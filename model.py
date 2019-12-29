@@ -439,10 +439,10 @@ class Helipad():
 				# print("Period",self.t,"shocking",shock['var'],"to",newval)
 		
 		#Shuffle or sort agents as necessary
-		for t, lst in self.agents.items():
+		for prim, lst in self.agents.items():
 			if self.order == 'random': shuffle(lst)
-			o = self.doHooks([t+'Order', 'order'], [lst, self])	#Individual and global order hooks 
-			if o is not None: self.agents[t] = o
+			o = self.doHooks([prim+'Order', 'order'], [lst, self])	#Individual and global order hooks 
+			if o is not None: self.agents[prim] = o
 			
 		for self.stage in range(1, self.stages+1):
 			self.doHooks('modelStep', [self, self.stage])
@@ -519,11 +519,9 @@ class Helipad():
 				if a.unique_id > maxid: maxid = a.unique_id #Figure out maximum existing ID
 			for i in range(0, int(diff)):
 				maxid += 1
-				if 'decideBreed_'+prim in self.hooks:
-					breed = self.doHooks('decideBreed_'+prim, [maxid, self.primitives[prim]['breeds'].keys(), self])
-				elif 'decideBreed' in self.hooks:
-					breed = self.doHooks('decideBreed', [maxid, self.primitives[prim]['breeds'].keys(), self])
-				else: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
+				
+				breed = self.doHooks(['decideBreed_'+prim, 'decideBreed'], [maxid, self.primitives[prim]['breeds'].keys(), self])
+				if breed is None: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
 				if not breed in self.primitives[prim]['breeds']:
 					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
 				new = self.primitives[prim]['class'](breed, maxid, self)
