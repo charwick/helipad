@@ -25,10 +25,8 @@ heli = Helipad()
 #Have to specify this first for it to be available…
 class Bank():
 	def __init__(self, breed, id, model):
-		self.breed = breed
 		self.unique_id = id
 		self.model = model
-		self.dead = False
 		
 		self.reserves = 0
 		self.i = .1				#Per-period interest rate
@@ -38,7 +36,9 @@ class Bank():
 		self.accounts = {}		#Liabilities
 		self.credit = {}		#Assets
 		
-		self.model.doHooks('bankInit', [self, model])
+		self.dif = 0			#How much credit was rationed
+		self.defaultTotal = 0
+		self.pLast = 50 		#Initial price level, equal to average of initial prices
 		
 			
 	def balance(self, customer):
@@ -93,7 +93,6 @@ class Bank():
 		self.accounts[customer.unique_id] += amt	#Credit account
 		
 		# print('Now reserves are $',self.reserves)
-		
 		return amt
 	
 	def withdraw(self, customer, amt):
@@ -150,12 +149,44 @@ class Bank():
 		self.lastWithdrawal = 0
 		for l in self.credit: self.credit[l].step(stage)
 				
-		self.model.doHooks('bankStep', [self, self.model, stage])
+		#Pay interest on deposits
+		lia = self.liabilities
+		profit = self.assets - lia
+		if profit > self.model.param('agents_agent'):
+			print('Disbursing profit of $',profit)
+			for id, a in self.accounts.items():
+				self.accounts[id] += profit/lia * a
+		
+		# #Set target reserve ratio
+		# wd = self.model.data.getLast('withdrawals', 50)
+		# mn, st = wd.mean(), wd.std()
+		# if isnan(mn) or isnan(st): mn, st = .1, .1
+		# ttargetRR = (mn + 2 * st) / lia
+		# self.targetRR = (self.targetRR + 49*ttargetRR)/50
 	
-	def die(self):
-		self.model.agents['bank'].remove(self)
-		self.model.doHooks('bankDie', [self])
-		self.dead = True
+		#Calculate inflation as the unweighted average price change over all goods
+		if self.model.t >= 2:
+			inflation = self.model.cb.P/self.pLast - 1
+			self.pLast = self.model.cb.P	#Remember the price from this period before altering it for the next period
+			self.inflation = (19 * self.inflation + inflation) / 20		#Decaying average
+	
+		#Set interest rate and/or minimum repayment schedule
+		#Count potential borrowing in the interest rate adjustment
+		targeti = self.i * self.targetRR / (self.reserveRatio)
+	
+		#Adjust in proportion to the rate of reserve change
+		#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
+		if self.model.t > 2:
+			deltaReserves = (self.lastReserves - self.reserves)/self.model.cb.P
+			targeti *= (1 + deltaReserves/(20 ** self.model.param('pSmooth')))
+		self.i = (self.i * 24 + targeti)/25										#Interest rate stickiness
+	
+		self.lastReserves = self.reserves
+			
+		#Upper and lower interest rate bounds
+		if self.i > 1 + self.inflation: self.i = 1 + self.inflation				#interest rate cap at 100%
+		if self.i < self.inflation + 0.005: self.i = self.inflation + 0.005		#no negative real rates
+		if self.i < 0.005: self.i = 0.005										#no negative nominal rates
 
 class Loan():
 	def __init__(self, customer, bank):
@@ -164,7 +195,6 @@ class Loan():
 		self.model = bank.model
 		self.loans = []
 		self.amortizeAmt = 0
-		self.model.doHooks('loanInit', [self, customer])
 	
 	@property
 	def owe(self):
@@ -202,7 +232,6 @@ class Loan():
 					# 	self.bank.defaultTotal += l['amount'] * l['i']
 				
 		self.amortizeAmt = 0
-		self.model.doHooks('loanStep', [self, self.model, stage])
 
 #===============
 # CONFIGURATION
@@ -604,58 +633,6 @@ def cbStep(cb, model, stage):
 		if model.param('agents_bank') > 0: expand *= mean([b.reserveRatio for b in model.agents['bank']])
 		if expand != 0: cb.expand(expand)
 heli.addHook('cbStep', cbStep)
-
-#
-# Bank
-#
-
-def bankInit(bank, model):
-	bank.dif = 0			#How much credit was rationed
-	bank.defaultTotal = 0
-	bank.pLast = 50 		#Initial price level, equal to average of initial prices
-heli.addHook('bankInit', bankInit)
-
-def bankStep(bank, model, stage):
-	#Pay interest on deposits
-	lia = bank.liabilities
-	profit = bank.assets - lia
-	if profit > model.param('agents_agent'):
-		print('Disbursing profit of $',profit)
-		for id, a in bank.accounts.items():
-			bank.accounts[id] += profit/lia * a
-		
-	# #Set target reserve ratio
-	# wd = model.data.getLast('withdrawals', 50)
-	# mn, st = wd.mean(), wd.std()
-	# if isnan(mn) or isnan(st): mn, st = .1, .1
-	# ttargetRR = (mn + 2 * st) / lia
-	# bank.targetRR = (bank.targetRR + 49*ttargetRR)/50
-	
-	#Calculate inflation as the unweighted average price change over all goods
-	if model.t >= 2:
-		inflation = model.cb.P/bank.pLast - 1
-		bank.pLast = model.cb.P	#Remember the price from this period before altering it for the next period
-		bank.inflation = (19 * bank.inflation + inflation) / 20		#Decaying average
-	
-	#Set interest rate and/or minimum repayment schedule
-	#Count potential borrowing in the interest rate adjustment
-	targeti = bank.i * bank.targetRR / (bank.reserveRatio)
-	
-	#Adjust in proportion to the rate of reserve change
-	#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
-	if model.t > 2:
-		deltaReserves = (bank.lastReserves - bank.reserves)/model.cb.P
-		targeti *= (1 + deltaReserves/(20 ** model.param('pSmooth')))
-	bank.i = (bank.i * 24 + targeti)/25										#Interest rate stickiness
-	
-	bank.lastReserves = bank.reserves
-			
-	#Upper and lower interest rate bounds
-	if bank.i > 1 + bank.inflation: bank.i = 1 + bank.inflation				#interest rate cap at 100%
-	if bank.i < bank.inflation + 0.005: bank.i = bank.inflation + 0.005		#no negative real rates
-	if bank.i < 0.005: bank.i = 0.005										#no negative nominal rates
-	
-heli.addHook('bankStep', bankStep)
 
 def modelPostStep(model):
 	#Reset per-period variables
