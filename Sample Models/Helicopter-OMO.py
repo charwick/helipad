@@ -263,8 +263,9 @@ def bankChecks(gui, val=None):
 	nobank = gui.model.param('dist')!='omo'
 	gui.model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
-		gui.checks[i].set(False)
 		gui.checks[i].disabled(nobank)
+	for b in gui.model.primitives['agent']['breeds'].keys():
+		gui.sliders['breed_agent-liqPref-'+b].config(state='disabled' if nobank else 'normal')
 
 #Since the param callback takes different parameters than the GUI callback
 def bankCheckWrapper(model, var, val):
@@ -285,12 +286,16 @@ def ngdpUpdater(model, var, val):
 
 def rbalUpdater(model, var, breed, val):
 	if model.hasModel:
-		beta = val/(1+val)
-			
-		for a in model.agents['agent']:
-			if hasattr(a, 'utility') and a.breed == breed:
-				a.utility.coeffs['rbal'] = beta
-				a.utility.coeffs['good'] = 1-beta
+		if var=='rbd':
+			beta = val/(1+val)
+			for a in model.agents['agent']:
+				if hasattr(a, 'utility') and a.breed == breed:
+					a.utility.coeffs['rbal'] = beta
+					a.utility.coeffs['good'] = 1-beta
+		elif var=='liqPref':
+			for a in model.agents['agent']:
+				if a.breed == breed:
+					a.liqPref = val
 				
 #Set up the info for the sliders on the control panel
 #These variables attach to the Helicopter object
@@ -314,6 +319,8 @@ heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low
 heli.addParameter('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
 
 heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':1, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
+heli.addBreedParam('liqPref', 'Demand for Liquidity', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=rbalUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
+
 heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
 
 #Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
@@ -413,6 +420,9 @@ def agentInit(agent, model):
 	beta = rbd/(rbd+1)
 	agent.utility = CES(['good','rbal'], agent.model.param('sigma'), {'good': 1-beta, 'rbal': beta })
 	
+	if model.param('agents_bank') > 0:
+		agent.liqPref = model.breedParam('liqPref', agent.breed, prim='agent')
+	
 	agent.expRWage = 100
 	agent.prevBal = agent.cash
 	agent.expCons = model.goodParam('prod', agent.item)
@@ -432,7 +442,7 @@ def agentStep(agent, model, stage):
 	bought = agent.store.buyFrom(agent.item, q)
 	agent.pay(agent.store, bought * itemPrice)
 	if agent.cash < 0: agent.cash = 0							#Floating point error gives you infinitessimaly negative cash sometimes
-	agent.utils = agent.utility.calculate({'good': bought, 'rbal': agent.cash/itemPrice}) if hasattr(agent,'utility') else 0	#Consume goods & get utility
+	agent.utils = agent.utility.calculate({'good': bought, 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Consume goods & get utility
 	
 	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
 	if negadjust > basicq: negadjust = basicq
@@ -440,12 +450,13 @@ def agentStep(agent, model, stage):
 	
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
-		agent.bank.deposit(agent, agent.cash)
+		tCash = agent.liqPref*agent.balance
+		agent.bank.deposit(agent, agent.cash-tCash)
 heli.addHook('agentStep', agentStep)
 
 def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0
-	return agent.balance/agent.store.price[agent.item] #Cheating here to assume a single store...
+	return agent.balance/agent.store.price[agent.item]
 	# return agent.balance/agent.model.cb.P
 Agent.realBalances = property(realBalances)
 

@@ -158,7 +158,7 @@ def agentStep(agent, model, stage):
 	bought = agent.store.buyFrom(agent.item, q)
 	agent.pay(agent.store, bought * itemPrice)
 	if agent.cash < 0: agent.cash = 0							#Floating point error gives you infinitessimaly negative cash sometimes
-	agent.utils = agent.utility.calculate({'good': bought, 'rbal': agent.cash/itemPrice}) if hasattr(agent,'utility') else 0	#Consume goods & get utility
+	agent.utils = agent.utility.calculate({'good': bought, 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Consume goods & get utility
 	
 	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
 	if negadjust > basicq: negadjust = basicq

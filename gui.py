@@ -214,7 +214,7 @@ class GUI():
 		#Trim the plot list to the checked items and sent it to Graph
 		plotsToDraw = {}
 		for k, i in self.checks.items():
-			if i.get():
+			if i.enabled and i.get():
 				plotsToDraw[k] = self.model.plots[k]
 		
 		#If there are any graphs to plot
