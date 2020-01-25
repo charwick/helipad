@@ -166,7 +166,6 @@ class Helipad():
 
 			self.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 			self.addSeries('money', 'M0', 'Monetary Base', '0000CC')
-			self.addSeries('money', 'storeCash', 'Store Cash', '777777')
 			self.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
 		
 		#Per-breed series and reporters

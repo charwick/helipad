@@ -117,6 +117,7 @@ for breed, d in heli.primitives['agent']['breeds'].items():
 	# heli.addSeries('Wage', 'expWage', 'Expected Wage', '999999')
 
 heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
+heli.addSeries('money', 'storeCash', 'Store Cash', '777777')
 heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
 heli.addSeries('money', 'StoreCashDemand', 'Store Cash Demand', 'CCCCCC')
 heli.data.addReporter('wage', heli.data.agentReporter('wage', 'store'))
