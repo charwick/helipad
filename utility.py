@@ -30,6 +30,12 @@ class Utility():
 	@abstractmethod
 	def demand(self, budget, prices):
 		pass
+	
+	#Receives an array of quantities
+	#Returns a dictionary of marginal utilities
+	@abstractmethod
+	def mu(self, quantity):
+		pass
 
 #Constant elasticity of substitution
 class CES(Utility):
@@ -42,6 +48,8 @@ class CES(Utility):
 		self.coeffs = {g:1 for g in goodslist} if coeffs is None else coeffs
 	
 	def calculate(self, quantities):
+		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
+		
 		#Can't divide by zero in the inner exponent
 		#But at σ=0, the utility function becomes a Leontief function in the limit
 		#The coefficients don't show up, see https://www.jstor.org/stable/29793581
@@ -67,6 +75,31 @@ class CES(Utility):
 			for g in self.goods:
 				util += self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast)
 			return util ** (self.elast/(self.elast-1))
+	
+	def mu(self, quantities):
+		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
+		mus = {}
+		
+		if self.elast==0:	#Leontief
+			for g in self.goods:
+				mus[g] = 1 if quantities[g] < min(quantities.values()) else 0
+		
+		elif self.elast==1:	#Cobb-Douglas
+			for g in self.goods:
+				mus[g] = self.coeffs[g] * quantities[g] ** (self.coeffs[g] - 1)
+				for g2 in self.goods:
+					if g2 != g:
+						mus[g] *= quantities[g2] ** self.coeffs[g2]
+		
+		else:				#General CES
+			coeff = 0
+			for g in self.goods: #Only need to do this once
+				coeff += self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast)
+			coeff = coeff ** (1/(self.elast-1))
+			for g in self.goods:
+				mus[g] = coeff * (self.coeffs[g]/quantities[g]) ** (1/self.elast)
+		
+		return mus				
 	
 	def demand(self, budget, prices):
 		demand = {g:0 for g in self.goods}

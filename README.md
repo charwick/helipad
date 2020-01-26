@@ -36,3 +36,4 @@ The following libraries are optional but recommended:
 ## Version History
 
 * 0.1: Initial release
+* 0.2: Abstraction of agent-type primitives
