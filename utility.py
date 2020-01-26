@@ -34,7 +34,12 @@ class Utility():
 	#Receives an array of quantities
 	#Returns a dictionary of marginal utilities
 	@abstractmethod
-	def mu(self, quantity):
+	def mu(self, quantities):
+		pass
+	
+	#Receives two quantities, returns a marginal rate of substitution
+	@abstractmethod
+	def mrs(self, good1, q1, good2, q2):
 		pass
 
 #Constant elasticity of substitution
@@ -99,7 +104,18 @@ class CES(Utility):
 			for g in self.goods:
 				mus[g] = coeff * (self.coeffs[g]/quantities[g]) ** (1/self.elast)
 		
-		return mus				
+		return mus
+	
+	#Doesn't depend on any other quantities
+	def mrs(self, good1, q1, good2, q2):
+		if self.elast==0:
+			if q1 < q2: return float('inf')
+			elif q1 > q2: return 0
+			else: return None #Undefined at the kink in the indifference curve
+		
+		#Works for both Cobb-Douglas and the general CES
+		else:
+			return ((self.coeffs[good1]*q2)/(self.coeffs[good2]*q1)) ** (1/self.elast)
 	
 	def demand(self, budget, prices):
 		demand = {g:0 for g in self.goods}
