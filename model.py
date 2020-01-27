@@ -201,6 +201,7 @@ class Helipad():
 		
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1]['priority'])} #Sort by priority
+		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
 		if (self.param('M0') != False):

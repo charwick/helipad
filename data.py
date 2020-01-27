@@ -92,7 +92,7 @@ class Data():
 				if breed is not None and agent.breed != breed: continue
 				v = getattr(agent, key)
 				if good is not None: v = v[good] #Narrow to goods. Hackish…
-				u.append(v)
+				if v is not None: u.append(v)
 			if not u: return 0
 			elif stat=='sum':	return sum(u)
 			elif stat=='mean':	return mean(u)
@@ -100,9 +100,12 @@ class Data():
 			elif stat=='std':	return std(u)
 			elif 'percentile-' in stat:
 				pctile = int(stat.split('-')[1])
-				u.sort()
-				idx = round(len(u)*pctile/100)
-				return u[idx] if len(u)>=idx+1 else u[0]
+				if pctile==100: return max(u)
+				elif pctile==0: return min(u)
+				else:
+					u.sort()
+					idx = round(len(u)*pctile/100)
+					return u[idx] if len(u)>=idx+1 else u[0]
 			else: raise ValueError('Invalid statistic '+stat)
 		return (reporter, subplots) if subplots is not None else reporter
 	
