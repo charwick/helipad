@@ -47,8 +47,8 @@ class GUI():
 		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
 		self.expCSV.grid(row=1, column=0, columnspan=3)
 		
-		refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=self.setUpdate)
-		refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=self.setUpdate)
+		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.run_btn = Button(frame1, text='Run', command=self.prepare_plots, padx=10, pady=10)
 		self.run_btn.grid(row=2, column=2, pady=(15,0))
 		

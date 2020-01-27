@@ -228,10 +228,12 @@ class CentralBank(MoneyUser):
 	
 	#Price level
 	#Average good prices at each store, then average all of those together weighted by the store's sale volume
+	#Figure out whether to break this out or not
 	@property
 	def P(self):
 		denom = 0
 		numer = 0
+		if not 'store' in self.model.agents: return None
 		for s in self.model.agents['store']:
 			volume = sum(list(s.lastDemand.values()))
 			numer += mean(array(list(s.price.values()))) * volume

@@ -23,7 +23,7 @@ class Utility():
 	#Returns a scalar utility
 	@abstractmethod
 	def calculate(self, quantities):
-		pass
+		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
 	
 	#Receives a budget and an array of prices
 	#Returns an array of utility-maximizing quantities
@@ -35,7 +35,7 @@ class Utility():
 	#Returns a dictionary of marginal utilities
 	@abstractmethod
 	def mu(self, quantities):
-		pass
+		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
 	
 	#Receives two quantities, returns a marginal rate of substitution
 	@abstractmethod
@@ -53,7 +53,7 @@ class CES(Utility):
 		self.coeffs = {g:1 for g in goodslist} if coeffs is None else coeffs
 	
 	def calculate(self, quantities):
-		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
+		super().calculate(quantities)
 		
 		#Can't divide by zero in the inner exponent
 		#But at σ=0, the utility function becomes a Leontief function in the limit
@@ -82,7 +82,7 @@ class CES(Utility):
 			return util ** (self.elast/(self.elast-1))
 	
 	def mu(self, quantities):
-		if len(quantities) != len(self.goods): raise KeyError('Quantities argument doesn\'t match initialized list of goods')
+		super().mu(quantities)
 		mus = {}
 		
 		if self.elast==0:	#Leontief
