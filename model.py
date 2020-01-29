@@ -17,6 +17,7 @@ from tkinter import *
 from collections import namedtuple
 import pandas
 from colour import Color
+from numpy import random
 # import multiprocessing
 
 #Has to be here so we can invoke TkAgg before Tkinter initializes
@@ -39,7 +40,8 @@ class Helipad():
 		self.root.title('Control Panel')
 		self.root.resizable(0,0)
 		self.data = Data(self)
-		
+		self.shocks = Shocks(self)	
+			
 		self.agents = {}
 		self.primitives = {}
 		self.params = {}		#Global parameters
@@ -47,7 +49,6 @@ class Helipad():
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
 		self.buttons = []
-		self.shocks = {}
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
@@ -391,41 +392,11 @@ class Helipad():
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
 		return r
-	
-	#Var is the name of the variable to shock.
-	#valFunc is a function that takes the current value and returns the new value.
-	#timerFunc is a function that takes the current tick value and returns true or false
-	#The variable is shocked when timerFunc returns true
-	def registerShock(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
-		self.shocks[name] = {
-			'name': name,
-			'desc': desc,
-			'var': var,
-			'valFunc': valFunc,
-			'timerFunc': timerFunc,
-			'paramType': paramType,
-			'obj': obj,
-			'prim': prim,
-			'active': active
-		}
 				
 	def step(self):
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
-		
-		#Shock variables at the beginning of the period
-		for shock in self.shocks.values():
-			if shock['active'] and shock['timerFunc'](self.t):
-				newval = shock['valFunc'](self.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
-				
-				if shock['paramType'] is not None and shock['obj'] is not None:
-					begin = shock['paramType']
-					if shock['prim'] is not None: begin += '_'+shock['prim']
-					v=begin+'-'+shock['var']+'-'+shock['obj']
-				else: v=shock['var']
-					
-				self.updateVar(v, newval, updateGUI=True)
-				# print("Period",self.t,"shocking",shock['var'],"to",newval)
+		self.shocks.do()
 		
 		#Shuffle or sort agents as necessary
 		for prim, lst in self.agents.items():
@@ -609,6 +580,72 @@ class Helipad():
 		
 		#Callback takes one parameter, GUI object
 		self.doHooks('GUIPostLaunch', [self.gui])
+
+class Shocks():
+	def __init__(self, model):
+		self.shocks = {}
+		self.model = model
+	
+	#Var is the name of the variable to shock.
+	#valFunc is a function that takes the current value and returns the new value.
+	#timerFunc is a function that takes the current tick value and returns true or false
+	#The variable is shocked when timerFunc returns true
+	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
+		self.shocks[name] = {
+			'name': name,
+			'desc': desc,
+			'var': var,
+			'valFunc': valFunc,
+			'timerFunc': timerFunc,
+			'paramType': paramType,
+			'obj': obj,
+			'prim': prim,
+			'active': BooleanVar() #Saves some Tkinter code later
+		}
+		self.shocks[name]['active'].set(active)
+		
+	def do(self):
+		for shock in self.shocks.values():
+			if shock['active'].get() and shock['timerFunc'](self.model.t):
+				newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
+				
+				if shock['paramType'] is not None and shock['obj'] is not None:
+					begin = shock['paramType']
+					if shock['prim'] is not None: begin += '_'+shock['prim']
+					v=begin+'-'+shock['var']+'-'+shock['obj']
+				else: v=shock['var']
+					
+				self.model.updateVar(v, newval, updateGUI=True)
+				# print("Period",self.t,"shocking",shock['var'],"to",newval)
+	
+	@property
+	def number(self):
+		return len(self.shocks)
+	
+	# ===============
+	# TIMER FUNCTIONS
+	# The following *return* timer functions; they are not themselves timer functions.
+	# ===============
+	
+	#With n% probability each period
+	def randn(self, n):
+		if n<0 or n>100: raise ValueError('randn() argument can only be between 0 and 100')
+		def fn(t): return True if random.randint(0,100) < n else False
+		return fn
+	
+	#Once at t=n. n can be an int or a list of periods
+	def atperiod(self, n):
+		def fn(t):
+			if type(n) == list:
+				return True if t in n else False
+			else:
+				return True if t==n else False
+		return fn
+	
+	#Regularly every n periods
+	def everyn(self, n, offset=0):
+		def fn(t): return True if t%n-offset==0 else False
+		return fn
 
 #Takes a hex color *with* the #
 def lighten(color):

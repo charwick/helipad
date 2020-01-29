@@ -7,8 +7,7 @@
 # -Code is refactored to make it simple to add agent classes
 # -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 #
-#TODO: Interface for system shocks?
-#TODO: Use multiprocessing to run the graphing in a different process (and/or convert to Java)
+#TODO: Use multiprocessing to run the graphing in a different process
 
 from collections import namedtuple
 from itertools import combinations
@@ -17,7 +16,7 @@ import pandas
 
 from model import Helipad
 from math import sqrt
-from agent import * #Necessary for callback to figure out if is instance of Agent
+from agent import * #Necessary to register primitives
 heli = Helipad()
 
 #========
@@ -395,7 +394,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 #Don't bother keeping track of the bank-specific variables unless the banking system is there
 #Do this here rather than at the beginning so we can decide at runtime
 def modelPreSetup(model):
-	if 'bank' in model.primitives and model.param('agents_bank') > 0:
+	if model.param('agents_bank') > 0:
 		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
 		model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
 		model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
@@ -439,7 +438,6 @@ def agentInit(agent, model):
 	if model.param('agents_bank') > 0:
 		agent.liqPref = model.breedParam('liqPref', agent.breed, prim='agent')
 	
-	agent.expRWage = 100
 	agent.prevBal = agent.cash
 	agent.expCons = model.goodParam('prod', agent.item)
 	
@@ -526,29 +524,22 @@ def storeStep(store, model, stage):
 	N = model.param('agents_agent')
 		
 	#Calculate wages
-	bal = store.balance
 	store.cashDemand = N * store.wage #Hold enough cash for one period's disbursements
-	newwage = (bal - store.cashDemand) / N
+	newwage = (store.balance - store.cashDemand) / N
 	if newwage < 1: newwage = 1
 	store.wage = (store.wage * model.param('wStick') + newwage)/(1 + model.param('wStick'))
-	if store.wage * N > bal: store.wage = bal / N 	#Budget constraint
+	if store.wage * N > store.balance: store.wage = store.balance / N 	#Budget constraint
 	
 	#Hire labor
 	labor, tPrice = 0, 0
 	for a in model.agents['agent']:
-		if not isinstance(a, Agent): continue
-		
-		#Pay agents
-		#Wage shocks (give them something to smooth with the banking system)
+		#Pay agents / wage shocks
 		if store.wage < 0: store.wage = 0
 		wage = random.normal(store.wage, store.wage/2 + 0.1)	#Can't have zero stdev
 		wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
 		store.pay(a, wage)
 		labor += 1
-		
-		a.lastRWage = wage/store.price[a.item]
-		a.expRWage = (19 * a.expRWage + a.lastRWage)/20		#Expected real wage, decaying average
-		
+				
 	for good in model.goods: tPrice += store.price[good] #Sum of prices. This is a separate loop because we need it in order to do this calculation
 	avg, stdev = {},{} #Hang onto these for use with credit calculations
 	for i in model.goods:
@@ -578,69 +569,9 @@ def storeStep(store, model, stage):
 	
 	#Intertemporal transactions
 	if hasattr(store, 'bank') and model.t > 0:
-		#Just stipulate some demand for credit, we'll worry about microfoundations later
+		#Stipulate some demand for credit, we can worry about microfoundations later
 		store.bank.amortize(store, store.bank.credit[store.unique_id].owe/1.5)
 		store.bank.borrow(store, store.model.cb.ngdp * (1-store.bank.i))
-		
-		# store.pavg = (model.cb.P + 2*store.pavg)/3	#Relatively short rolling average price level
-		# expRRev = model.cb.ngdp/store.pavg			#Since the store's nominal revenue is NGDP
-		#
-		# #Borrow in real terms, since—with a constant money supply—nominal borrowing will never be viable except at zero interest
-		# #Generate an investment opportunity
-		# prodinc = random.normal(1.5, 0.5)	# % increase in productivity
-		# if prodinc < 0: prodinc = 0
-		# time = int(random.normal(20, 5))	# Expected periods until completion
-		# if time < 1: time = 1
-		# cost = random.normal(5,2)			#Expected cost as a percentage of expected revenue/period
-		# if cost < 0.1: cost = 0.1
-		# cost = 0.01*cost*expRRev
-		#
-		# #Calculate expected present value
-		# r = store.bank.i - store.bank.inflation
-		# pval = 1/(1+r)**time * (0.01*prodinc*expRRev/r)
-		#
-		# #Borrow the money
-		# if pval > cost:
-		# 	print('Borrowing $',cost,'for present value is',pval,', r is',r)
-		# 	store.bank.borrow(store, cost)
-		# 	store.projects.append({
-		# 		'prodinc': prodinc,
-		# 		'amt': cost*expRRev,
-		# 		'exprrev': expRRev,
-		# 		'end': store.model.t + time,
-		# 		'completed': False
-		# 	})
-		# else: print('Did not borrow. Cost is',cost,', present value is',pval,', r is',r)
-		#
-		# amortized = 0
-		# for p in store.projects:
-		#
-		# 	#Pay back previous projects out of new earnings
-		# 	if expRRev > p['exprrev'] + amortized/store.model.cb.P:
-		# 		amt = (expRRev - p['exprrev'])*store.model.cb.P - amortized	#Nominal
-		# 		if amt > p['amt']: amt = p['amt']
-		# 		print('Amortizing $',amt)
-		# 		store.bank.amortize(store, amt)
-		# 		p['amt'] -= amt
-		# 		amortized += amt/store.model.cb.P
-		#
-		# 	#Realize investment projects and increase productivity
-		# 	if not p['completed'] and store.model.t >= p['end']-1 and random.randint(0,100) < 25:
-		# 		print('Completing project, increasing productivity by',p['prodinc'],'%')
-		# 		for g in store.price:
-		# 			store.model.goodParam('prod', g, store.model.goodParam('prod',g)*(1+p['prodinc']))
-		# 		p['completed'] = True
-		#
-		# 	#Default if it takes more than 20 periods past the expected date to pay back
-		# 	if store.model.t > p['end']+20:
-		# 		print('Defaulting $',p['amt'])
-		# 		store.defaults += p['amt']
-		# 		store.projects.remove(p)
-		#
-		# 	#Remove if paid off and completed
-		# 	if p['completed'] and p['amt'] <= 0:
-		# 		print('Project completed and paid off')
-		# 		store.projects.remove(p)
 			
 heli.addHook('storeStep', storeStep)
 
@@ -676,35 +607,11 @@ heli.addHook('modelPostStep', modelPostStep)
 # SHOCKS
 #========
 
-#Timer functions
-
-#With n% probability each period
-def shock_randn(n):
-	def fn(t): return True if random.randint(0,100) < n else False
-	return fn
-	
-#Once at t=n
-#n can be an int or a list of periods
-def shock_atperiodn(n):
-	def fn(t):
-		if type(n) == list:
-			return True if t in n else False
-		else:
-			return True if t==n else False
-	return fn
-	
-#Regularly every n periods
-def shock_everyn(n):
-	def fn(t): return True if t%n==0 else False
-	return fn
-
-#Shock functions
-
 #Random shock to dwarf cash demand
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-heli.registerShock('Dwarf real balances', 'rbd', shock, shock_randn(2), paramType='breed', obj='dwarf', prim='agent')
+heli.shocks.register('Dwarf real balances', 'rbd', shock, heli.shocks.randn(2), paramType='breed', obj='dwarf', prim='agent')
 
 #Shock the money supply
 def mshock(v):
@@ -713,7 +620,7 @@ def mshock(v):
 	m = v * (1+pct/100)
 	if m < 10000: m = 10000		#Things get weird when there's a money shortage
 	return m
-heli.registerShock('M0 (2% prob)', 'M0', mshock, shock_randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+heli.shocks.register('M0 (2% prob)', 'M0', mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
 # heli.registerShock('M0 (every 700 periods)', 'M0', mshock, shock_everyn(700))
 
 heli.launchGUI()
