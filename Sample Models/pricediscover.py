@@ -25,15 +25,13 @@ def agentInit(agent, model):
 	agent.shmoo = random.randint(1,1000)
 	agent.soma = random.randint(1,floor(exp(model.param('ratio'))*1000))
 	
-	#Utility
-	coeff = random.randint(1,99)/100
 	agent.utility = CobbDouglas(['shmoo', 'soma'])
 heli.addHook('agentInit', agentInit)
 
 def agentStep(agent, model, stage):
 	if agent.lastPeriod == model.t: return #Already traded
 	partner = random.choice(model.agents['agent']);
-	while partner.lastPeriod == model.t: partner = random.choice(model.agents['agent']); #Don't trade with someone who's already traded
+	while partner.lastPeriod == model.t: partner = random.choice(model.agents['agent']) #Don't trade with someone who's already traded
 	
 	myEndowU = agent.utility.calculate({'soma': agent.soma, 'shmoo': agent.shmoo})
 	theirEndowU = partner.utility.calculate({'soma': partner.soma, 'shmoo': partner.shmoo})
@@ -77,7 +75,7 @@ heli.addHook('agentStep', agentStep)
 
 #Stop the model when we're basically equilibrated
 def modelStep(model, stage):
-	if model.t > 1 and model.data.getLast('shmooTrade') < 0.5 and model.data.getLast('somaTrade') < 0.5:
+	if model.t > 1 and model.data.getLast('shmooTrade') < 20 and model.data.getLast('somaTrade') < 20:
 		model.gui.terminate()
 heli.addHook('modelStep', modelStep)
 
@@ -86,9 +84,9 @@ heli.addHook('modelStep', modelStep)
 #===============
 
 heli.data.addReporter('price', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
+heli.data.addReporter('somaTrade', heli.data.agentReporter('somaTrade', 'agent', stat='sum'))
+heli.data.addReporter('shmooTrade', heli.data.agentReporter('shmooTrade', 'agent', stat='sum'))
 heli.addSeries('prices', 'price', 'Soma/Shmoo Price', '119900')
-heli.data.addReporter('somaTrade', heli.data.agentReporter('somaTrade', 'agent'))
-heli.data.addReporter('shmooTrade', heli.data.agentReporter('shmooTrade', 'agent'))
 heli.addSeries('demand', 'shmooTrade', 'Shmoo Trade', '990000')
 heli.addSeries('demand', 'somaTrade', 'Soma Trade', '000099')
 
