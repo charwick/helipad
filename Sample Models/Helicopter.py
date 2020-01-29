@@ -146,7 +146,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 # Agents
 #
 
-from agent import CES
+from utility import CES
 
 def agentInit(agent, model):
 	agent.store = choice(model.agents['store'])
@@ -220,7 +220,7 @@ def storeStep(store, model, stage):
 	
 	#Hire labor
 	labor, tPrice = 0, 0
-	for a in model.agents['agent']:		
+	for a in model.agents['agent']:
 		#Pay agents / wage shocks
 		if store.wage < 0: store.wage = 0
 		wage = random.normal(store.wage, store.wage/2 + 0.1)	#Can't have zero stdev

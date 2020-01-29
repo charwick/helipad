@@ -419,7 +419,7 @@ heli.addHook('modelPreSetup', modelPreSetup)
 # Agents
 #
 
-from agent import CES
+from utility import CES
 
 #Choose a bank if necessary
 def moneyUserInit(agent, model):

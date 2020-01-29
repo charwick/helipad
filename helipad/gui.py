@@ -6,13 +6,12 @@
 from tkinter import *
 from colour import Color
 from itertools import combinations
-from numpy import *
-from math import *
-import time
-import string, random as rand2
+from numpy import ndarray, log10
+from math import ceil
+# import time #For performance testing
+import importlib, string, random as rand2
 import matplotlib.pyplot as plt
 import matplotlib.style as mlpstyle
-import importlib
 mlpstyle.use('fast')
 if importlib.util.find_spec('Pmw') is not None:
 	import Pmw
@@ -231,7 +230,7 @@ class GUI():
 		self.run_btn['text'] = 'Pause'
 		self.run_btn['command'] = self.pause
 		
-		start = time.time()
+		# start = time.time()
 		while self.running:
 			for t in range(self.updateEvery):
 				if (self.model.param('M0') != False): self.M0 = self.model.cb.M0 #Necessary for shocks

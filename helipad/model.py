@@ -4,7 +4,7 @@
 # ==========
 
 #Make sure we've got the requisite modules
-import importlib, pip, sys, warnings
+import importlib, sys, warnings
 needed = ['pandas', 'matplotlib', 'colour']
 for module in needed:
 	if importlib.util.find_spec(module) is None:
