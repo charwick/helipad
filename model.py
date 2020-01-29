@@ -15,7 +15,6 @@ for module in needed:
 from random import shuffle
 from tkinter import *
 from collections import namedtuple
-from itertools import combinations
 import pandas
 from colour import Color
 # import multiprocessing
@@ -62,14 +61,13 @@ class Helipad():
 		plotList = {
 			'prices': 'Prices',
 			'inventory': 'Inventory',
-			'ratios': 'Price ratios',
 			'demand': 'Demand',
 			'money': 'Money',
 			'ngdp': 'NGDP',
 			'utility': 'Utility'
 		}
-		for name, label in plotList.items(): self.addPlot(name, label, logscale=True if name=='ratios' else False)
-		self.defaultPlots = ['prices', 'inventory', 'ratios']
+		for name, label in plotList.items(): self.addPlot(name, label)
+		self.defaultPlots = ['prices', 'inventory']
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if not plural: plural = name+'s'
@@ -164,7 +162,6 @@ class Helipad():
 			self.data.addReporter('M0', self.data.cbReporter('M0'))
 			self.data.addReporter('P', self.data.cbReporter('P'))
 
-			self.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 			self.addSeries('money', 'M0', 'Monetary Base', '0000CC')
 			self.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
 		
@@ -188,14 +185,6 @@ class Helipad():
 			for good, g in self.goods.items():
 				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
 				if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
-		
-			#Price ratios, color halfway between
-			if (self.param('M0') != False):
-				for r in combinations(goods, 2):
-					self.data.addReporter('ratio-'+r[0]+'-'+r[1], self.data.ratioReporter(r[0], r[1]))
-					c1, c2 = self.goods[r[0]].color, self.goods[r[1]].color
-					c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
-					self.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
 				
 		self.hasModel = True #Declare before instantiating agents
 		
@@ -598,7 +587,7 @@ class Helipad():
 			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
 		if self.param('M0') == False:
-			for i in ['prices', 'ratios', 'money','ngdp']:
+			for i in ['prices', 'money','ngdp']:
 				del self.plots[i]
 				
 		self.gui = GUI(self.root, self)

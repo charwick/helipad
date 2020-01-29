@@ -14,7 +14,7 @@ class Data():
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
-	#or one of: 'model', 'agent', 'store', 'bank', 'cb', or 'ratio'
+	#or one of: 'model', 'agent', 'store', or 'cb'
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
 		
@@ -65,11 +65,6 @@ class Data():
 	def modelReporter(self, key):
 		def reporter(model):
 			return getattr(model, key)
-		return reporter
-
-	def ratioReporter(self, item1, item2):
-		def reporter(model):
-			return self.agentReporter('price', 'store', good=item1)(model)/self.agentReporter('price', 'store', good=item2)(model)
 		return reporter
 	
 	def cbReporter(self, key):

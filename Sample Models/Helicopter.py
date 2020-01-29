@@ -10,6 +10,8 @@
 #TODO: Use multiprocessing to run the graphing in a different process (and/or convert to Java)
 
 from collections import namedtuple
+from itertools import combinations
+from colour import Color
 import pandas
 
 from model import Helipad
@@ -96,7 +98,6 @@ heli.addPlot('shortage', 'Shortages', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
-heli.defaultPlots.append('rbal')
 heli.addSeries('capital', lambda: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
@@ -116,6 +117,21 @@ for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.addSeries('capital', 'portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
 	# heli.addSeries('Wage', 'expWage', 'Expected Wage', '999999')
 
+#Price ratio plots
+def ratioReporter(item1, item2):
+	def reporter(model):
+		return model.data.agentReporter('price', 'store', good=item1)(model)/model.data.agentReporter('price', 'store', good=item2)(model)
+	return reporter
+heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
+heli.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
+for r in combinations(heli.goods.keys(), 2):
+	heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
+	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
+	c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
+	heli.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
+heli.defaultPlots.extend(['rbal', 'ratios'])
+
+#Misc plots
 heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
 heli.addSeries('money', 'storeCash', 'Store Cash', '777777')
 heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
