@@ -14,6 +14,7 @@ class MoneyUser():
 		self.model = model
 		self.cash = 0
 		self.dead = False
+		self.goods = {good: params.endowment(self.breed if hasattr(self, 'breed') else None) if params.endowment is not None else 0 for good,params in model.goods.items()}
 		
 		self.model.doHooks('moneyUserInit', [self, self.model])
 	
@@ -44,9 +45,9 @@ class MoneyUser():
 #Customers
 class Agent(MoneyUser):
 	def __init__(self, breed, id, model):
-		super().__init__(id, model)
-		
 		self.breed = breed
+		super().__init__(id, model)
+
 		if model.param('M0'):
 			self.cash = model.param('M0')/model.param('agents_agent')	#Initial cash endowment
 		
@@ -106,16 +107,14 @@ class Agent(MoneyUser):
 class Store(MoneyUser):
 	
 	def __init__(self, breed, id, model):
+		self.breed = breed
 		super().__init__(id, model)
 		
-		self.breed = breed
 		self.price = {}
-		self.inventory = {}
 		self.lastDemand = {}		#Aggregate effective demand for each good, not including shortages
 		
 		for good in model.goods:
 			self.price[good] = 50
-			self.inventory[good] = 0
 			self.lastDemand[good] = 0
 		
 		self.model.doHooks('storeInit', [self, model])
@@ -130,13 +129,13 @@ class Store(MoneyUser):
 		self.model.doHooks('storePreBuy', [self, item, quantity])
 		
 		if quantity < 0: quantity = 0
-		if quantity > self.inventory[item]:
-			q = self.inventory[item]
+		if quantity > self.goods[item]:
+			q = self.goods[item]
 			self.lastShortage[item] += quantity - q
-			self.inventory[item] = 0
+			self.goods[item] = 0
 		
 		else:
-			self.inventory[item] -= quantity
+			self.goods[item] -= quantity
 			q = quantity
 		
 		self.lastDemand[item] += q
@@ -168,8 +167,9 @@ class CentralBank(MoneyUser):
 		if stage == self.model.stages:
 			self.ngdp = 0
 			for good in self.model.goods:
-				for s in self.model.agents['store']:
-					self.ngdp += s.price[good] * s.lastDemand[good]
+				if 'store' in self.model.agents:
+					for s in self.model.agents['store']:
+						self.ngdp += s.price[good] * s.lastDemand[good]
 			if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 			self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
 		

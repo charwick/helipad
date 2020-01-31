@@ -554,18 +554,18 @@ def storeStep(store, model, stage):
 		#Set prices
 		#Change in the direction of hitting the inventory target
 		# store.price[i] += log(store.invTarget[i] / (store.inventory[i][0] + store.lastShortage[i])) #Jim's pricing rule?
-		store.price[i] += (store.invTarget[i] - store.inventory[i] + store.lastShortage[i])/100 #/150
+		store.price[i] += (store.invTarget[i] - store.goods[i] + store.lastShortage[i])/100 #/150
 		
 		#Adjust in proportion to the rate of inventory change
 		#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
 		lasti = model.data.getLast('inv-'+i,2)[0] if model.t > 1 else 0
-		deltaInv = lasti - store.inventory[i]
+		deltaInv = lasti - store.goods[i]
 		store.price[i] *= (1 + deltaInv/(50 ** model.param('pSmooth')))
 		if store.price[i] < 0: store.price[i] = 1
 		
 		#Produce stuff
 		store.portion[i] = (model.param('kImmob') * store.portion[i] + store.price[i]/tPrice) / (model.param('kImmob') + 1)	#Calculate capital allocation
-		store.inventory[i] = store.inventory[i] + store.portion[i] * labor * model.goodParam('prod',i)
+		store.goods[i] = store.goods[i] + store.portion[i] * labor * model.goodParam('prod',i)
 	
 	#Intertemporal transactions
 	if hasattr(store, 'bank') and model.t > 0:

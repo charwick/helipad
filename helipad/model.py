@@ -14,7 +14,6 @@ for module in needed:
 
 from random import shuffle
 from tkinter import *
-from collections import namedtuple
 import pandas
 from colour import Color
 from numpy import random
@@ -29,9 +28,11 @@ from gui import GUI
 from data import Data
 import agent
 
-Item = namedtuple('Item', ['color', 'color2'])
-Series = namedtuple('Series', ['reporter', 'label', 'color', 'style', 'subseries'])
-Plot = namedtuple('Plot', ['label', 'series', 'logscale'])
+#Generic extensible item class to store structured data
+class Item():
+	def __init__(self, **kwargs):
+		for k,v in kwargs.items():
+			setattr(self, k, v)
 
 class Helipad():
 	def __init__(self):
@@ -84,7 +85,7 @@ class Helipad():
 			
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, logscale=False):
-		plot = Plot(label, [], logscale)
+		plot = Item(label=label, series=[], logscale=logscale)
 		if position is None or position > len(self.plots):
 			self.plots[name] = plot
 		else:		#Reconstruct the dict because there's no insert method...
@@ -98,7 +99,7 @@ class Helipad():
 	#First arg is the plot it's a part of
 	#Second arg is a reporter name registered in DataCollector, or a lambda function
 	#Third arg is the series name. Use '' to not show in the legend.
-	#Fourth arg is the plot's hex color
+	#Fourth arg is the plot's hex color, or a Color object
 	def addSeries(self, plot, reporter, label, color, style='-'):
 		if isinstance(color, Color): color = color.hex_l.replace('#','')
 		if not plot in self.plots:
@@ -113,14 +114,14 @@ class Helipad():
 			for p, f in self.data.reporters[reporter][1].items():
 				subkey = reporter+'-'+str(p)+'-pctile'
 				subseries.append(subkey)
-				self.addSeries(plot, subkey, '', lighten('#'+color), style='--')
+				self.addSeries(plot, subkey, '', Color('#'+color).lighten(), style='--')
 
 		#Since many series are added at setup time, we have to de-dupe
 		for s in self.plots[plot].series:
 			if s.reporter == reporter:
 				self.plots[plot].series.remove(s)
 		
-		self.plots[plot].series.append(Series(reporter, label, color, style, subseries))
+		self.plots[plot].series.append(Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries))
 	
 	def addButton(self, text, func):
 		self.buttons.append((text, func))
@@ -176,7 +177,7 @@ class Helipad():
 		if 'store' in self.primitives:
 			goods = self.goods.keys()
 			for good, g in self.goods.items():
-				self.data.addReporter('inv-'+good, self.data.agentReporter('inventory', 'store', good=good))
+				self.data.addReporter('inv-'+good, self.data.agentReporter('goods', 'store', good=good))
 				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', good=good))
 				if self.param('M0') != False:
 					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
@@ -339,7 +340,7 @@ class Helipad():
 	
 	#For adding breeds and goods
 	#Should not be called directly
-	def addItem(self, obj, name, color, prim=''):
+	def addItem(self, obj, name, color, prim='', **kwargs):
 		if obj=='good':
 			itemDict = self.goods
 			paramDict = self.goodParams
@@ -352,8 +353,8 @@ class Helipad():
 			warnings.warn(obj+' \''+name+'\' already defined. Overriding...', None, 2)
 		
 		cobj = Color('#'+color)
-		cobj2 = lighten('#'+color)
-		itemDict[name] = Item(cobj, cobj2)
+		cobj2 = cobj.lighten()
+		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
 		
 		#Make sure the parameter arrays keep up with our items
 		for k,p in paramDict.items():
@@ -373,8 +374,8 @@ class Helipad():
 			else: raise KeyError('Breed must specify which primitive it belongs to')
 		self.addItem('breed', name, color, prim=prim)
 		
-	def addGood(self, name, color):
-		self.addItem('good', name, color)
+	def addGood(self, name, color, endowment=None):
+		self.addItem('good', name, color, endowment=endowment)
 			
 	def addHook(self, place, func):
 		if not place in self.hooks: self.hooks[place] = []
@@ -647,11 +648,10 @@ class Shocks():
 		def fn(t): return True if t%n-offset==0 else False
 		return fn
 
-#Takes a hex color *with* the #
-def lighten(color):
-	c = Color(color)
-	c2 = Color(hue=c.hue, saturation=c.saturation, luminance=.66+c.luminance/3)
-	return c2.hex_l.replace('#','')
+#Append to the Color class
+def lighten(self):
+	return Color(hue=self.hue, saturation=self.saturation, luminance=.66+self.luminance/3)
+Color.lighten = lighten
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)
