@@ -21,6 +21,38 @@ class MoneyUser():
 	def step(self, stage):
 		self.model.doHooks('moneyUserStep', [self, self.model, stage])
 	
+	#Give amt1 of good 1, get amt2 of good 2
+	#Negative values of amt1 and amt2 allowed, which reverses the direction
+	def trade(self, partner, good1, amt1, good2, amt2):
+		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
+		
+		price = amt1 / amt2
+		
+		#Budget constraints. Hold price constant if hit		
+		if amt1 > self.goods[good1]:
+			print('Agent',self.unique_id,'doesn\'t have enough',good1,'to initiate that trade.')
+			amt1 = self.goods[good1]
+			amt2 = amt1 / price
+		elif -amt1 > partner.goods[good1]:
+			print('Agent',partner.unique_id,'doesn\'t have enough',good2,'to execute that trade.')
+			amt1 = -partner.goods[good1]
+			amt2 = amt1 / price
+		if amt2 > partner.goods[good2]:
+			print('Agent',partner.unique_id,'doesn\'t have enough',good2,'to execute that trade.')
+			amt2 = partner.goods[good2]
+			amt1 = price * amt1
+		elif -amt2 > self.goods[good2]:
+			print('Agent',self.unique_id,'doesn\'t have enough',good1,'to initiate that trade.')
+			amt2 = -self.goods[good2]
+			amt1 = price * amt1
+		
+		self.goods[good1] -= amt1
+		partner.goods[good1] += amt1
+		self.goods[good2] += amt2
+		partner.goods[good2] -= amt2
+		
+		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
+	
 	def pay(self, recipient, amount):
 		if amount > self.balance: amount = self.balance #Budget constraint
 		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])

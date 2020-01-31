@@ -46,11 +46,7 @@ def agentStep(agent, model, stage):
 	
 	#Do the trades
 	if abs(somaDemand) > 0.1 and abs(shmooDemand) > 0.1:
-		agent.goods['soma'] += somaDemand
-		partner.goods['soma'] -= somaDemand
-		agent.goods['shmoo'] += shmooDemand
-		partner.goods['shmoo'] -= shmooDemand
-		
+		agent.trade(partner, 'soma', -somaDemand, 'shmoo', shmooDemand)		
 		agent.lastPrice = -somaDemand/shmooDemand
 		partner.lastPrice = -somaDemand/shmooDemand
 	else:
