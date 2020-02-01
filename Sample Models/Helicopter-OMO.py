@@ -88,8 +88,8 @@ class Bank():
 		# print('Reserves are $', self.reserves)
 		# if self.reserves > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.reserves*100,"% of reserves")
 		
-		if amt > customer.cash: amt = customer.cash
-		customer.cash -= amt						#Charge customer
+		if amt > customer.goods[self.model.moneyGood]: amt = customer.goods[self.model.moneyGood]
+		customer.goods[self.model.moneyGood] -= amt	#Charge customer
 		self.reserves += amt						#Deposit cash
 		self.accounts[customer.unique_id] += amt	#Credit account
 		
@@ -256,6 +256,10 @@ for b in breeds:
 	heli.addGood(b[1], b[2])
 	AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
 
+#Set endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
+#endowment=lambda breed: heli.agents['store'][0].price[AgentGoods[breed]] * rbaltodemand(breed)(heli)
+heli.addGood('cash', '009900', money=True, endowment=1000)
+
 heli.order = 'random'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
@@ -369,7 +373,10 @@ def ratioReporter(item1, item2):
 	return reporter
 heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
 heli.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
-for r in combinations(heli.goods.keys(), 2):
+
+goods = list(heli.goods.keys())
+goods.remove(heli.moneyGood)
+for r in combinations(goods, 2):
 	heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
 	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
 	c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
@@ -438,11 +445,8 @@ def agentInit(agent, model):
 	if model.param('agents_bank') > 0:
 		agent.liqPref = model.breedParam('liqPref', agent.breed, prim='agent')
 	
-	agent.prevBal = agent.cash
+	agent.prevBal = agent.balance
 	agent.expCons = model.goodParam('prod', agent.item)
-	
-	#Set to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
-	agent.cash = model.agents['store'][0].price[AgentGoods[agent.breed]] * rbaltodemand(agent.breed)(model)
 	
 heli.addHook('agentInit', agentInit)
 
@@ -455,7 +459,7 @@ def agentStep(agent, model, stage):
 	
 	bought = agent.store.buyFrom(agent.item, q)
 	agent.pay(agent.store, bought * itemPrice)
-	if agent.cash < 0: agent.cash = 0							#Floating point error gives you infinitessimaly negative cash sometimes
+	if agent.goods[model.moneyGood] < 0: agent.goods[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
 	agent.utils = agent.utility.calculate({'good': bought, 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Consume goods & get utility
 	
 	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
@@ -465,7 +469,7 @@ def agentStep(agent, model, stage):
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
 		tCash = agent.liqPref*agent.balance
-		agent.bank.deposit(agent, agent.cash-tCash)
+		agent.bank.deposit(agent, agent.goods[agent.model.moneyGood]-tCash)
 heli.addHook('agentStep', agentStep)
 
 def realBalances(agent):
@@ -512,8 +516,7 @@ def storeInit(store, model):
 		store.lastShortage[good] = 0
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-		store.price[good] = (model.param('M0')/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
-	
+		# store.price[good] = (model.cb.M0/model.param('agents_agent')) * sum([1/sqrt(model.goodParam('prod',g)) for g in model.goods])/(sqrt(model.goodParam('prod',good))*(len(model.goods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))	
 	if hasattr(store, 'bank'):
 		store.pavg = 0
 		store.projects = []
@@ -540,9 +543,13 @@ def storeStep(store, model, stage):
 		store.pay(a, wage)
 		labor += 1
 				
-	for good in model.goods: tPrice += store.price[good] #Sum of prices. This is a separate loop because we need it in order to do this calculation
+	for good in model.goods:
+		if good == model.moneyGood: continue
+		tPrice += store.price[good] #Sum of prices. This is a separate loop because we need it in order to do this calculation
+	
 	avg, stdev = {},{} #Hang onto these for use with credit calculations
 	for i in model.goods:
+		if i == model.moneyGood: continue
 
 		#Keep track of typical demand
 		#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods
@@ -614,13 +621,13 @@ def shock(v):
 heli.shocks.register('Dwarf real balances', 'rbd', shock, heli.shocks.randn(2), paramType='breed', obj='dwarf', prim='agent')
 
 #Shock the money supply
-def mshock(v):
+def mshock(model):
 	# return v*2
 	pct = random.normal(1, 15)
-	m = v * (1+pct/100)
+	m = model.cb.M0 * (1+pct/100)
 	if m < 10000: m = 10000		#Things get weird when there's a money shortage
-	return m
-heli.shocks.register('M0 (2% prob)', 'M0', mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+	model.cb.M0 = m
+heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
 # heli.registerShock('M0 (every 700 periods)', 'M0', mshock, shock_everyn(700))
 
 heli.launchGUI()

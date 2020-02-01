@@ -73,6 +73,7 @@ class GUI():
 					bpf_super = bpf
 				i=0
 				for name, b in itemDict.items():
+					if hasattr(b, 'money') and b.money: continue
 					bname = obj+'-'+k+'-'+name
 				
 					if var[1]['type'] == 'menu':
@@ -233,7 +234,6 @@ class GUI():
 		# start = time.time()
 		while self.running:
 			for t in range(self.updateEvery):
-				if (self.model.param('M0') != False): self.M0 = self.model.cb.M0 #Necessary for shocks
 				self.model.step()
 	
 			#Update graphs

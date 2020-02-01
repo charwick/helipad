@@ -12,10 +12,13 @@ class MoneyUser():
 	def __init__(self, id, model):
 		self.unique_id = int(id)
 		self.model = model
-		self.cash = 0
 		self.dead = False
-		self.goods = {good: params.endowment(self.breed if hasattr(self, 'breed') else None) if params.endowment is not None else 0 for good,params in model.goods.items()}
-		
+		self.goods = {}
+		for good, params in model.goods.items():
+			if params.endowment is None: self.goods[good] = 0
+			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
+			else: self.goods[good] = params.endowment
+					
 		self.model.doHooks('moneyUserInit', [self, self.model])
 	
 	def step(self, stage):
@@ -53,22 +56,26 @@ class MoneyUser():
 		
 		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
 	
+	#Unilateral
 	def pay(self, recipient, amount):
+		if self.model.moneyGood is None: raise RuntimeError('Pay function requires a monetary good to be specified')
+		
 		if amount > self.balance: amount = self.balance #Budget constraint
 		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])
 		if amount_ is not None: amount = amount_
 				
 		if amount > 0:
-			recipient.cash += amount
-			self.cash -= amount
+			recipient.goods[self.model.moneyGood] += amount
+			self.goods[self.model.moneyGood] -= amount
 	
 	def die(self):
 		self.model.doHooks('moneyUserDie', [self])
 		self.dead = True
 	
-	@property		#Nominal
+	@property
 	def balance(self):
-		bal = self.cash
+		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
+		bal = self.goods[self.model.moneyGood]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
 		if bal_ is not None: bal = bal_
 		
@@ -79,9 +86,6 @@ class Agent(MoneyUser):
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		super().__init__(id, model)
-
-		if model.param('M0'):
-			self.cash = model.param('M0')/model.param('agents_agent')	#Initial cash endowment
 		
 		self.age = 0
 		self.utils = 0
@@ -171,7 +175,7 @@ class Store(MoneyUser):
 			q = quantity
 		
 		self.lastDemand[item] += q
-		# self.cash += self.price[item] * q
+		# self.goods[self.model.moneyGood] += self.price[item] * q
 		
 		self.model.doHooks('storePostBuy', [self, item, q])
 		return q
@@ -211,7 +215,7 @@ class CentralBank(MoneyUser):
 		
 		#Deposit with each bank in proportion to their liabilities
 		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0:
-			self.cash += amount
+			self.goods[self.model.moneyGood] += amount
 			denom = 0
 			for b in self.model.agents['bank']:
 				denom += b.liabilities
@@ -224,25 +228,22 @@ class CentralBank(MoneyUser):
 		elif self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('agents_agent')
 			for a in self.model.agents['agent']:
-				a.cash += amt
+				a.goods[self.model.moneyGood] += amt
 		else:
 			M0 = self.M0
 			for a in self.model.agents['agent']:
-				a.cash += a.cash/M0 * amount
+				a.goods[self.model.moneyGood] += a.goods[self.model.moneyGood]/M0 * amount
 		
 			for s in self.model.agents['store']:
-				s.cash += s.cash/M0 * amount
-		
-		#Update model parameter, bypassing the param() function
-		self.model.params['M0'][0] = self.M0
+				s.goods[self.model.moneyGood] += s.goods[self.model.moneyGood]/M0 * amount
 				
 	@property
 	def M0(self):
 		total = 0
 		for lst in self.model.agents.values():
 			for a in lst:
-				if hasattr(a, 'cash'): total += a.cash
-				elif hasattr(a, 'reserves'): total += a.reserves
+				if hasattr(a, 'reserves'): total += a.reserves #Do something about this
+				else: total += a.goods[self.model.moneyGood]
 		return total
 	
 	@M0.setter

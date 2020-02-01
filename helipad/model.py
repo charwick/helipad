@@ -53,10 +53,10 @@ class Helipad():
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
+		self.moneyGood = None
 		
 		#Default parameters
 		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
-		self.addParameter('M0', 'Base Money Supply', 'hidden', dflt=120000, callback=self.updateM0)
 		
 		#Plot categories
 		self.plots = {}
@@ -159,12 +159,12 @@ class Helipad():
 			if p[1]['type'] == 'hidden': continue				#Skip hidden parameters
 			self.data.addReporter(n, pReporter(n))
 
-		if (self.param('M0') != False):
+		if (self.moneyGood is not None):
 			self.data.addReporter('ngdp', self.data.cbReporter('ngdp'))
 			self.data.addReporter('M0', self.data.cbReporter('M0'))
 			self.data.addReporter('P', self.data.cbReporter('P'))
 
-			self.addSeries('money', 'M0', 'Monetary Base', '0000CC')
+			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
 			self.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
 		
 		#Per-breed series and reporters
@@ -177,14 +177,16 @@ class Helipad():
 		if 'store' in self.primitives:
 			goods = self.goods.keys()
 			for good, g in self.goods.items():
+				if g.money: continue
 				self.data.addReporter('inv-'+good, self.data.agentReporter('goods', 'store', good=good))
 				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', good=good))
-				if self.param('M0') != False:
+				if self.moneyGood is not None:
 					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
 					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
 			# Separate from the above to make sure actual values draw above target values
 			for good, g in self.goods.items():
+				if g.money: continue
 				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
 				if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 				
@@ -195,7 +197,7 @@ class Helipad():
 		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
-		if (self.param('M0') != False):
+		if (self.moneyGood is not None):
 			self.cb = agent.CentralBank(0, self)
 		
 		self.doHooks('modelPostSetup', [self])
@@ -374,8 +376,11 @@ class Helipad():
 			else: raise KeyError('Breed must specify which primitive it belongs to')
 		self.addItem('breed', name, color, prim=prim)
 		
-	def addGood(self, name, color, endowment=None):
-		self.addItem('good', name, color, endowment=endowment)
+	def addGood(self, name, color, endowment=None, money=False):
+		if money:
+			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
+			self.moneyGood = name
+		self.addItem('good', name, color, endowment=endowment, money=money)
 			
 	def addHook(self, place, func):
 		if not place in self.hooks: self.hooks[place] = []
@@ -558,7 +563,7 @@ class Helipad():
 			self.params['agents_'+k][0] = makeDivisible(self.params['agents_'+k][0], l, 'max')
 			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
-		if self.param('M0') == False:
+		if self.moneyGood is None:
 			for i in ['prices', 'money','ngdp']:
 				del self.plots[i]
 				
@@ -591,6 +596,7 @@ class Shocks():
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
 	#The variable is shocked when timerFunc returns true
+	#Can pass in var=None to run an open-ended valFunc that takes the model as an object instead
 	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
 		self.shocks[name] = {
 			'name': name,
@@ -608,16 +614,18 @@ class Shocks():
 	def do(self):
 		for shock in self.shocks.values():
 			if shock['active'].get() and shock['timerFunc'](self.model.t):
-				newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
+				if shock['var'] is not None:
+					newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
 				
-				if shock['paramType'] is not None and shock['obj'] is not None:
-					begin = shock['paramType']
-					if shock['prim'] is not None: begin += '_'+shock['prim']
-					v=begin+'-'+shock['var']+'-'+shock['obj']
-				else: v=shock['var']
+					if shock['paramType'] is not None and shock['obj'] is not None:
+						begin = shock['paramType']
+						if shock['prim'] is not None: begin += '_'+shock['prim']
+						v=begin+'-'+shock['var']+'-'+shock['obj']
+					else: v=shock['var']
 					
-				self.model.updateVar(v, newval, updateGUI=True)
-				# print("Period",self.t,"shocking",shock['var'],"to",newval)
+					self.model.updateVar(v, newval, updateGUI=True)
+				else:
+					shock['valFunc'](self.model)
 	
 	@property
 	def number(self):
