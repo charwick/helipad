@@ -64,6 +64,7 @@ class Helipad():
 			'prices': 'Prices',
 			'inventory': 'Inventory',
 			'demand': 'Demand',
+			'shortage': 'Shortages',
 			'money': 'Money',
 			'ngdp': 'NGDP',
 			'utility': 'Utility'
@@ -174,21 +175,24 @@ class Helipad():
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
 		# Per-good series and reporters
-		if 'store' in self.primitives:
-			goods = self.goods.keys()
-			for good, g in self.goods.items():
-				if g.money: continue
+		goods = self.goods.keys()
+		for good, g in self.goods.items():
+			if g.money: continue
+			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'agent', good=good, stat='sum'))
+			if 'store' in self.primitives:
 				self.data.addReporter('inv-'+good, self.data.agentReporter('goods', 'store', good=good))
-				self.data.addReporter('demand-'+good, self.data.agentReporter('lastDemand', 'store', good=good))
+				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'store', good=good, stat='sum'))
+				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
 				if self.moneyGood is not None:
 					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
 					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
-			# Separate from the above to make sure actual values draw above target values
-			for good, g in self.goods.items():
-				if g.money: continue
+		# Separate from the above to make sure actual values draw above target values
+		for good, g in self.goods.items():
+			if g.money: continue
+			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
+			if 'store' in self.primitives:
 				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
-				if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 				
 		self.hasModel = True #Declare before instantiating agents
 		

@@ -18,10 +18,15 @@ class MoneyUser():
 			if params.endowment is None: self.goods[good] = 0
 			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
 			else: self.goods[good] = params.endowment
+		
+		self.currentDemand = {g:0 for g in model.goods.keys()}
+		self.currentShortage = {g:0 for g in model.goods.keys()}
 					
 		self.model.doHooks('moneyUserInit', [self, self.model])
 	
 	def step(self, stage):
+		self.currentDemand = {g:0 for g in self.model.goods.keys()}
+		self.currentShortage = {g:0 for g in self.model.goods.keys()}
 		self.model.doHooks('moneyUserStep', [self, self.model, stage])
 	
 	#Give amt1 of good 1, get amt2 of good 2
@@ -29,32 +34,49 @@ class MoneyUser():
 	def trade(self, partner, good1, amt1, good2, amt2):
 		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
 		
-		price = amt1 / amt2
+		if amt2 != 0: price = amt1 / amt2
 		
 		#Budget constraints. Hold price constant if hit		
 		if amt1 > self.goods[good1]:
-			print('Agent',self.unique_id,'doesn\'t have enough',good1,'to initiate that trade.')
+			self.currentShortage[good1] += amt1 - self.goods[good1]
 			amt1 = self.goods[good1]
-			amt2 = amt1 / price
+			if amt2 != 0: amt2 = amt1 / price
 		elif -amt1 > partner.goods[good1]:
-			print('Agent',partner.unique_id,'doesn\'t have enough',good2,'to execute that trade.')
+			partner.currentShortage[good1] += -amt1 - partner.goods[good1]
 			amt1 = -partner.goods[good1]
-			amt2 = amt1 / price
+			if amt2 != 0: amt2 = amt1 / price
 		if amt2 > partner.goods[good2]:
-			print('Agent',partner.unique_id,'doesn\'t have enough',good2,'to execute that trade.')
+			partner.currentShortage[good2] += amt1 - partner.goods[good2]
 			amt2 = partner.goods[good2]
-			amt1 = price * amt1
+			amt1 = price * amt2
 		elif -amt2 > self.goods[good2]:
-			print('Agent',self.unique_id,'doesn\'t have enough',good1,'to initiate that trade.')
+			self.currentShortage[good2] += -amt1 - self.goods[good2]
 			amt2 = -self.goods[good2]
-			amt1 = price * amt1
-		
+			amt1 = price * amt2
+
 		self.goods[good1] -= amt1
 		partner.goods[good1] += amt1
 		self.goods[good2] += amt2
 		partner.goods[good2] -= amt2
 		
+		#Record demand
+		if amt1 > 0: partner.currentDemand[good1] += amt1
+		else: self.currentDemand[good1] -= amt1
+		if amt2 > 0: self.currentDemand[good2] += amt2
+		else: partner.currentDemand[good2] -= amt2
+		
 		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
+	
+	#Price is per-unit
+	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
+	def buy(self, partner, good, q, p):
+		if self.model.moneyGood is None: raise RuntimeError('Buy function requires a monetary good to be specified')
+		qp = self.model.doHooks('buy', [self, partner, good, q, p])
+		if qp is not None: q, p = qp
+		
+		before = self.goods[good]
+		self.trade(partner, self.model.moneyGood, p*q, good, q)
+		return self.goods[good] - before
 	
 	#Unilateral
 	def pay(self, recipient, amount):
@@ -146,39 +168,12 @@ class Store(MoneyUser):
 		self.breed = breed
 		super().__init__(id, model)
 		
-		self.price = {}
-		self.lastDemand = {}		#Aggregate effective demand for each good, not including shortages
-		
-		for good in model.goods:
-			self.price[good] = 50
-			self.lastDemand[good] = 0
-		
+		self.price = {g:50 for g in model.goods}
 		self.model.doHooks('storeInit', [self, model])
 	
 	def step(self, stage):
 		super().step(stage)
 		self.model.doHooks('storeStep', [self, self.model, stage])
-	
-	#Returns the quantity actually sold
-	#Which is the same as quantity input, unless there's a shortage
-	def buyFrom(self, item, quantity):
-		self.model.doHooks('storePreBuy', [self, item, quantity])
-		
-		if quantity < 0: quantity = 0
-		if quantity > self.goods[item]:
-			q = self.goods[item]
-			self.lastShortage[item] += quantity - q
-			self.goods[item] = 0
-		
-		else:
-			self.goods[item] -= quantity
-			q = quantity
-		
-		self.lastDemand[item] += q
-		# self.goods[self.model.moneyGood] += self.price[item] * q
-		
-		self.model.doHooks('storePostBuy', [self, item, q])
-		return q
 	
 	def die(self):
 		self.model.agents['store'].remove(self)
@@ -200,14 +195,16 @@ class CentralBank(MoneyUser):
 	def step(self, stage):
 		
 		#Record macroeconomic vars at the end of the last stage
+		#Getting last demand has it lagged two periods…
+		#Break this into Helicopter model
 		if stage == self.model.stages:
 			self.ngdp = 0
-			for good in self.model.goods:
-				if 'store' in self.model.agents:
-					for s in self.model.agents['store']:
-						self.ngdp += s.price[good] * s.lastDemand[good]
-			if not self.ngdpAvg: self.ngdpAvg = self.ngdp
-			self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
+			if 'store' in self.model.agents:
+				for good in self.model.goods:
+					if good == self.model.moneyGood: continue
+					self.ngdp += self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good]
+				if not self.ngdpAvg: self.ngdpAvg = self.ngdp
+				self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
 		
 		self.model.doHooks('cbStep', [self, self.model, stage])
 	
@@ -267,10 +264,11 @@ class CentralBank(MoneyUser):
 		denom = 0
 		numer = 0
 		if not 'store' in self.model.agents: return None
-		for s in self.model.agents['store']:
-			volume = sum(list(s.lastDemand.values()))
-			numer += mean(array(list(s.price.values()))) * volume
-			denom += volume
-		
-		if denom==0: return 1
-		else: return numer/denom
+		return mean(array(list(self.model.agents['store'][0].price.values())))
+		# for s in self.model.agents['store']:
+		# 	volume = sum(list(s.lastDemand.values()))
+		# 	numer += mean(array(list(s.price.values()))) * volume
+		# 	denom += volume
+		#
+		# if denom==0: return 1
+		# else: return numer/denom
