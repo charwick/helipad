@@ -29,7 +29,7 @@ class Bank():
 		self.unique_id = id
 		self.model = model
 		
-		self.reserves = 0
+		self.goods = {model.moneyGood: 0} #Reserves
 		self.i = .1				#Per-period interest rate
 		self.targetRR = 0.25
 		self.lastWithdrawal = 0
@@ -55,7 +55,7 @@ class Bank():
 	#Any difference gets disbursed as interest on deposits
 	@property
 	def assets(self):
-		a = self.reserves
+		a = self.goods[self.model.moneyGood] #Reserves
 		for uid, l in self.credit.items():
 			a += l.owe
 		return a
@@ -66,13 +66,13 @@ class Bank():
 	
 	@property
 	def loans(self):
-		return self.assets - self.reserves
+		return self.assets - self.goods[self.model.moneyGood]
 	
 	@property
 	def reserveRatio(self):
 		l = self.liabilities
 		if l == 0: return 1
-		else: return self.reserves / l
+		else: return self.goods[self.model.moneyGood] / l
 		
 	@property
 	def realInterest(self):
@@ -84,16 +84,16 @@ class Bank():
 	
 	def deposit(self, customer, amt):
 		if amt == 0: return 0
-		if -amt > self.reserves: amt = 0.1 - self.reserves
-		# print('Reserves are $', self.reserves)
-		# if self.reserves > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.reserves*100,"% of reserves")
+		if -amt > self.goods[self.model.moneyGood]: amt = 0.1 - self.goods[self.model.moneyGood]
+		# print('Reserves are $', self.goods[self.model.moneyGood])
+		# if self.goods[self.model.moneyGood] > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.goods[self.model.moneyGood]*100,"% of reserves")
 		
 		if amt > customer.goods[self.model.moneyGood]: amt = customer.goods[self.model.moneyGood]
 		customer.goods[self.model.moneyGood] -= amt	#Charge customer
-		self.reserves += amt						#Deposit cash
+		self.goods[self.model.moneyGood] += amt		#Deposit cash
 		self.accounts[customer.unique_id] += amt	#Credit account
 		
-		# print('Now reserves are $',self.reserves)
+		# print('Now reserves are $',self.goods[self.model.moneyGood])
 		return amt
 	
 	def withdraw(self, customer, amt):
@@ -178,11 +178,11 @@ class Bank():
 		#Adjust in proportion to the rate of reserve change
 		#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
 		if self.model.t > 2:
-			deltaReserves = (self.lastReserves - self.reserves)/self.model.cb.P
+			deltaReserves = (self.lastReserves - self.goods[self.model.moneyGood])/self.model.cb.P
 			targeti *= (1 + deltaReserves/(20 ** self.model.param('pSmooth')))
 		self.i = (self.i * 24 + targeti)/25										#Interest rate stickiness
 	
-		self.lastReserves = self.reserves
+		self.lastReserves = self.goods[self.model.moneyGood]
 			
 		#Upper and lower interest rate bounds
 		if self.i > 1 + self.inflation: self.i = 1 + self.inflation				#interest rate cap at 100%
@@ -377,6 +377,9 @@ for r in combinations(heli.nonMoneyGoods.keys(), 2):
 	heli.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
 heli.defaultPlots.extend(['rbal', 'ratios'])
 
+heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
+heli.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
+heli.data.addReporter('P', lambda model: model.cb.P)
 heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
 heli.addSeries('money', 'storeCash', 'Store Cash', '777777')
 heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
@@ -404,7 +407,7 @@ def modelPreSetup(model):
 		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
 		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
 		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
-		model.data.addReporter('M2', model.data.cbReporter('M2'))
+		model.data.addReporter('M2', lambda model: model.cb.M2)
 
 		model.addSeries('money', 'defaults', 'Defaults', 'CC0000')
 		model.addSeries('money', 'M2', 'Money Supply', '000000')
@@ -593,19 +596,97 @@ heli.addHook('storeStep', storeStep)
 # Central Bank
 #
 
-def cbInit(cb, model):
-	cb.ngdpTarget = False if not model.param('ngdpTarget') else 10000
-heli.addHook('cbInit', cbInit)
-
-def cbStep(cb, model, stage):
-	#Set macroeconomic targets at the end of the last stage
-	if stage == model.stages:
+class CentralBank(MoneyUser):
+	ngdpAvg = 0
+	inflation = 0		#Target. so 0.005 would be 0.5%
+	ngdp = 0
+	
+	def __init__(self, id, model):
+		super().__init__(id, model)
+		self.unique_id = id
+		self.model = model
+		
+		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
+	
+	def step(self):
+		
+		#Record macroeconomic vars at the end of the last stage
+		#Getting demand has it lagged one period…
+		self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
+		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
+		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
+		
+		#Set macroeconomic targets
 		expand = 0
-		if cb.inflation: expand = M0(model) * cb.inflation
-		if cb.ngdpTarget: expand = cb.ngdpTarget - cb.ngdpAvg
-		if model.param('agents_bank') > 0: expand *= model.agents['bank'][0].reserveRatio
-		if expand != 0: cb.expand(expand)
-heli.addHook('cbStep', cbStep)
+		if self.inflation: expand = M0(model) * self.inflation
+		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
+		if self.model.param('agents_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
+		if expand != 0: self.expand(expand)
+			
+	def expand(self, amount):
+		
+		#Deposit with each bank in proportion to their liabilities
+		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0:
+			self.goods[self.model.moneyGood] += amount
+			denom = 0
+			for b in self.model.agents['bank']:
+				denom += b.liabilities
+			for b in self.model.agents['bank']:
+				r = b.goods[self.model.moneyGood]
+				a = amount * b.liabilities/denom
+				if -a > r: a = -r + 1
+				b.deposit(self, a)
+				
+		elif self.model.param('dist') == 'lump':
+			amt = amount/self.model.param('agents_agent')
+			for a in self.model.agents['agent']:
+				a.goods[self.model.moneyGood] += amt
+		else:
+			M0 = self.M0
+			for a in self.model.allagents.values():
+				a.goods[self.model.moneyGood] += a.goods[self.model.moneyGood]/M0 * amount
+				
+	@property
+	def M0(self):
+		return self.model.data.agentReporter('goods', 'all', good=self.model.moneyGood, stat='sum')(self.model)
+	
+	@M0.setter
+	def M0(self, value):
+		self.expand(value - self.M0)
+	
+	@property
+	def M2(self):
+		if 'bank' not in self.model.primitives or self.model.param('agents_bank') == 0: return self.M0
+	
+		total = self.bank.goods[self.model.moneyGood]
+		for a in self.model.agents['agent']: total += a.balance
+		for s in self.model.agents['store']: total += s.balance
+		return total
+	
+	#Price level
+	#Average good prices at each store, then average all of those together weighted by the store's sale volume
+	#Figure out whether to break this out or not
+	@property
+	def P(self):
+		denom = 0
+		numer = 0
+		if not 'store' in self.model.agents: return None
+		return mean(array(list(self.model.agents['store'][0].price.values())))
+		# for s in self.model.agents['store']:
+		# 	volume = sum(list(s.lastDemand.values()))
+		# 	numer += mean(array(list(s.price.values()))) * volume
+		# 	denom += volume
+		#
+		# if denom==0: return 1
+		# else: return numer/denom
+
+def modelPostSetup(model):
+	model.cb = CentralBank(0, model)
+heli.addHook('modelPostSetup', modelPostSetup)
+
+def modelPostStep(model):
+	model.cb.step()	#Step the central bank last
+heli.addHook('modelPostStep', modelPostStep)
 
 #========
 # SHOCKS

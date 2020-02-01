@@ -17,7 +17,6 @@ heli.addBreed('urban', 'CC0000')
 heli.addBreed('rural', '00CC00')
 heli.addGood('consumption', '000000')
 
-heli.param('M0', False) #Non-monetary economy
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
 heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'low':0, 'high': 0.25, 'step': 0.01})

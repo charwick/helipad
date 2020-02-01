@@ -131,6 +131,8 @@ for r in combinations(heli.nonMoneyGoods.keys(), 2):
 heli.defaultPlots.extend(['rbal', 'ratios'])
 
 #Misc plots
+heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
+heli.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
 heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
 heli.addSeries('money', 'storeCash', 'Store Cash', '777777')
 heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
@@ -260,18 +262,57 @@ heli.addHook('storeStep', storeStep)
 # Central Bank
 #
 
-def cbInit(cb, model):
-	cb.ngdpTarget = False if not model.param('ngdpTarget') else 10000
-heli.addHook('cbInit', cbInit)
-
-def cbStep(cb, model, stage):
-	#Set macroeconomic targets at the end of the last stage
-	if stage == model.stages:
+class CentralBank(MoneyUser):
+	ngdpAvg = 0
+	inflation = 0		#Target. so 0.005 would be 0.5%
+	ngdp = 0
+	
+	def __init__(self, id, model):
+		super().__init__(id, model)
+		self.unique_id = id
+		self.model = model
+		
+		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
+	
+	def step(self):
+		
+		#Record macroeconomic vars at the end of the last stage
+		#Getting demand has it lagged one period…
+		self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
+		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
+		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
+		
+		#Set macroeconomic targets
 		expand = 0
-		if cb.inflation: expand = M0(model) * cb.inflation
-		if cb.ngdpTarget: expand = cb.ngdpTarget - cb.ngdpAvg
-		if expand != 0: cb.expand(expand)
-heli.addHook('cbStep', cbStep)
+		if self.inflation: expand = M0(model) * self.inflation
+		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
+		if expand != 0: self.expand(expand)
+			
+	def expand(self, amount):				
+		if self.model.param('dist') == 'lump':
+			amt = amount/self.model.param('agents_agent')
+			for a in self.model.agents['agent']:
+				a.goods[self.model.moneyGood] += amt
+		else:
+			M0 = self.M0
+			for a in self.model.allagents.values():
+				a.goods[self.model.moneyGood] += a.goods[self.model.moneyGood]/M0 * amount
+				
+	@property
+	def M0(self):
+		return self.model.data.agentReporter('goods', 'all', good=self.model.moneyGood, stat='sum')(self.model)
+	
+	@M0.setter
+	def M0(self, value):
+		self.expand(value - self.M0)
+
+def modelPostSetup(model):
+	model.cb = CentralBank(0, model)
+heli.addHook('modelPostSetup', modelPostSetup)
+
+def modelPostStep(model):
+	model.cb.step()	#Step the central bank last
+heli.addHook('modelPostStep', modelPostStep)
 
 #========
 # SHOCKS

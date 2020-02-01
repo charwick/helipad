@@ -14,7 +14,7 @@ class Data():
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
-	#or one of: 'model', 'agent', 'store', or 'cb'
+	#or one of: 'model', 'agent', or 'store'
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
 		
@@ -67,11 +67,6 @@ class Data():
 			return getattr(model, key)
 		return reporter
 	
-	def cbReporter(self, key):
-		def reporter(model):
-			return getattr(model.cb, key)
-		return reporter
-	
 	def agentReporter(self, key, prim, breed=None, good=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
 			subplots = {}
@@ -81,7 +76,7 @@ class Data():
 		
 		def reporter(model):
 			u = []
-			array = model.agents[prim]
+			array = model.allagents.values() if prim=='all' else model.agents[prim]
 			
 			for agent in array:
 				if breed is not None and agent.breed != breed: continue
@@ -91,7 +86,7 @@ class Data():
 			if not u: return 0
 			elif stat=='sum':	return sum(u)
 			elif stat=='mean':	return mean(u)
-			elif stat=='gmean':	return gmean(u)
+			elif stat=='gmean':	return exp(log(u).sum()/len(u))
 			elif stat=='std':	return std(u)
 			elif 'percentile-' in stat:
 				pctile = int(stat.split('-')[1])
@@ -126,11 +121,3 @@ class Data():
 			i += 1
 			file = filename+'-'+str(i)+'.csv'
 		self.dataframe.to_csv(file)
-
-
-# HELPER FUNCTIONS
-
-#Geometric mean
-def gmean(iterable):
-    a = log(iterable)
-    return exp(a.sum()/len(a))

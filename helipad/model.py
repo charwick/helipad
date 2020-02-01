@@ -73,6 +73,7 @@ class Helipad():
 		self.defaultPlots = ['prices', 'inventory']
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
+		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
 		self.primitives[name] = {
 			'class': class_,
@@ -161,12 +162,8 @@ class Helipad():
 			self.data.addReporter(n, pReporter(n))
 
 		if (self.moneyGood is not None):
-			self.data.addReporter('ngdp', self.data.cbReporter('ngdp'))
-			self.data.addReporter('M0', self.data.cbReporter('M0'))
-			self.data.addReporter('P', self.data.cbReporter('P'))
-
+			self.data.addReporter('M0', self.data.agentReporter('goods', 'all', good=self.moneyGood, stat='sum'))
 			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
-			self.addSeries('ngdp', 'ngdp', 'NGDP', '000000')
 		
 		#Per-breed series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
@@ -199,8 +196,6 @@ class Helipad():
 		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
-		if (self.moneyGood is not None):
-			self.cb = agent.CentralBank(0, self)
 		
 		self.doHooks('modelPostSetup', [self])
 			
@@ -433,7 +428,6 @@ class Helipad():
 			for t in self.agents.values():
 				for a in t:
 					a.step(self.stage)
-			if hasattr(self, 'cb'): self.cb.step(self.stage)	#Step the central bank last
 		
 		self.data.collect(self)
 		self.doHooks('modelPostStep', [self])
@@ -469,7 +463,7 @@ class Helipad():
 			if 'callback' in paramDict[var][1] and callable(paramDict[var][1]['callback']):
 				paramDict[var][1]['callback'](self, var, item, newval)
 		else:
-			if var in self.params and var != 'M0':
+			if var in self.params:
 				self.param(var, newval)
 			if 'callback' in self.params[var][1] and callable(self.params[var][1]['callback']):
 				self.params[var][1]['callback'](self, var, newval)
@@ -482,12 +476,7 @@ class Helipad():
 				agents[a.unique_id] = a
 		return agents
 	
-	# CALLBACKS FOR DEFAULT PARAMETERS
-	
-	def updateM0(self, model, var, val):
-		if self.hasModel and var == 'M0':
-			self.cb.M0 = val
-	
+	#CALLBACK FOR DEFAULT PARAMETERS
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the other callbacks, where it is necessary
 	def nUpdater(self, model, prim, val):
 		if not self.hasModel: return
