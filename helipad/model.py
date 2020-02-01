@@ -412,6 +412,14 @@ class Helipad():
 	def step(self):
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
+		
+		#Reset per-period variables
+		#Have to do this all at once at the beginning of the period, not when each agent steps
+		for p in self.agents.values():
+			for a in p:
+				a.currentDemand = {g:0 for g in self.goods.keys()}
+				a.currentShortage = {g:0 for g in self.goods.keys()}
+		
 		self.shocks.do()
 		
 		#Shuffle or sort agents as necessary

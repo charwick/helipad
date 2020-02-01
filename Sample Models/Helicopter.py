@@ -123,9 +123,7 @@ def ratioReporter(item1, item2):
 heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
 heli.addSeries('ratios', lambda: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 
-goods = list(heli.goods.keys())
-goods.remove(heli.moneyGood)
-for r in combinations(goods, 2):
+for r in combinations(heli.nonMoneyGoods.keys(), 2):
 	heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
 	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
 	c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)

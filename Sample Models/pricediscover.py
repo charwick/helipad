@@ -13,8 +13,8 @@ heli = Helipad()
 heli.order = 'random'
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5})
-heli.addGood('shmoo','119900', lambda breed: random.randint(1,1000))
-heli.addGood('soma', '990000', lambda breed: random.randint(1,floor(exp(heli.param('ratio'))*1000)))
+heli.addGood('shmoo','11CC00', lambda breed: random.randint(1,1000))
+heli.addGood('soma', 'CC0000', lambda breed: random.randint(1,floor(exp(heli.param('ratio'))*1000)))
 
 #===============
 # BEHAVIOR
@@ -59,16 +59,11 @@ def agentStep(agent, model, stage):
 	agent.utils = agent.utility.consume({'soma': agent.goods['soma'], 'shmoo': agent.goods['shmoo']})
 	partner.utils = partner.utility.consume({'soma': partner.goods['soma'], 'shmoo': partner.goods['shmoo']})
 	
-	agent.somaTrade = abs(somaDemand)
-	agent.shmooTrade = abs(shmooDemand)
-	partner.somaTrade = 0 #Don't double count
-	partner.shmooTrade = 0
-	
 heli.addHook('agentStep', agentStep)
 
 #Stop the model when we're basically equilibrated
 def modelStep(model, stage):
-	if model.t > 1 and model.data.getLast('shmooTrade') < 20 and model.data.getLast('somaTrade') < 20:
+	if model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20:
 		model.gui.terminate()
 heli.addHook('modelStep', modelStep)
 
@@ -76,13 +71,10 @@ heli.addHook('modelStep', modelStep)
 # CONFIGURATION
 #===============
 
-heli.data.addReporter('price', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
-heli.data.addReporter('somaTrade', heli.data.agentReporter('somaTrade', 'agent', stat='sum'))
-heli.data.addReporter('shmooTrade', heli.data.agentReporter('shmooTrade', 'agent', stat='sum'))
-heli.addSeries('prices', 'price', 'Soma/Shmoo Price', '119900')
-heli.addSeries('demand', 'shmooTrade', 'Shmoo Trade', '990000')
-heli.addSeries('demand', 'somaTrade', 'Soma Trade', '000099')
+heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
+heli.addPlot('price', 'Price', logscale=True)
+heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '119900')
 
-heli.defaultPlots = ['prices', 'demand', 'utility']
+heli.defaultPlots = ['price', 'demand', 'utility']
 
 heli.launchGUI()

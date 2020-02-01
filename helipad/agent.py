@@ -25,8 +25,6 @@ class MoneyUser():
 		self.model.doHooks('moneyUserInit', [self, self.model])
 	
 	def step(self, stage):
-		self.currentDemand = {g:0 for g in self.model.goods.keys()}
-		self.currentShortage = {g:0 for g in self.model.goods.keys()}
 		self.model.doHooks('moneyUserStep', [self, self.model, stage])
 	
 	#Give amt1 of good 1, get amt2 of good 2
@@ -103,7 +101,6 @@ class MoneyUser():
 		
 		return bal
 		
-#Customers
 class Agent(MoneyUser):
 	def __init__(self, breed, id, model):
 		self.breed = breed
