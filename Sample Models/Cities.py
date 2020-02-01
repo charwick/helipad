@@ -113,7 +113,7 @@ def agentStep(agent, model, stage):
 		if rand < model.param('deathrate'): agent.die()
 		elif agent.wealth > model.param('breedThresh') * (randn if agent.breed=='rural' else agent.H/4):
 			# print('randn was',randn,'Reproducing with wealth',agent.wealth)
-			agent.reproduce({'H': (0.5, 'log')})
+			agent.reproduce(mutate={'H': (0.5, 'log')})
 			agent.wealth -= agent.wealth/2 + 1 #-= breedThresh #Fixed cost
 			model.births[agent.breed] += 1
 	

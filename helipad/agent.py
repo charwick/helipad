@@ -117,29 +117,31 @@ class Agent(MoneyUser):
 		self.model.doHooks('agentStep', [self, self.model, stage])
 		self.age += 1
 	
-	def reproduce(self, funcs={}):
+	def reproduce(self, inherit=[], mutate={}):
 		maxid = 0
 		for a in self.model.agents['agent']:
 			if a.unique_id > maxid:
 				maxid = a.unique_id
 		newagent = Agent(self.breed, maxid+1, self.model)
 		
-		#Copy all writeable parameters and update those specified in the funcs argument
-		params = [a for a in dir(self) if not (a.startswith('__') or callable(getattr(self,a)))]
-		for param in params:
-			if param == 'utility': continue #Do something less hackish here to make sure objects don't get copied...
-			val = getattr(self, param)
-			if param in funcs:
-				if (callable(funcs[param])): newval = funcs[param](val)
-				else:
-					if isinstance(funcs[param], tuple): funcs[param], scale = funcs[param]
-					else: scale = 'linear'
-						
-					if scale=='log': newval = random.lognormal(log(val), funcs[param])
-					else: newval = random.normal(val, funcs[param])
-			else: newval = val
-			try: setattr(newagent, param, newval)
-			except: pass	#skip @properties
+		#Copy inherited variables
+		for a in inherit + list(mutate.keys()):
+			if hasattr(self, a):
+				setattr(newagent, a, getattr(self, a))
+		
+		#Mutate variables
+		#Values in the mutate dict can be either a function (which takes a value and returns a value),
+		#  a number (a std dev by which to mutate the value), or a tuple, the first element of which
+		#  is a std dev and the second of which is either 'log' or 'linear'
+		for k,v in mutate.items():
+			if callable(v): newval = v(getattr(newagent, k))
+			else:
+				if isinstance(v, tuple): v, scale = v
+				else: scale = 'linear'
+					
+				if scale=='log': newval = random.lognormal(log(getattr(newagent, k)), v)
+				else: newval = random.normal(getattr(newagent, k), v)
+			setattr(newagent, k, newval)
 		
 		newagent.unique_id = maxid+1
 		newagent.parent = self
