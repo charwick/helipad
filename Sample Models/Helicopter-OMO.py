@@ -522,13 +522,8 @@ def storeInit(store, model):
 	store.wage = 0
 	store.cashDemand = 0
 	
-	sm=0
-	for g in model.goods:
-		if g==model.moneyGood: continue
-		sm += 1/sqrt(model.goodParam('prod',g))
-		
-	for good in model.goods:
-		if good==model.moneyGood: continue
+	sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods])		
+	for good in model.nonMoneyGoods:
 		store.portion[good] = 1/(len(model.goods)-1)
 		store.invTarget[good] = 1
 		
@@ -552,7 +547,7 @@ def storeStep(store, model, stage):
 	if store.wage * N > store.balance: store.wage = store.balance / N 	#Budget constraint
 	
 	#Hire labor
-	labor, tPrice = 0, 0
+	labor = 0
 	for a in model.agents['agent']:
 		#Pay agents / wage shocks
 		if store.wage < 0: store.wage = 0
@@ -561,13 +556,9 @@ def storeStep(store, model, stage):
 		store.pay(a, wage)
 		labor += 1
 				
-	for good in model.goods:
-		if good == model.moneyGood: continue
-		tPrice += store.price[good] #Sum of prices. This is a separate loop because we need it in order to do this calculation
-	
+	tPrice = sum([store.price[good] for good in model.nonMoneyGoods])	
 	avg, stdev = {},{} #Hang onto these for use with credit calculations
-	for i in model.goods:
-		if i == model.moneyGood: continue
+	for i in model.nonMoneyGoods:
 
 		#Keep track of typical demand
 		#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods

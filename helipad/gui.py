@@ -73,7 +73,6 @@ class GUI():
 					bpf_super = bpf
 				i=0
 				for name, b in itemDict.items():
-					if hasattr(b, 'money') and b.money: continue
 					bname = obj+'-'+k+'-'+name
 				
 					if var[1]['type'] == 'menu':
@@ -97,7 +96,7 @@ class GUI():
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
 				
-		buildSlider(model.goods, model.goodParams, model.goodParam, 'good')
+		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, 'good')
 		fnum += 1
 		for p,v in model.primitives.items():
 			if v['breedParams'] != {}:

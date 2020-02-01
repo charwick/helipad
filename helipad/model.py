@@ -176,8 +176,7 @@ class Helipad():
 	
 		# Per-good series and reporters
 		goods = self.goods.keys()
-		for good, g in self.goods.items():
-			if g.money: continue
+		for good, g in self.nonMoneyGoods.items():
 			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'agent', good=good, stat='sum'))
 			if 'store' in self.primitives:
 				self.data.addReporter('inv-'+good, self.data.agentReporter('goods', 'store', good=good))
@@ -188,8 +187,7 @@ class Helipad():
 					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
 		# Separate from the above to make sure actual values draw above target values
-		for good, g in self.goods.items():
-			if g.money: continue
+		for good, g in self.nonMoneyGoods.items():
 			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 			if 'store' in self.primitives:
 				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
@@ -385,6 +383,14 @@ class Helipad():
 			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
 			self.moneyGood = name
 		self.addItem('good', name, color, endowment=endowment, money=money)
+	
+	@property
+	def nonMoneyGoods(self):
+		g={}
+		for k,v in self.goods.items():
+			if v.money: continue
+			g[k] = v
+		return g
 			
 	def addHook(self, place, func):
 		if not place in self.hooks: self.hooks[place] = []
