@@ -160,21 +160,3 @@ class Agent(MoneyUser):
 	def debt(self):
 		if not 'bank' in self.model.primitives or self.model.param('agents_bank') == 0: return 0
 		return self.bank.credit[self.unique_id].owe
-
-class Store(MoneyUser):
-	
-	def __init__(self, breed, id, model):
-		self.breed = breed
-		super().__init__(id, model)
-		
-		self.price = {g:50 for g in model.goods}
-		self.model.doHooks('storeInit', [self, model])
-	
-	def step(self, stage):
-		super().step(stage)
-		self.model.doHooks('storeStep', [self, self.model, stage])
-	
-	def die(self):
-		self.model.agents['store'].remove(self)
-		self.model.doHooks('storeDie', [self])
-		super().die()

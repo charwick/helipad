@@ -5,10 +5,7 @@
 # -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
 # -Code is refactored to make it simple to add agent classes
 # -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
-#
-#TODO: Use multiprocessing to run the graphing in a different process
 
-from collections import namedtuple
 from itertools import combinations
 from colour import Color
 import pandas
@@ -17,6 +14,79 @@ from model import Helipad
 from math import sqrt
 from agent import * #Necessary to register primitives
 heli = Helipad()
+
+#===============
+# STORE CLASS
+# Has to come before adding the primitive
+#===============
+
+class Store(MoneyUser):
+	def __init__(self, breed, id, model):
+		self.breed = breed
+		super().__init__(id, model)
+		
+		self.price = {g:50 for g in model.goods}
+		self.invTarget = {}		#Inventory targets in terms of absolute quantity
+		self.portion = {}		#Allocation of capital to the various goods
+		self.wage = 0
+		self.cashDemand = 0
+	
+		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods])	
+		for good in model.nonMoneyGoods:
+			self.portion[good] = 1/(len(model.goods)-1)
+			self.invTarget[good] = 1
+		
+			#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
+			self.price[good] = M0/model.param('agents_agent') * sm/(sqrt(model.goodParam('prod',good))*(len(model.goods)-1+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
+		
+	
+	def step(self, stage):
+		super().step(stage)
+		N = self.model.param('agents_agent')
+		
+		#Calculate wages
+		self.cashDemand = N * self.wage #Hold enough cash for one period's disbursements
+		newwage = (self.balance - self.cashDemand) / N
+		if newwage < 1: newwage = 1
+		self.wage = (self.wage * self.model.param('wStick') + newwage)/(1 + self.model.param('wStick'))
+		if self.wage * N > self.balance: self.wage = self.balance / N 	#Budget constraint
+	
+		#Hire labor
+		labor = 0
+		for a in self.model.agents['agent']:
+			#Pay agents / wage shocks
+			if self.wage < 0: self.wage = 0
+			wage = random.normal(self.wage, self.wage/2 + 0.1)	#Can't have zero stdev
+			wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
+			self.pay(a, wage)
+			labor += 1
+	
+		tPrice = sum([self.price[good] for good in self.model.nonMoneyGoods])		
+		avg, stdev = {},{} #Hang onto these for use with credit calculations
+		for i in self.model.nonMoneyGoods:
+
+			#Keep track of typical demand
+			#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods
+			history = pandas.Series(self.model.data.getLast('demand-'+i, 50)) + pandas.Series(self.model.data.getLast('shortage-'+i, 50))
+			avg[i], stdev[i] = history.mean(), history.std()
+			itt = (1 if isnan(avg[i]) else avg[i]) + 1.5 * (1 if isnan(stdev[i]) else stdev[i])
+			self.invTarget[i] = (self.invTarget[i] + itt)/2 #Smooth it a bit
+		
+			#Set prices
+			#Change in the direction of hitting the inventory target
+			# self.price[i] += log(self.invTarget[i] / (self.inventory[i][0] + self.lastShortage[i])) #Jim's pricing rule?
+			self.price[i] += (self.invTarget[i] - self.goods[i] + self.model.data.getLast('shortage-'+i))/100 #/150
+		
+			#Adjust in proportion to the rate of inventory change
+			#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
+			lasti = self.model.data.getLast('inv-'+i,2)[0] if self.model.t > 1 else 0
+			deltaInv = lasti - self.goods[i]
+			self.price[i] *= (1 + deltaInv/(50 ** self.model.param('pSmooth')))
+			if self.price[i] < 0: self.price[i] = 1
+		
+			#Produce stuff
+			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
+			self.goods[i] = self.goods[i] + self.portion[i] * labor * self.model.goodParam('prod',i)
 
 #===============
 # CONFIGURATION
@@ -188,76 +258,7 @@ def realBalances(agent):
 	return agent.balance/agent.store.price[agent.item]
 	# return agent.balance/agent.model.cb.P
 Agent.realBalances = property(realBalances)
-
-#
-# Store
-#
-
-def storeInit(store, model):
-	store.invTarget = {}		#Inventory targets in terms of absolute quantity
-	store.portion = {}			#Allocation of capital to the various goods
-	store.wage = 0
-	store.cashDemand = 0
-	
-	sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods])	
-	for good in model.nonMoneyGoods:
-		store.portion[good] = 1/(len(model.goods)-1)
-		store.invTarget[good] = 1
-		
-		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-		store.price[good] = M0/model.param('agents_agent') * sm/(sqrt(model.goodParam('prod',good))*(len(model.goods)-1+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
-
-heli.addHook('storeInit', storeInit)
-
-def storeStep(store, model, stage):
-	N = model.param('agents_agent')
-		
-	#Calculate wages
-	store.cashDemand = N * store.wage #Hold enough cash for one period's disbursements
-	newwage = (store.balance - store.cashDemand) / N
-	if newwage < 1: newwage = 1
-	store.wage = (store.wage * model.param('wStick') + newwage)/(1 + model.param('wStick'))
-	if store.wage * N > store.balance: store.wage = store.balance / N 	#Budget constraint
-	
-	#Hire labor
-	labor = 0
-	for a in model.agents['agent']:
-		#Pay agents / wage shocks
-		if store.wage < 0: store.wage = 0
-		wage = random.normal(store.wage, store.wage/2 + 0.1)	#Can't have zero stdev
-		wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
-		store.pay(a, wage)
-		labor += 1
-	
-	tPrice = sum([store.price[good] for good in model.nonMoneyGoods])		
-	avg, stdev = {},{} #Hang onto these for use with credit calculations
-	for i in model.nonMoneyGoods:
-
-		#Keep track of typical demand
-		#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods
-		history = pandas.Series(model.data.getLast('demand-'+i, 50)) + pandas.Series(model.data.getLast('shortage-'+i, 50))
-		avg[i], stdev[i] = history.mean(), history.std()
-		itt = (1 if isnan(avg[i]) else avg[i]) + 1.5 * (1 if isnan(stdev[i]) else stdev[i])
-		store.invTarget[i] = (store.invTarget[i] + itt)/2 #Smooth it a bit
-		
-		#Set prices
-		#Change in the direction of hitting the inventory target
-		# store.price[i] += log(store.invTarget[i] / (store.inventory[i][0] + store.lastShortage[i])) #Jim's pricing rule?
-		store.price[i] += (store.invTarget[i] - store.goods[i] + model.data.getLast('shortage-'+i))/100 #/150
-		
-		#Adjust in proportion to the rate of inventory change
-		#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
-		lasti = model.data.getLast('inv-'+i,2)[0] if model.t > 1 else 0
-		deltaInv = lasti - store.goods[i]
-		store.price[i] *= (1 + deltaInv/(50 ** model.param('pSmooth')))
-		if store.price[i] < 0: store.price[i] = 1
-		
-		#Produce stuff
-		store.portion[i] = (model.param('kImmob') * store.portion[i] + store.price[i]/tPrice) / (model.param('kImmob') + 1)	#Calculate capital allocation
-		store.goods[i] = store.goods[i] + store.portion[i] * labor * model.goodParam('prod',i)
 			
-heli.addHook('storeStep', storeStep)
-
 #
 # Central Bank
 #
