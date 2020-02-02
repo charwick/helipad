@@ -412,7 +412,7 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
-heli.addPlot('shortage', 'Shortages', 3)
+heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
@@ -437,6 +437,11 @@ for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.addSeries('capital', 'portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
 	# heli.addSeries('Wage', 'expWage', 'Expected Wage', '999999')
 
+#Do this one separately so it draws on top
+for good, g in heli.nonMoneyGoods.items():
+	heli.data.addReporter('inv-'+good, heli.data.agentReporter('goods', 'store', good=good))
+	heli.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
+
 #Price ratio plots
 def ratioReporter(item1, item2):
 	def reporter(model):
@@ -450,7 +455,7 @@ for r in combinations(heli.nonMoneyGoods.keys(), 2):
 	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
 	c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
 	heli.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
-heli.defaultPlots.extend(['rbal', 'ratios'])
+heli.defaultPlots.extend(['rbal', 'ratios', 'inventory'])
 
 heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
 heli.addSeries('ngdp', 'ngdp', 'NGDP', '000000')

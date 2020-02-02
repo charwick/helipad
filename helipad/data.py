@@ -14,7 +14,7 @@ class Data():
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
-	#or one of: 'model', 'agent', or 'store'
+	#or a string, either 'model' or the name of a primitive.
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
 		

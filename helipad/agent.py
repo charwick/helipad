@@ -1,13 +1,12 @@
 # ==========
-# Logic for the agents, store, and bank
+# Basic extensible agent class
 # Do not run this file; import model.py and run from your file.
 # ==========
 
 from random import choice
 from numpy import *
-from utility import *
 
-#Everybody who uses money, in this case all agents including the store and bank
+#Everybody who uses money, a base class to build upon
 class MoneyUser():
 	def __init__(self, id, model):
 		self.unique_id = int(id)

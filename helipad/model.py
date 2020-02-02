@@ -64,7 +64,6 @@ class Helipad():
 		self.plots = {}
 		plotList = {
 			'prices': 'Prices',
-			'inventory': 'Inventory',
 			'demand': 'Demand',
 			'shortage': 'Shortages',
 			'money': 'Money',
@@ -72,7 +71,7 @@ class Helipad():
 			'utility': 'Utility'
 		}
 		for name, label in plotList.items(): self.addPlot(name, label)
-		self.defaultPlots = ['prices', 'inventory']
+		self.defaultPlots = ['prices']
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
@@ -176,21 +175,14 @@ class Helipad():
 		# Per-good series and reporters
 		goods = self.goods.keys()
 		for good, g in self.nonMoneyGoods.items():
-			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'agent', good=good, stat='sum'))
-			if 'store' in self.primitives:
-				self.data.addReporter('inv-'+good, self.data.agentReporter('goods', 'store', good=good))
-				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'store', good=good, stat='sum'))
-				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
-				if self.moneyGood is not None:
-					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
-					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
+			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
+			self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
+			self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
+			self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
+			if 'store' in self.primitives and self.moneyGood is not None:
+				self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
+				self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
-		# Separate from the above to make sure actual values draw above target values
-		for good, g in self.nonMoneyGoods.items():
-			if 'demand' in self.plots: self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
-			if 'store' in self.primitives:
-				if 'inventory' in self.plots: self.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
-				
 		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
