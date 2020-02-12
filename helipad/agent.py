@@ -7,7 +7,7 @@ from random import choice
 from numpy import *
 
 #Everybody who uses money, a base class to build upon
-class MoneyUser():
+class baseAgent():
 	def __init__(self, id, model):
 		self.unique_id = int(id)
 		self.model = model
@@ -21,10 +21,10 @@ class MoneyUser():
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
 					
-		self.model.doHooks('moneyUserInit', [self, self.model])
+		self.model.doHooks('baseAgentInit', [self, self.model])
 	
 	def step(self, stage):
-		self.model.doHooks('moneyUserStep', [self, self.model, stage])
+		self.model.doHooks('baseAgentStep', [self, self.model, stage])
 	
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
@@ -88,7 +88,7 @@ class MoneyUser():
 			self.goods[self.model.moneyGood] -= amount
 	
 	def die(self):
-		self.model.doHooks('moneyUserDie', [self])
+		self.model.doHooks('baseAgentDie', [self])
 		self.dead = True
 	
 	@property
@@ -100,7 +100,7 @@ class MoneyUser():
 		
 		return bal
 		
-class Agent(MoneyUser):
+class Agent(baseAgent):
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		super().__init__(id, model)

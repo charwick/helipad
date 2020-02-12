@@ -6,7 +6,7 @@
 from tkinter import *
 from colour import Color
 from itertools import combinations
-from numpy import ndarray, log10
+from numpy import ndarray, asanyarray, log10
 from math import ceil
 # import time #For performance testing
 import importlib, string, random as rand2

@@ -20,7 +20,7 @@ heli = Helipad()
 # Has to come before adding the primitive
 #===============
 
-class Store(MoneyUser):
+class Store(baseAgent):
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		super().__init__(id, model)
@@ -269,7 +269,7 @@ Agent.realBalances = property(realBalances)
 # Central Bank
 #
 
-class CentralBank(MoneyUser):
+class CentralBank(baseAgent):
 	ngdpAvg = 0
 	inflation = 0		#Target. so 0.005 would be 0.5%
 	ngdp = 0

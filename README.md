@@ -35,5 +35,6 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* 0.3: Improvements to goods API
 * 0.2: Abstraction of agent-type primitives
 * 0.1: Initial release

@@ -21,7 +21,7 @@ heli = Helipad()
 # Have to come before adding the primitives
 #===============
 
-class Store(MoneyUser):
+class Store(baseAgent):
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		super().__init__(id, model)
@@ -506,11 +506,11 @@ heli.addHook('modelPreSetup', modelPreSetup)
 from utility import CES
 
 #Choose a bank if necessary
-def moneyUserInit(agent, model):
+def baseAgentInit(agent, model):
 	if model.param('agents_bank') > 0:
 		agent.bank = model.agents['bank'][0]
 		agent.bank.setupAccount(agent)
-heli.addHook('moneyUserInit', moneyUserInit)
+heli.addHook('baseAgentInit', baseAgentInit)
 
 def agentInit(agent, model):
 	agent.store = model.agents['store'][0]
@@ -597,7 +597,7 @@ heli.addHook('checkBalance', checkBalance)
 # Central Bank
 #
 
-class CentralBank(MoneyUser):
+class CentralBank(baseAgent):
 	ngdpAvg = 0
 	inflation = 0		#Target. so 0.005 would be 0.5%
 	ngdp = 0
