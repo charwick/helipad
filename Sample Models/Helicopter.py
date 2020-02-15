@@ -38,7 +38,6 @@ class Store(baseAgent):
 		
 			#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
 			self.price[good] = M0/model.param('agents_agent') * sm/(sqrt(model.goodParam('prod',good))*(len(model.goods)-1+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
-		
 	
 	def step(self, stage):
 		super().step(stage)
@@ -51,13 +50,12 @@ class Store(baseAgent):
 		self.wage = (self.wage * self.model.param('wStick') + newwage)/(1 + self.model.param('wStick'))
 		if self.wage * N > self.balance: self.wage = self.balance / N 	#Budget constraint
 	
-		#Hire labor
+		#Hire labor, with individualized wage shocks
 		labor = 0
 		for a in self.model.agents['agent']:
-			#Pay agents / wage shocks
 			if self.wage < 0: self.wage = 0
 			wage = random.normal(self.wage, self.wage/2 + 0.1)	#Can't have zero stdev
-			wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
+			wage = 0 if wage < 0 else wage						#Wage bounded from below by 0
 			self.pay(a, wage)
 			labor += 1
 	
@@ -271,7 +269,6 @@ Agent.realBalances = property(realBalances)
 
 class CentralBank(baseAgent):
 	ngdpAvg = 0
-	inflation = 0		#Target. so 0.005 would be 0.5%
 	ngdp = 0
 	
 	def __init__(self, id, model):
@@ -291,7 +288,6 @@ class CentralBank(baseAgent):
 		
 		#Set macroeconomic targets
 		expand = 0
-		if self.inflation: expand = M0(model) * self.inflation
 		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
 		if expand != 0: self.expand(expand)
 			
