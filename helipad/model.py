@@ -91,7 +91,7 @@ class Helipad():
 		plot = Item(label=label, series=[], logscale=logscale)
 		if position is None or position > len(self.plots):
 			self.plots[name] = plot
-		else:		#Reconstruct the dict because there's no insert method...
+		else:		#Reconstruct the dict because there's no insert method…
 			newplots, i = ({}, 1)
 			for k,v in self.plots.items():
 				if position==i: newplots[name] = plot
@@ -206,7 +206,7 @@ class Helipad():
 		elif paramType=='good': params=self.goodParams
 		else: raise ValueError('Invalid object \''+paramType+'\'')
 		
-		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding...', None, 2)
+		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
 		
 		#Instantiate the defaults.
 		#1. Are we dealing with a per-breed or a global default?
@@ -343,7 +343,7 @@ class Helipad():
 		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'');
 		
 		if name in itemDict:
-			warnings.warn(obj+' \''+name+'\' already defined. Overriding...', None, 2)
+			warnings.warn(obj+' \''+name+'\' already defined. Overriding…', None, 2)
 		
 		cobj = Color('#'+color)
 		cobj2 = cobj.lighten()
@@ -409,7 +409,7 @@ class Helipad():
 				a.currentDemand = {g:0 for g in self.goods.keys()}
 				a.currentShortage = {g:0 for g in self.goods.keys()}
 		
-		self.shocks.do()
+		self.shocks.step()
 		
 		#Shuffle or sort agents as necessary
 		for prim, lst in self.agents.items():
@@ -596,6 +596,7 @@ class Shocks():
 	#Var is the name of the variable to shock.
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
+	#    or the string 'button' in which case it draws a button in the control panel that shocks on press
 	#The variable is shocked when timerFunc returns true
 	#Can pass in var=None to run an open-ended valFunc that takes the model as an object instead
 	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
@@ -612,21 +613,29 @@ class Shocks():
 		}
 		self.shocks[name]['active'].set(active)
 		
-	def do(self):
-		for shock in self.shocks.values():
-			if shock['active'].get() and shock['timerFunc'](self.model.t):
-				if shock['var'] is not None:
-					newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
-				
-					if shock['paramType'] is not None and shock['obj'] is not None:
-						begin = shock['paramType']
-						if shock['prim'] is not None: begin += '_'+shock['prim']
-						v=begin+'-'+shock['var']+'-'+shock['obj']
-					else: v=shock['var']
-					
-					self.model.updateVar(v, newval, updateGUI=True)
-				else:
-					shock['valFunc'](self.model)
+	def step(self):
+		for name, shock in self.shocks.items():
+			if shock['active'].get() and callable(shock['timerFunc']) and shock['timerFunc'](self.model.t):
+				self.do(name)
+	
+	def do(self, name):
+		shock = self.shocks[name]
+		if shock['var'] is not None:
+			newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
+		
+			if shock['paramType'] is not None and shock['obj'] is not None:
+				begin = shock['paramType']
+				if shock['prim'] is not None: begin += '_'+shock['prim']
+				v=begin+'-'+shock['var']+'-'+shock['obj']
+			else: v=shock['var']
+			
+			self.model.updateVar(v, newval, updateGUI=True)
+		else:
+			shock['valFunc'](self.model)
+	
+	#Returns a function with 0 arguments. Necessary to make it a button callback
+	def returnDo(self, name):
+		return lambda: self.do(name)
 	
 	@property
 	def number(self):

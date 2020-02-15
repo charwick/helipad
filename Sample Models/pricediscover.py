@@ -40,14 +40,14 @@ def agentStep(agent, model, stage):
 	cc1Shmoo = ((agent.goods['shmoo']+partner.goods['shmoo'])/(agent.goods['soma']+partner.goods['soma'])) * cc1Soma
 	cc2Shmoo = ((agent.goods['shmoo']+partner.goods['shmoo'])/(agent.goods['soma']+partner.goods['soma'])) * cc2Soma
 		
-	#Calculate demand – choose a random point on the contract curve
+	#Calculate demand: choose a random point on the contract curve
 	r = random.random()
 	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agent.goods['soma']
 	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agent.goods['shmoo']
 	
 	#Do the trades
 	if abs(somaDemand) > 0.1 and abs(shmooDemand) > 0.1:
-		agent.trade(partner, 'soma', -somaDemand, 'shmoo', shmooDemand)		
+		agent.trade(partner, 'soma', -somaDemand, 'shmoo', shmooDemand)
 		agent.lastPrice = -somaDemand/shmooDemand
 		partner.lastPrice = -somaDemand/shmooDemand
 	else:

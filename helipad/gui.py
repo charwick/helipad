@@ -148,7 +148,11 @@ class GUI():
 			fnum += 1
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			for shock in self.model.shocks.shocks.values():
-				shock['guiElement'] = Checkbutton(frame8.sub_frame, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+				if callable(shock['timerFunc']):
+					shock['guiElement'] = Checkbutton(frame8.sub_frame, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+				elif shock['timerFunc'] == 'button':
+					shock['guiElement'] = Button(frame8.sub_frame, text=shock['name'], command=self.model.shocks.returnDo(shock['name']), padx=10, pady=10)
+				
 				if hasPmw and shock['desc'] is not None:
 					self.balloon.bind(shock['guiElement'], shock['desc'])
 				shock['guiElement'].pack(fill=BOTH)
