@@ -413,6 +413,7 @@ def rbaltodemand(breed):
 #Data Collection
 heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
+heli.addPlot('ngdp', 'NGDP', 7)
 heli.addPlot('capital', 'Production', 9)
 heli.addPlot('wage', 'Wage', 11)
 heli.addPlot('debt', 'Debt')

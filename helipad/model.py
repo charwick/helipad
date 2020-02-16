@@ -67,7 +67,6 @@ class Helipad():
 			'demand': 'Demand',
 			'shortage': 'Shortages',
 			'money': 'Money',
-			'ngdp': 'NGDP',
 			'utility': 'Utility'
 		}
 		for name, label in plotList.items(): self.addPlot(name, label)
@@ -565,7 +564,7 @@ class Helipad():
 			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
 		if self.moneyGood is None:
-			for i in ['prices', 'money','ngdp']:
+			for i in ['prices', 'money']:
 				del self.plots[i]
 				
 		self.gui = GUI(self.root, self)
