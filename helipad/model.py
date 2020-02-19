@@ -10,7 +10,6 @@ import importlib, sys, warnings
 needed = ['pandas', 'matplotlib', 'colour']
 for module in needed:
 	if importlib.util.find_spec(module) is None:
-		#Can't auto-install as of Pip 10
 		print("This model requires "+module+". Please use Pip to install it before continuing.")
 		sys.exit()
 
@@ -466,7 +465,7 @@ class Helipad():
 		agents = {}
 		for k, l in self.agents.items():
 			for a in l:
-				agents[a.unique_id] = a
+				agents[a.id] = a
 		return agents
 	
 	#CALLBACK FOR DEFAULT PARAMETERS
@@ -482,7 +481,7 @@ class Helipad():
 		if diff > 0:
 			maxid = 1
 			for id, a in self.allagents.items():
-				if a.unique_id > maxid: maxid = a.unique_id #Figure out maximum existing ID
+				if a.id > maxid: maxid = a.id #Figure out maximum existing ID
 			for i in range(0, int(diff)):
 				maxid += 1
 				

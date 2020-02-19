@@ -51,7 +51,7 @@ class Data():
 		model.doHooks('collect', [self, model.t])
 	
 	def reset(self):
-		for k in self.all.keys(): self.all[k] = []
+		self.all = {k: [] for k in self.all.keys()}
 	
 	@property
 	def dataframe(self):
@@ -67,6 +67,8 @@ class Data():
 			return getattr(model, key)
 		return reporter
 	
+	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over
+	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim, breed=None, good=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
 			subplots = {}

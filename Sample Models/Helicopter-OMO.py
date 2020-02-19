@@ -95,12 +95,12 @@ class Store(baseAgent):
 		#Intertemporal transactions
 		if hasattr(self, 'bank') and self.model.t > 0:
 			#Stipulate some demand for credit, we can worry about microfoundations later
-			self.bank.amortize(self, self.bank.credit[self.unique_id].owe/1.5)
+			self.bank.amortize(self, self.bank.credit[self.id].owe/1.5)
 			self.bank.borrow(self, self.model.cb.ngdp * (1-self.bank.i))
 
 class Bank():
 	def __init__(self, breed, id, model):
-		self.unique_id = id
+		self.id = id
 		self.model = model
 		
 		self.goods = {model.moneyGood: 0} #Reserves
@@ -117,13 +117,13 @@ class Bank():
 		
 			
 	def balance(self, customer):
-		if customer.unique_id in self.accounts: return self.accounts[customer.unique_id]
+		if customer.id in self.accounts: return self.accounts[customer.id]
 		else: return 0
 	
 	def setupAccount(self, customer):
-		if customer.unique_id in self.accounts: return False		#If you already have an account
-		self.accounts[customer.unique_id] = 0						#Liabilities
-		self.credit[customer.unique_id] = Loan(customer, self)		#Assets
+		if customer.id in self.accounts: return False		#If you already have an account
+		self.accounts[customer.id] = 0						#Liabilities
+		self.credit[customer.id] = Loan(customer, self)		#Assets
 	
 	#Assets and liabilities should return the same thing
 	#Any difference gets disbursed as interest on deposits
@@ -165,7 +165,7 @@ class Bank():
 		if amt > customer.goods[self.model.moneyGood]: amt = customer.goods[self.model.moneyGood]
 		customer.goods[self.model.moneyGood] -= amt	#Charge customer
 		self.goods[self.model.moneyGood] += amt		#Deposit cash
-		self.accounts[customer.unique_id] += amt	#Credit account
+		self.accounts[customer.id] += amt	#Credit account
 		
 		# print('Now reserves are $',self.goods[self.model.moneyGood])
 		return amt
@@ -175,14 +175,14 @@ class Bank():
 		self.lastWithdrawal += amt
 	
 	def transfer(self, customer, recipient, amt):		
-		if self.accounts[customer.unique_id] < amt: amt = self.accounts[customer.unique_id]
-		self.accounts[customer.unique_id] -= amt
-		self.accounts[recipient.unique_id] += amt
+		if self.accounts[customer.id] < amt: amt = self.accounts[customer.id]
+		self.accounts[customer.id] -= amt
+		self.accounts[recipient.id] += amt
 		return amt
 	
 	def borrow(self, customer, amt):
 		if amt < 0.01: return 0 #Skip blanks and float errors
-		l = self.credit[customer.unique_id]
+		l = self.credit[customer.id]
 				
 		#Refinance anything with a higher interest rate
 		for n,loan in enumerate(l.loans):
@@ -196,14 +196,14 @@ class Bank():
 			'i': self.i
 		})
 		
-		self.accounts[customer.unique_id] += amt	#Increase liabilities
+		self.accounts[customer.id] += amt	#Increase liabilities
 		
 		return amt									#How much you actually borrowed
 	
 	#Returns the amount you actually pay – the lesser of amt or your outstanding balance
 	def amortize(self, customer, amt):
 		if amt < 0.001: return 0			#Skip blanks and float errors
-		l = self.credit[customer.unique_id]	#Your loan object
+		l = self.credit[customer.id]	#Your loan object
 		l.amortizeAmt += amt				#Count it toward minimum repayment
 		leftover = amt
 			
@@ -216,7 +216,7 @@ class Bank():
 				l.loans[0]['amount'] -= leftover
 				leftover = 0
 			
-		self.accounts[customer.unique_id] -= (amt - leftover)	#Reduce liabilities
+		self.accounts[customer.id] -= (amt - leftover)	#Reduce liabilities
 		
 		return amt - leftover									#How much you amortized
 	
@@ -289,10 +289,10 @@ class Loan():
 		amtz = minRepay - self.amortizeAmt
 		defaulted = False
 		if amtz > 0:
-			if amtz > self.bank.accounts[self.customer.unique_id]:	#Can't charge them more than they have in the bank
+			if amtz > self.bank.accounts[self.customer.id]:	#Can't charge them more than they have in the bank
 				defaulted = True
-				amtz = self.bank.accounts[self.customer.unique_id]
-				# print(self.model.t, ': Agent', self.customer.unique_id, 'defaulted $', self.owe - amtz)
+				amtz = self.bank.accounts[self.customer.id]
+				# print(self.model.t, ': Agent', self.customer.id, 'defaulted $', self.owe - amtz)
 			self.bank.amortize(self.customer, amtz)
 			if defaulted:
 				for n, l in enumerate(self.loans):
@@ -603,7 +603,7 @@ class CentralBank(baseAgent):
 	
 	def __init__(self, id, model):
 		super().__init__(id, model)
-		self.unique_id = id
+		self.id = id
 		self.model = model
 		
 		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000

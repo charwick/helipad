@@ -9,7 +9,7 @@ from numpy import *
 #Everybody who uses money, a base class to build upon
 class baseAgent():
 	def __init__(self, id, model):
-		self.unique_id = int(id)
+		self.id = int(id)
 		self.model = model
 		self.dead = False
 		self.goods = {}
@@ -119,8 +119,8 @@ class Agent(baseAgent):
 	def reproduce(self, inherit=[], mutate={}):
 		maxid = 0
 		for a in self.model.agents['agent']:
-			if a.unique_id > maxid:
-				maxid = a.unique_id
+			if a.id > maxid:
+				maxid = a.id
 		newagent = Agent(self.breed, maxid+1, self.model)
 		
 		#Copy inherited variables
@@ -142,7 +142,7 @@ class Agent(baseAgent):
 				else: newval = random.normal(getattr(newagent, k), v)
 			setattr(newagent, k, newval)
 		
-		newagent.unique_id = maxid+1
+		newagent.id = maxid+1
 		newagent.parent = self
 		self.model.agents['agent'].append(newagent)
 		self.model.param('agents_agent', self.model.param('agents_agent')+1)
@@ -158,4 +158,4 @@ class Agent(baseAgent):
 	@property
 	def debt(self):
 		if not 'bank' in self.model.primitives or self.model.param('agents_bank') == 0: return 0
-		return self.bank.credit[self.unique_id].owe
+		return self.bank.credit[self.id].owe

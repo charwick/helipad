@@ -48,8 +48,8 @@ class GUI():
 		
 		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=self.setUpdate)
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.run_btn = Button(frame1, text='Run', command=self.prepare_plots, padx=10, pady=10)
-		self.run_btn.grid(row=2, column=2, pady=(15,0))
+		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10)
+		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
 		b=0
 		for f in self.model.buttons:
@@ -202,7 +202,7 @@ class GUI():
 		return sv
 	
 	#Start a new model
-	def prepare_plots(self):
+	def preparePlots(self):
 		self.model.setup()
 		
 		#Trim the plot list to the checked items and sent it to Graph
@@ -231,8 +231,8 @@ class GUI():
 	#Resume a model
 	def run(self):
 		self.running = True
-		self.run_btn['text'] = 'Pause'
-		self.run_btn['command'] = self.pause
+		self.runButton['text'] = 'Pause'
+		self.runButton['command'] = self.pause
 		
 		# start = time.time()
 		while self.running:
@@ -268,8 +268,8 @@ class GUI():
 	
 	def pause(self):
 		self.running = False
-		self.run_btn['text'] = 'Run'
-		self.run_btn['command'] = self.run
+		self.runButton['text'] = 'Run'
+		self.runButton['command'] = self.run
 	
 	def terminate(self, evt=False):
 		if self.running and self.expCSV.get(): self.model.data.saveCSV(self.expCSV.get())
@@ -284,8 +284,8 @@ class GUI():
 		#Passes GUI object to the callback
 		self.model.doHooks('terminate', [self])
 		
-		self.run_btn['text'] = 'New Model'
-		self.run_btn['command'] = self.prepare_plots
+		self.runButton['text'] = 'New Model'
+		self.runButton['command'] = self.preparePlots
 	
 	def catchKeystroke(self, event):
 		if event.key == 't':

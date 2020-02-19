@@ -274,7 +274,7 @@ class CentralBank(baseAgent):
 	
 	def __init__(self, id, model):
 		super().__init__(id, model)
-		self.unique_id = id
+		self.id = id
 		self.model = model
 		
 		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000

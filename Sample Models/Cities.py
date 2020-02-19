@@ -22,7 +22,6 @@ heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'low':0, 'high': 0.25, 'step': 0.01})
 heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living')
-del heli.plots['inventory']
 
 heli.stages = 2
 heli.order = 'linear'
