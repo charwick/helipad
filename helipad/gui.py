@@ -361,15 +361,16 @@ class Graph():
 		
 		plt.draw()
 		# plt.ion()	# Makes plt.draw() unnecessary, but also closes the window after it's done
-
+	
+	#data is the *incremental* data
 	def update(self, data):
-		newlen = len(next(data[x] for x in data))*self.resolution
+		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
 		time = newlen + len(next(self.series[x] for x in self.series).fdata)*self.resolution
 		
 		for k, serie in self.series.items():
 			if hasattr(serie,'func'):						#Lambda functions
 				for i in range(int(newlen/self.resolution)):
-					serie.fdata.append(serie.func())
+					serie.fdata.append(serie.func(time-newlen+(1+i)*self.resolution))
 			elif k in data: serie.fdata += data[k]			#Actual data
 			else: continue									#No data
 		
