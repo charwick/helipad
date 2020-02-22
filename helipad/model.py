@@ -124,8 +124,8 @@ class Helipad():
 		
 		self.plots[plot].series.append(Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries))
 	
-	def addButton(self, text, func):
-		self.buttons.append((text, func))
+	def addButton(self, text, func, desc=None):
+		self.buttons.append((text, func, desc))
 	
 	#Get ready to actually run the model
 	def setup(self):
