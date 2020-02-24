@@ -60,7 +60,6 @@ def agentInit(agent, model):
 	agent.H = 1 #Human capital
 	agent.prod = {'urban': 0, 'rural': 0}
 	agent.wealth = 0
-	agent.children = 0
 	agent.lastWage = 0
 heli.addHook('agentInit', agentInit)
 
@@ -125,8 +124,6 @@ def agentStep(agent, model, stage):
 heli.addHook('agentStep', agentStep)
 
 def agentReproduce(agent, child, model):
-	agent.children += 1
-	child.children = 0
 	child.wealth = agent.wealth/2
 heli.addHook('agentReproduce', agentReproduce)
 

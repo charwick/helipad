@@ -11,6 +11,9 @@ class baseAgent():
 	def __init__(self, id, model):
 		self.id = int(id)
 		self.model = model
+		self.parent = None
+		self.children = []
+		self.age = 0
 		self.dead = False
 		self.goods = {}
 		for good, params in model.goods.items():
@@ -25,6 +28,7 @@ class baseAgent():
 	
 	def step(self, stage):
 		self.model.doHooks('baseAgentStep', [self, self.model, stage])
+		if stage == self.model.stages: self.age += 1
 	
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
@@ -87,35 +91,6 @@ class baseAgent():
 			recipient.goods[self.model.moneyGood] += amount
 			self.goods[self.model.moneyGood] -= amount
 	
-	def die(self):
-		self.model.doHooks('baseAgentDie', [self])
-		self.dead = True
-	
-	@property
-	def balance(self):
-		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
-		bal = self.goods[self.model.moneyGood]
-		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
-		if bal_ is not None: bal = bal_
-		
-		return bal
-		
-class Agent(baseAgent):
-	def __init__(self, breed, id, model):
-		self.breed = breed
-		super().__init__(id, model)
-		
-		self.age = 0
-		self.utils = 0
-		self.parent = None
-		
-		self.model.doHooks('agentInit', [self, model])
-	
-	def step(self, stage):
-		super().step(stage)
-		self.model.doHooks('agentStep', [self, self.model, stage])
-		self.age += 1
-	
 	def reproduce(self, inherit=[], mutate={}):
 		maxid = 0
 		for a in self.model.agents['agent']:
@@ -144,10 +119,36 @@ class Agent(baseAgent):
 		
 		newagent.id = maxid+1
 		newagent.parent = self
-		self.model.agents['agent'].append(newagent)
+		self.children.append(newagent)
+		self.model.agents['agent'].append(newagent) #To do: append to the correct primitive
 		self.model.param('agents_agent', self.model.param('agents_agent')+1)
 		
 		self.model.doHooks('agentReproduce', [self, newagent, self.model])
+	
+	def die(self):
+		self.model.doHooks('baseAgentDie', [self])
+		self.dead = True
+	
+	@property
+	def balance(self):
+		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
+		bal = self.goods[self.model.moneyGood]
+		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
+		if bal_ is not None: bal = bal_
+		
+		return bal
+		
+class Agent(baseAgent):
+	def __init__(self, breed, id, model):
+		self.breed = breed
+		super().__init__(id, model)
+		
+		self.utils = 0
+		self.model.doHooks('agentInit', [self, model])
+	
+	def step(self, stage):
+		super().step(stage)
+		self.model.doHooks('agentStep', [self, self.model, stage])
 	
 	def die(self):
 		self.model.agents['agent'].remove(self)
