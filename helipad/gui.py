@@ -46,7 +46,7 @@ class GUI():
 		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
 		self.expCSV.grid(row=1, column=0, columnspan=3)
 		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=self.setUpdate)
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=lambda val: setattr(self, 'updateEvery', int(val)))
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10)
 		self.runButton.grid(row=2, column=2, pady=(15,0))
@@ -174,11 +174,8 @@ class GUI():
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
 	
-	#Callback
-	def setUpdate(self, val):
-		setattr(self, 'updateEvery', int(val))
-		
-	def menuCallback(self, fullvar, callback):
+	#Callback	
+	def menuCallback(self, fullvar, callback=None):
 		def cb(val=None):
 			if '-' in fullvar:
 				obj, var, item = fullvar.split('-')	#Per-object variables
