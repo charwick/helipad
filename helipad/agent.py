@@ -120,12 +120,14 @@ class baseAgent():
 		newagent.id = maxid+1
 		newagent.parent = self
 		self.children.append(newagent)
-		self.model.agents['agent'].append(newagent) #To do: append to the correct primitive
-		self.model.param('agents_agent', self.model.param('agents_agent')+1)
+		self.model.agents[self.primitive].append(newagent)
+		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
 		self.model.doHooks('agentReproduce', [self, newagent, self.model])
 	
 	def die(self):
+		self.model.agents[self.primitive].remove(self)
+		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)-1)
 		self.model.doHooks('baseAgentDie', [self])
 		self.dead = True
 	
@@ -151,12 +153,5 @@ class Agent(baseAgent):
 		self.model.doHooks('agentStep', [self, self.model, stage])
 	
 	def die(self):
-		self.model.agents['agent'].remove(self)
-		self.model.param('agents_agent', self.model.param('agents_agent')-1)
 		self.model.doHooks('agentDie', [self])
 		super().die()
-	
-	@property
-	def debt(self):
-		if not 'bank' in self.model.primitives or self.model.param('agents_bank') == 0: return 0
-		return self.bank.credit[self.id].owe

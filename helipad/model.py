@@ -74,6 +74,7 @@ class Helipad():
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
+		class_.primitive = name
 		self.primitives[name] = {
 			'class': class_,
 			'plural': plural,
@@ -523,8 +524,8 @@ class Helipad():
 		return None #If nobody matched
 		
 	#Returns summary statistics on an agent variable at a single point in time
-	def summary(self, var, type=False):
-		agents = self.agents['agent'] if not type else self.agent(type)
+	def summary(self, var, prim='agent', breed=None):
+		agents = self.agents['agent'] if breed is None else self.agent(breed, prim)
 		data = []
 		for a in agents: data.append(getattr(a, var))
 		data = pandas.Series(data) #Gives us nice statistical functions
