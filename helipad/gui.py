@@ -60,6 +60,11 @@ class GUI():
 				self.model.updateVar(vname, val)
 			return sv
 		
+		#For shock buttons.
+		#Can't do an inline lambda here because lambdas apparently don't preserve variable context
+		def shockCallback(name):
+			return lambda: self.model.shocks.do(name)
+		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
@@ -180,7 +185,7 @@ class GUI():
 				if callable(shock['timerFunc']):
 					shock['guiElement'] = Checkbutton(frame8.sub_frame, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
 				elif shock['timerFunc'] == 'button':
-					shock['guiElement'] = Button(frame8.sub_frame, text=shock['name'], command=self.model.shocks.returnDo(shock['name']), padx=10, pady=10)
+					shock['guiElement'] = Button(frame8.sub_frame, text=shock['name'], command=shockCallback(shock['name']), padx=10, pady=10)
 				
 				if hasPmw and shock['desc'] is not None:
 					self.balloon.bind(shock['guiElement'], shock['desc'])

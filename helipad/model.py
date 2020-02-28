@@ -632,10 +632,6 @@ class Shocks():
 		else:
 			shock['valFunc'](self.model)
 	
-	#Returns a function with 0 arguments. Necessary to make it a button callback
-	def returnDo(self, name):
-		return lambda: self.do(name)
-	
 	@property
 	def number(self):
 		return len(self.shocks)
