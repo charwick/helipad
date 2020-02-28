@@ -124,6 +124,7 @@ class baseAgent():
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
 		self.model.doHooks('agentReproduce', [self, newagent, self.model])
+		return newagent
 	
 	def die(self):
 		self.model.agents[self.primitive].remove(self)

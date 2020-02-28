@@ -332,7 +332,7 @@ class Helipad():
 	
 	#For adding breeds and goods
 	#Should not be called directly
-	def addItem(self, obj, name, color, prim='', **kwargs):
+	def addItem(self, obj, name, color, prim=None, **kwargs):
 		if obj=='good':
 			itemDict = self.goods
 			paramDict = self.goodParams

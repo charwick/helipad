@@ -34,6 +34,33 @@ class GUI():
 		fnum = 0
 		
 		#
+		# CALLBACK FUNCTION GENERATORS FOR TKINTER ELEMENTS
+		#
+		def menuCallback(fullvar, callback=None):
+			def cb(val=None):
+				if '-' in fullvar:
+					obj, var, item = fullvar.split('-')	#Per-object variables
+					val = getattr(self.model, obj+'Param')(var, item)
+				else:
+					var = fullvar
+					val = getattr(self.model, 'param')(var)
+			
+				if callable(callback): callback(self.model, var, val)
+			return cb
+		
+		def setVar(vname):
+			def sv(val=None):
+			
+				#The checkbox callback doesn't pass the argument, so we've got to get the value the hard way
+				#But we also know it's a boolean if we don't get it
+				#Otherwise it came from a slider, which passes a string that ought to be a float
+				if val is None: val = self.sliders[vname].variable.get()
+				else: val = float(val)
+			
+				self.model.updateVar(vname, val)
+			return sv
+		
+		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
@@ -78,13 +105,13 @@ class GUI():
 					bname = obj+'-'+k+'-'+name
 				
 					if var[1]['type'] == 'menu':
-						self.sliders[bname] = OptionMenu(bpf, paramDict[k][0][name], command=self.menuCallback(bname, var[1]['callback']), *var[1]['opts'].values())
+						self.sliders[bname] = OptionMenu(bpf, paramDict[k][0][name], command=menuCallback(bname, var[1]['callback']), *var[1]['opts'].values())
 						self.sliders[bname].config(bg=bgcolors[fnum%2])
 					elif var[1]['type'] == 'check':
-						self.sliders[bname] = Checkbutton(bpf, text=var[1]['title'], var=paramDict[k][0][name], onvalue=True, offvalue=False, command=self.setVar(bname), bg=bgcolors[fnum%2])
+						self.sliders[bname] = Checkbutton(bpf, text=var[1]['title'], var=paramDict[k][0][name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
 						self.sliders[bname].variable = paramDict[k][0][name] #Keep track of this because it doesn't pass the value to the callback
 					elif var[1]['type'] == 'slider':
-						self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=self.setVar(bname), bg=bgcolors[fnum%2])
+						self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
 						self.sliders[bname].set(setget(k, name, prim=prim))
 				
 					self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
@@ -111,7 +138,7 @@ class GUI():
 			if var['type'] == 'hidden': continue
 			elif var['type'] == 'check':
 				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
-				self.sliders[k] = Checkbutton(f, text=var['title'], var=self.model.params[k][0], onvalue=True, offvalue=False, command=self.setVar(k), bg=bgcolors[fnum%2])
+				self.sliders[k] = Checkbutton(f, text=var['title'], var=self.model.params[k][0], onvalue=True, offvalue=False, command=setVar(k), bg=bgcolors[fnum%2])
 				self.sliders[k].variable = self.model.params[k][0] #Keep track of this because it doesn't pass the value to the callback
 				self.sliders[k].pack()
 			else:
@@ -119,10 +146,10 @@ class GUI():
 				Label(f, text=var['title'], fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
 				if var['type'] == 'menu':
 					#Callback is different because menus automatically update their variable
-					self.sliders[k] = OptionMenu(f, self.model.params[k][0], *var['opts'].values(), command=self.menuCallback(k, var['callback']))
+					self.sliders[k] = OptionMenu(f, self.model.params[k][0], *var['opts'].values(), command=menuCallback(k, var['callback']))
 					self.sliders[k].config(bg=bgcolors[fnum%2])
 				elif var['type'] == 'slider':
-					self.sliders[k] = Scale(f, from_=var['opts']['low'], to=var['opts']['high'], resolution=var['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=self.setVar(k), bg=bgcolors[fnum%2])
+					self.sliders[k] = Scale(f, from_=var['opts']['low'], to=var['opts']['high'], resolution=var['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(k), bg=bgcolors[fnum%2])
 					self.sliders[k].set(var['dflt'])
 					
 				self.sliders[k].pack(side=RIGHT)
@@ -173,32 +200,6 @@ class GUI():
 		
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
-	
-	#Callback	
-	def menuCallback(self, fullvar, callback=None):
-		def cb(val=None):
-			if '-' in fullvar:
-				obj, var, item = fullvar.split('-')	#Per-object variables
-				val = getattr(self.model, obj+'Param')(var, item)
-			else:
-				var = fullvar
-				val = getattr(self.model, 'param')(var)
-			
-			if callable(callback): callback(self.model, var, val)
-		return cb
-	
-	#Returns a function so the sliders can have the same basic callback
-	def setVar(self, vname):
-		def sv(val=None):
-			
-			#The checkbox callback doesn't pass the argument, so we've got to get the value the hard way
-			#But we also know it's a boolean if we don't get it
-			#Otherwise it came from a slider, which passes a string that ought to be a float
-			if val is None: val = self.sliders[vname].variable.get()
-			else: val = float(val)
-			
-			self.model.updateVar(vname, val)
-		return sv
 	
 	#Start a new model
 	def preparePlots(self):
