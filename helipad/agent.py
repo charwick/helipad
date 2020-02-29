@@ -117,7 +117,7 @@ class baseAgent():
 			setattr(newagent, k, newval)
 		
 		newagent.id = maxid+1
-		self.newEdge('lineage', newagent, newagent) #Keep track of parent-child relationships
+		self.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
@@ -127,30 +127,31 @@ class baseAgent():
 	def die(self):
 		self.model.agents[self.primitive].remove(self)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)-1)
+		for edge in self.alledges: edge.cut()
 		self.model.doHooks('baseAgentDie', [self])
 		self.dead = True
 	
-	def newEdge(self, kind, partner, direction=None, weight=1):
-		return Edge(kind, self, partner, direction, weight)
+	def newEdge(self, partner, kind='edge', direction=None, weight=1):
+		return Edge(self, partner, kind, direction, weight)
 	
-	def outbound(self, kind=None):
+	def outbound(self, kind='edge', undirected=False):
 		if kind is None: edges = self.alledges
 		else:
 			if not kind in self.edges: return []
 			edges = self.edges[kind]
 		ob = []
 		for edge in edges:
-			if edge.startpoint == self: ob.append(edge)
+			if edge.startpoint == self or (undirected and not edge.directed): ob.append(edge)
 		return ob
 	
-	def inbound(self, kind=None):
+	def inbound(self, kind='edge', undirected=False):
 		if kind is None: edges = self.alledges
 		else:
 			if not kind in self.edges: return []
 			edges = self.edges[kind]
 		ib = []
 		for edge in edges:
-			if edge.endpoint == self: ib.append(edge)
+			if edge.endpoint == self or (undirected and not edge.directed): ib.append(edge)
 		return ib
 	
 	@property
@@ -193,18 +194,31 @@ class Agent(baseAgent):
 		self.model.doHooks('agentDie', [self])
 		super().die()
 
+#Direction can take an Agent object (corresponding to the endpoint),
+#an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
+#or a boolean (False for undirected, True for agent1 to agent2)
 class Edge():
-	def __init__(self, kind, agent1, agent2, direction=None, weight=1):
+	def __init__(self, agent1, agent2, kind='edge', direction=None, weight=1):
 		self.active = True
 		self.kind = kind
 		self.vertices = (agent1, agent2)
 		self.weight = weight
+		self.directed = False
 		if direction is not None:
-			if direction not in self.vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
-			self.endpoint = direction
-			self.startpoint = agent1 if direction==agent2 else agent2
 			self.directed = True
-		else:
+			if isinstance(direction, int):
+				if direction==0: self.directed = False
+				elif direction>0: self.startpoint, self.endpoint = (agent1, agent2)
+				elif direction<0: self.startpoint, self.endpoint = (agent2, agent1)
+			elif isinstance(direction, bool):
+				self.directed = direction
+				if direction: self.startpoint, self.endpoint = (agent1, agent2)
+			elif isinstance(direction, baseAgent):
+				if direction not in self.vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
+				self.endpoint = direction
+				self.startpoint = agent1 if direction==agent2 else agent2
+			else: raise ValueError('Direction must be either int, bool, or agent.')
+		if not self.directed:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
 		print(self.vertices)
 		for agent in self.vertices:
