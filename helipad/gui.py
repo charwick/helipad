@@ -24,11 +24,14 @@ class GUI():
 	running = False
 	sliders = {}
 	
-	def __init__(self, parent, model):
+	def __init__(self, parent, model, headless=False):
 		self.parent = parent
 		self.model = model
 		self.lastUpdate = None
 		self.balloon = Pmw.Balloon(parent) if hasPmw else None
+		self.updateEvery = 20
+		self.checks = {} #Shock checkboxes
+		self.headless = headless
 		
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 0
@@ -68,10 +71,14 @@ class GUI():
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
-		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
 		
+		#Put this up here so the variable name is accessible when headless
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int')
+		
+		if headless: return
+		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
+		
 		self.stopafter.grid(row=0,column=0, columnspan=3)
 		
 		#CSV export
@@ -165,7 +172,6 @@ class GUI():
 		
 		# Graph Checkboxes
 		frame7 = expandableFrame(self.parent, text='Graphs', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
-		self.checks = {}
 		i=0
 		for k, v in self.model.plots.items():
 			i += 1
@@ -211,10 +217,12 @@ class GUI():
 		self.model.setup()
 		
 		#Trim the plot list to the checked items and sent it to Graph
-		plotsToDraw = {}
-		for k, i in self.checks.items():
-			if i.enabled and i.get():
-				plotsToDraw[k] = self.model.plots[k]
+		if self.headless: plotsToDraw = {k: self.model.plots[k] for k in self.model.defaultPlots}
+		else:
+			plotsToDraw = {}
+			for k, i in self.checks.items():
+				if i.enabled and i.get():
+					plotsToDraw[k] = self.model.plots[k]
 		
 		#If there are any graphs to plot
 		if not len(plotsToDraw.items()):
@@ -224,7 +232,7 @@ class GUI():
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
 		for c in self.checks: self.checks[c].disable()
 		for k, var in self.model.params.items():
-			if not var[1]['runtime']:
+			if not var[1]['runtime'] and k in self.sliders:
 				self.sliders[k].configure(state='disabled')
 		
 		self.graph = Graph(plotsToDraw)
@@ -236,8 +244,9 @@ class GUI():
 	#Resume a model
 	def run(self):
 		self.running = True
-		self.runButton['text'] = 'Pause'
-		self.runButton['command'] = self.pause
+		if hasattr(self, 'runButton'):
+			self.runButton['text'] = 'Pause'
+			self.runButton['command'] = self.pause
 		
 		# start = time.time()
 		while self.running:
@@ -277,7 +286,8 @@ class GUI():
 		self.runButton['command'] = self.run
 	
 	def terminate(self, evt=False):
-		if self.running and self.expCSV.get(): self.model.data.saveCSV(self.expCSV.get())
+		if self.running and (self.headless or self.expCSV.get()):
+			self.model.data.saveCSV(self.expCSV.get() if not self.headless else 'data')
 		
 		self.running = False
 		self.model.hasModel = False
@@ -289,8 +299,9 @@ class GUI():
 		#Passes GUI object to the callback
 		self.model.doHooks('terminate', [self])
 		
-		self.runButton['text'] = 'New Model'
-		self.runButton['command'] = self.preparePlots
+		if hasattr(self, 'runButton'):
+			self.runButton['text'] = 'New Model'
+			self.runButton['command'] = self.preparePlots
 	
 	def catchKeystroke(self, event):
 		if event.key == 't':

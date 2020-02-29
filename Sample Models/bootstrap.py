@@ -73,4 +73,4 @@ heli.defaultPlots.append('myplot') #Makes sure our 'myplot' plot is selected by 
 # LAUNCH THE GUI
 #===============
 
-heli.launchGUI()
+heli.launchGUI(headless=False)

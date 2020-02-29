@@ -545,7 +545,7 @@ class Helipad():
 	# And, last but not least, the GUI init
 	#
 
-	def launchGUI(self):
+	def launchGUI(self, headless=False):
 		#Callback takes one parameter, model object
 		self.doHooks('GUIPreLaunch', [self])
 		
@@ -567,7 +567,7 @@ class Helipad():
 			for i in ['prices', 'money']:
 				del self.plots[i]
 				
-		self.gui = GUI(self.root, self)
+		self.gui = GUI(self.root, self, headless)
 		
 		# Debug console
 		# Requires to be run from Terminal (⌘-⇧-R in TextMate)
@@ -581,8 +581,11 @@ class Helipad():
 				shell = code.InteractiveConsole(vars)
 				shell.interact()
 			else: print('Use pip to install readline and code for a debug console')
-			
-		self.root.mainloop()
+		
+		if headless:
+			self.root.destroy()
+			self.gui.preparePlots()		#Jump straight to the graph
+		else: self.root.mainloop()		#Launch the control panel
 		
 		#Callback takes one parameter, GUI object
 		self.doHooks('GUIPostLaunch', [self.gui])
