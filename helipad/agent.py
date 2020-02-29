@@ -11,12 +11,10 @@ class baseAgent():
 	def __init__(self, id, model):
 		self.id = int(id)
 		self.model = model
-		self.parent = None
-		self.children = []
 		self.age = 0
 		self.dead = False
 		self.goods = {}
-		self.edges = []
+		self.edges = {}
 		for good, params in model.goods.items():
 			if params.endowment is None: self.goods[good] = 0
 			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
@@ -119,8 +117,7 @@ class baseAgent():
 			setattr(newagent, k, newval)
 		
 		newagent.id = maxid+1
-		newagent.parent = self
-		self.children.append(newagent)
+		self.newEdge('lineage', newagent, newagent) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
@@ -133,8 +130,43 @@ class baseAgent():
 		self.model.doHooks('baseAgentDie', [self])
 		self.dead = True
 	
-	def newEdge(self, partner, direction=None, weight=1):
-		Edge(self, partner, direction, weight)
+	def newEdge(self, kind, partner, direction=None, weight=1):
+		return Edge(kind, self, partner, direction, weight)
+	
+	def outbound(self, kind=None):
+		if kind is None: edges = self.alledges
+		else:
+			if not kind in self.edges: return []
+			edges = self.edges[kind]
+		ob = []
+		for edge in edges:
+			if edge.startpoint == self: ob.append(edge)
+		return ob
+	
+	def inbound(self, kind=None):
+		if kind is None: edges = self.alledges
+		else:
+			if not kind in self.edges: return []
+			edges = self.edges[kind]
+		ib = []
+		for edge in edges:
+			if edge.endpoint == self: ib.append(edge)
+		return ib
+	
+	@property
+	def alledges(self):
+		edges = []
+		for e in self.edges.values(): edges += e
+		return edges
+	
+	@property
+	def parent(self):
+		p = self.inbound('lineage')
+		return p[0].partner(self) if len(p) > 0 else None
+	
+	@property
+	def children(self):
+		return [edge.partner(self) for edge in self.outbound('lineage')]
 	
 	@property
 	def balance(self):
@@ -162,22 +194,26 @@ class Agent(baseAgent):
 		super().die()
 
 class Edge():
-	def __init__(self, agent1, agent2, direction=None, weight=1):
+	def __init__(self, kind, agent1, agent2, direction=None, weight=1):
 		self.active = True
+		self.kind = kind
 		self.vertices = (agent1, agent2)
 		self.weight = weight
 		if direction is not None:
-			if direction not in vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
+			if direction not in self.vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
 			self.endpoint = direction
 			self.startpoint = agent1 if direction==agent2 else agent2
 			self.directed = True
 		else:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
-		for agent in self.vertices: agent.edges.append(self)
-		agent1.model.doHooks('edgeInit', [self, agent1, agent2])
+		print(self.vertices)
+		for agent in self.vertices:
+			if not kind in agent.edges: agent.edges[kind] = []
+			agent.edges[kind].append(self)
+		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
 	
 	def cut(self):
-		for agent in self.vertices: agent.edges.remove(self)
+		for agent in self.vertices: agent.edges[self.kind].remove(self)
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
 	
@@ -188,6 +224,6 @@ class Edge():
 	
 	def reassign(self, oldagent, newagent):
 		self.vertices = (self.partner(oldagent), newagent)
-		oldagent.edges.remove(self)
-		newagent.edges.append(self)
+		oldagent.edges[self.kind].remove(self)
+		newagent.edges[self.kind].append(self)
 		newagent.model.doHooks('edgeReassign', [self, oldagent, newagent])
