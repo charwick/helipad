@@ -595,6 +595,9 @@ class Shocks():
 		self.shocks = {}
 		self.model = model
 	
+	def __getitem__(self, index): return self.shocks[index]
+	def __setitem__(self, index, value): self.shocks[index] = value
+	
 	#Var is the name of the variable to shock.
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
@@ -602,7 +605,7 @@ class Shocks():
 	#The variable is shocked when timerFunc returns true
 	#Can pass in var=None to run an open-ended valFunc that takes the model as an object instead
 	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
-		self.shocks[name] = {
+		self[name] = {
 			'name': name,
 			'desc': desc,
 			'var': var,
@@ -613,7 +616,7 @@ class Shocks():
 			'prim': prim,
 			'active': BooleanVar() #Saves some Tkinter code later
 		}
-		self.shocks[name]['active'].set(active)
+		self[name]['active'].set(active)
 		
 	def step(self):
 		for name, shock in self.shocks.items():
@@ -621,7 +624,7 @@ class Shocks():
 				self.do(name)
 	
 	def do(self, name):
-		shock = self.shocks[name]
+		shock = self[name]
 		if shock['var'] is not None:
 			newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
 		

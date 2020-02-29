@@ -11,6 +11,9 @@ class Data():
 		self.all = {}			#Data
 		self.reporters = {}
 		self.model = model
+	
+	def __getitem__(self, index): return self.all[index]
+	def __setitem__(self, index, value): self.all[index] = value
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
@@ -22,7 +25,7 @@ class Data():
 		if isinstance(func, tuple):
 			mainfunc, subplots = func
 			for p, s in subplots.items():
-				self.all[key+'-'+str(p)+'-pctile'] = []
+				self[key+'-'+str(p)+'-pctile'] = []
 		else: mainfunc = func
 		
 		#If smoothing, shunt original reporter to -unsmooth and create a new series under the original name
@@ -30,24 +33,24 @@ class Data():
 			def smooth(weight, k):
 				def movingAvg(data, t):
 					#					  Old data 					   New data point
-					data.all[k].append(weight*data.all[k][-1] + (1-weight)*data.all[k+'-unsmooth'][-1] if t>1 else data.all[k+'-unsmooth'][-1])
+					data[k].append(weight*data[k][-1] + (1-weight)*data[k+'-unsmooth'][-1] if t>1 else data[k+'-unsmooth'][-1])
 				return movingAvg
 				
 			self.model.addHook('collect', smooth(kwargs['smooth'], key))
-			self.all[key] = []
+			self[key] = []
 			key += '-unsmooth'
 		
 		if not callable(mainfunc): raise TypeError('Second argument of addReporter must be callable')
 		self.reporters[key] = func
-		self.all[key] = []
+		self[key] = []
 
 	def collect(self, model):
 		for var, reporter in self.reporters.items():
 			if isinstance(reporter, tuple):
 				reporter, subplots = reporter
 				for p, s in subplots.items():
-					self.all[var+'-'+str(p)+'-pctile'].append(s(model))
-			self.all[var].append(reporter(model))
+					self[var+'-'+str(p)+'-pctile'].append(s(model))
+			self[var].append(reporter(model))
 		model.doHooks('collect', [self, model.t])
 	
 	def reset(self):
@@ -109,8 +112,8 @@ class Data():
 	#Returns a value if n=1, otherwise a list
 	def getLast(self, key, n=1):
 		if isinstance(key, str):
-			if len(self.all[key])==0: return 0
-			data = self.all[key][-n:]
+			if len(self[key])==0: return 0
+			data = self[key][-n:]
 			return data if n>1 else data[0]
 		elif isinstance(key, int):
 			return {k: v[-key:] for k,v in self.all.items()}
