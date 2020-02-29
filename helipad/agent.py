@@ -16,6 +16,7 @@ class baseAgent():
 		self.age = 0
 		self.dead = False
 		self.goods = {}
+		self.edges = []
 		for good, params in model.goods.items():
 			if params.endowment is None: self.goods[good] = 0
 			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
@@ -132,6 +133,9 @@ class baseAgent():
 		self.model.doHooks('baseAgentDie', [self])
 		self.dead = True
 	
+	def newEdge(self, partner, direction=None, weight=1):
+		Edge(self, partner, direction, weight)
+	
 	@property
 	def balance(self):
 		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
@@ -156,3 +160,34 @@ class Agent(baseAgent):
 	def die(self):
 		self.model.doHooks('agentDie', [self])
 		super().die()
+
+class Edge():
+	def __init__(self, agent1, agent2, direction=None, weight=1):
+		self.active = True
+		self.vertices = (agent1, agent2)
+		self.weight = weight
+		if direction is not None:
+			if direction not in vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
+			self.endpoint = direction
+			self.startpoint = agent1 if direction==agent2 else agent2
+			self.directed = True
+		else:
+			self.endpoint, self.startpoint, self.directed = (None, None, False)
+		for agent in self.vertices: agent.edges.append(self)
+		agent1.model.doHooks('edgeInit', [self, agent1, agent2])
+	
+	def cut(self):
+		for agent in self.vertices: agent.edges.remove(self)
+		self.active = False
+		self.vertices[0].model.doHooks('edgeCut', [self])
+	
+	def partner(self, agent):
+		if agent==self.vertices[0]: return self.vertices[1]
+		elif agent==self.vertices[1]: return self.vertices[0]
+		else: raise ValueError('Agent',agent.id,'is not connected to this edge.')
+	
+	def reassign(self, oldagent, newagent):
+		self.vertices = (self.partner(oldagent), newagent)
+		oldagent.edges.remove(self)
+		newagent.edges.append(self)
+		newagent.model.doHooks('edgeReassign', [self, oldagent, newagent])
