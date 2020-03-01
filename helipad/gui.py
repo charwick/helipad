@@ -235,9 +235,25 @@ class GUI():
 			if not var[1]['runtime'] and k in self.sliders:
 				self.sliders[k].configure(state='disabled')
 		
+		def catchKeypress(event):
+			#Toggle legend boxes
+			if event.key == 't':
+				for g in self.graph.graph:
+					leg = g.get_legend()
+					leg.set_visible(not leg.get_visible())
+				self.graph.fig.canvas.draw()
+			
+			#Pause on spacebar
+			elif event.key == ' ':
+				if self.running: self.pause()
+				else: self.run()
+			
+			#User functions
+			self.model.doHooks('graphKeypress', [self, event.key])
+		
 		self.graph = Graph(plotsToDraw)
 		self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
-		self.graph.fig.canvas.mpl_connect('key_press_event', self.catchKeystroke)
+		self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		self.lastUpdate = 0
 		self.run()
 	
@@ -302,16 +318,6 @@ class GUI():
 		if hasattr(self, 'runButton'):
 			self.runButton['text'] = 'New Model'
 			self.runButton['command'] = self.preparePlots
-	
-	def catchKeystroke(self, event):
-		if event.key == 't':
-			for g in self.graph.graph:
-				leg = g.get_legend()
-				leg.set_visible(not leg.get_visible())
-			self.graph.fig.canvas.draw()
-		elif event.key == ' ':
-			if self.running: self.pause()
-			else: self.run()
 
 class Graph():
 	#listOfPlots is the trimmed model.plots list
