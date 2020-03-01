@@ -24,19 +24,14 @@ class Store(baseAgent):
 		self.breed = breed
 		super().__init__(id, model)
 		
-		self.price = {g:50 for g in model.goods}
-		self.invTarget = {}		#Inventory targets in terms of absolute quantity
-		self.portion = {}		#Allocation of capital to the various goods
+		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
+		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
+		self.price = {g:sm/(sqrt(model.goodParam('prod',g))) for g in model.nonMoneyGoods}
+		
+		self.invTarget = {g:model.goodParam('prod',g)*model.param('agents_agent') for g in model.nonMoneyGoods}
+		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
-	
-		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods])	
-		for good in model.nonMoneyGoods:
-			self.portion[good] = 1/(len(model.goods)-1)
-			self.invTarget[good] = 1
-		
-			#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-			self.price[good] = M0/model.param('agents_agent') * sm/(sqrt(model.goodParam('prod',good))*(len(model.goods)-1+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
 	
 	def step(self, stage):
 		super().step(stage)
@@ -229,12 +224,10 @@ def agentInit(agent, model):
 	rbd = model.breedParam('rbd', agent.breed, prim='agent')
 	beta = rbd/(rbd+1)
 	agent.utility = CES(['good','rbal'], agent.model.param('sigma'), {'good': 1-beta, 'rbal': beta })
+	agent.expCons = model.goodParam('prod', agent.item)
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 	agent.goods[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
-	
-	agent.prevBal = agent.balance
-	agent.expCons = model.goodParam('prod', agent.item)
 	
 heli.addHook('agentInit', agentInit)
 

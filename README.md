@@ -13,7 +13,7 @@ Documentation is a work in progress, and can be found at http://helipad-docs.nfs
 	
 	heli.launchGUI()
 
-See the documentation and the included sample models for more usage details.
+A bootstrap model is included to get started. See the documentation for more usage details.
 
 ## Requirements
 
@@ -35,6 +35,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* 0.4: Basic graph and network functionality
 * 0.3: Improvements to goods API
 * 0.2: Abstraction of agent-type primitives
 * 0.1: Initial release

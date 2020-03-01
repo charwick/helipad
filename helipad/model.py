@@ -98,6 +98,15 @@ class Helipad():
 				i+=1
 			self.plots = newplots
 	
+	def removePlot(self, name, reassign=None):
+		if isinstance(name, list):
+			for p in name: self.removePlot(p, reassign)
+			return
+				
+		if reassign is not None:
+			self.plots[reassign].series += self.plots[name].series
+		del self.plots[name]
+	
 	#First arg is the plot it's a part of
 	#Second arg is a reporter name registered in DataCollector, or a lambda function
 	#Third arg is the series name. Use '' to not show in the legend.

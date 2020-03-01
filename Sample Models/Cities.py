@@ -183,6 +183,7 @@ heli.defaultPlots = ['pop', 'hcap', 'wage', 'wealth', 'rates']
 heli.data.addReporter('hsum', HSum)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
 heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
+heli.removePlot(['demand', 'shortage','utility'])
 
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])

@@ -25,20 +25,15 @@ class Store(baseAgent):
 		self.breed = breed
 		super().__init__(id, model)
 		
-		self.price = {g:50 for g in model.goods}
-		self.invTarget = {}		#Inventory targets in terms of absolute quantity
-		self.portion = {}		#Allocation of capital to the various goods
+		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
+		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
+		self.price = {g:sm/(sqrt(model.goodParam('prod',g))) for g in model.nonMoneyGoods}
+		
+		self.invTarget = {g:model.goodParam('prod',g)*model.param('agents_agent') for g in model.nonMoneyGoods}
+		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
-	
-		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods])		
-		for good in model.nonMoneyGoods:
-			self.portion[good] = 1/(len(model.goods)-1)
-			self.invTarget[good] = 1
 		
-			#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period.
-			self.price[good] = M0/model.param('agents_agent') * sm/(sqrt(model.goodParam('prod',good))*(len(model.goods)-1+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
-	
 		if hasattr(self, 'bank'):
 			self.pavg = 0
 			self.projects = []
@@ -177,7 +172,6 @@ class Bank(baseAgent):
 		})
 		
 		self.accounts[customer.id] += amt	#Increase liabilities
-		
 		return amt							#How much you actually borrowed
 	
 	#Returns the amount you actually pay – the lesser of amt or your outstanding balance
@@ -197,12 +191,11 @@ class Bank(baseAgent):
 				leftover = 0
 			
 		self.accounts[customer.id] -= (amt - leftover)	#Reduce liabilities
-		
 		return amt - leftover							#How much you amortized
 	
 	def step(self, stage):
 		self.lastWithdrawal = 0
-		for l in self.credit: self.credit[l].step(stage)
+		for l in self.credit: self.credit[l].step()
 				
 		#Pay interest on deposits
 		lia = self.liabilities
@@ -212,12 +205,13 @@ class Bank(baseAgent):
 			for id, a in self.accounts.items():
 				self.accounts[id] += profit/lia * a
 		
-		# #Set target reserve ratio
-		# wd = self.model.data.getLast('withdrawals', 50)
-		# mn, st = wd.mean(), wd.std()
-		# if isnan(mn) or isnan(st): mn, st = .1, .1
-		# ttargetRR = (mn + 2 * st) / lia
-		# self.targetRR = (self.targetRR + 49*ttargetRR)/50
+		# # Set target reserve ratio
+		# if self.model.t > 2:
+		# 	wd = self.model.data.getLast('withdrawals', 50)
+		# 	mn, st = mean(wd), stdev(wd)
+		# 	if isnan(mn) or isnan(st): mn, st = .1, .1
+		# 	ttargetRR = (mn + 2 * st) / lia
+		# 	self.targetRR = (49*self.targetRR + ttargetRR)/50
 	
 		#Calculate inflation as the unweighted average price change over all goods
 		if self.model.t >= 2:
@@ -247,17 +241,13 @@ class Loan():
 	def __init__(self, customer, bank):
 		self.customer = customer
 		self.bank = bank
-		self.model = bank.model
 		self.loans = []
 		self.amortizeAmt = 0
 	
 	@property
-	def owe(self):
-		amt = 0
-		for l in self.loans: amt += l['amount']
-		return amt
+	def owe(self): return sum([l['amount'] for l in self.loans])
 	
-	def step(self, stage):
+	def step(self):
 		#Charge the minimum repayment if the agent hasn't already amortized more than that amount
 		minRepay = 0
 		for l in self.loans:
@@ -272,7 +262,7 @@ class Loan():
 			if amtz > self.bank.accounts[self.customer.id]:	#Can't charge them more than they have in the bank
 				defaulted = True
 				amtz = self.bank.accounts[self.customer.id]
-				# print(self.model.t, ': Agent', self.customer.id, 'defaulted $', self.owe - amtz)
+				# print(self.bank.model.t, ': Agent', self.customer.id, 'defaulted $', self.owe - amtz)
 			self.bank.amortize(self.customer, amtz)
 			if defaulted:
 				for n, l in enumerate(self.loans):
@@ -495,15 +485,13 @@ def agentInit(agent, model):
 	rbd = model.breedParam('rbd', agent.breed, prim='agent')
 	beta = rbd/(rbd+1)
 	agent.utility = CES(['good','rbal'], agent.model.param('sigma'), {'good': 1-beta, 'rbal': beta })
+	agent.expCons = model.goodParam('prod', agent.item)
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 	agent.goods[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
 	
 	if model.param('agents_bank') > 0:
 		agent.liqPref = model.breedParam('liqPref', agent.breed, prim='agent')
-	
-	agent.prevBal = agent.balance
-	agent.expCons = model.goodParam('prod', agent.item)
 	
 heli.addHook('agentInit', agentInit)
 
@@ -553,7 +541,6 @@ heli.addHook('buy', buy)
 def pay(agent, recipient, amount, model):
 	if hasattr(agent, 'bank') and recipient.primitive != 'bank' and agent.primitive != 'bank':
 		bal = agent.bank.account(agent)
-		# origamt = amount
 		if amount > bal: #If there are not enough funds
 			trans = bal
 			amount -= bal
