@@ -66,8 +66,7 @@ class Data():
 	#
 	
 	def modelReporter(self, key):
-		def reporter(model):
-			return getattr(model, key)
+		def reporter(model): return getattr(model, key)
 		return reporter
 	
 	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over

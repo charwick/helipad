@@ -82,13 +82,16 @@ class baseAgent():
 	def pay(self, recipient, amount):
 		if self.model.moneyGood is None: raise RuntimeError('Pay function requires a monetary good to be specified')
 		
-		if amount > self.balance: amount = self.balance #Budget constraint
+		#Budget constraint and hooks
+		if amount > self.balance: amount = self.balance
+		if -amount > recipient.balance: amount = -recipient.balance
 		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])
 		if amount_ is not None: amount = amount_
 				
-		if amount > 0:
+		if amount != 0:
 			recipient.goods[self.model.moneyGood] += amount
 			self.goods[self.model.moneyGood] -= amount
+		return amount
 	
 	def reproduce(self, inherit=[], mutate={}):
 		maxid = 0

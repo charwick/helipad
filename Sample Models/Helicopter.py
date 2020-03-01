@@ -3,7 +3,6 @@
 # 
 # #Differences from the NetLogo version:
 # -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
-# -Code is refactored to make it simple to add agent classes
 # -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 
 from itertools import combinations
@@ -98,7 +97,6 @@ heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 breeds = [
 	('hobbit', 'jam', 'D73229'),
 	('dwarf', 'axe', '2D8DBE'),
-	# ('orc', 'flesh', '664411'),
 	# ('elf', 'lembas', 'CCBB22')
 ]
 AgentGoods = {}
@@ -271,6 +269,7 @@ Agent.realBalances = property(realBalances)
 class CentralBank(baseAgent):
 	ngdpAvg = 0
 	ngdp = 0
+	primitive = 'cb'
 	
 	def __init__(self, id, model):
 		super().__init__(id, model)
@@ -307,15 +306,12 @@ class CentralBank(baseAgent):
 		return self.model.data.agentReporter('goods', 'all', good=self.model.moneyGood, stat='sum')(self.model)
 	
 	@M0.setter
-	def M0(self, value):
-		self.expand(value - self.M0)
+	def M0(self, value): self.expand(value - self.M0)
 
-def modelPostSetup(model):
-	model.cb = CentralBank(0, model)
+def modelPostSetup(model): model.cb = CentralBank(0, model)
 heli.addHook('modelPostSetup', modelPostSetup)
 
-def modelPostStep(model):
-	model.cb.step()	#Step the central bank last
+def modelPostStep(model): model.cb.step()	#Step the central bank last
 heli.addHook('modelPostStep', modelPostStep)
 
 #========
@@ -336,6 +332,5 @@ def mshock(model):
 	if m < 10000: m = 10000		#Things get weird when there's a money shortage
 	model.cb.M0 = m
 heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
-# heli.registerShock('M0 (every 700 periods)', 'M0', mshock, shock_everyn(700))
 
 heli.launchGUI()

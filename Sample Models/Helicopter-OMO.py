@@ -4,7 +4,6 @@
 # #Differences from the NetLogo version:
 # -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
 # -Banking model exists and is somewhat stable
-# -Code is refactored to make it simple to add agent classes
 # -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 
 from itertools import combinations
@@ -98,12 +97,10 @@ class Store(baseAgent):
 			self.bank.amortize(self, self.bank.credit[self.id].owe/1.5)
 			self.bank.borrow(self, self.model.cb.ngdp * (1-self.bank.i))
 
-class Bank():
+class Bank(baseAgent):
 	def __init__(self, breed, id, model):
-		self.id = id
-		self.model = model
+		super().__init__(id, model)
 		
-		self.goods = {model.moneyGood: 0} #Reserves
 		self.i = .1				#Per-period interest rate
 		self.targetRR = 0.25
 		self.lastWithdrawal = 0
@@ -116,9 +113,8 @@ class Bank():
 		self.pLast = 50 		#Initial price level, equal to average of initial prices
 		
 			
-	def balance(self, customer):
-		if customer.id in self.accounts: return self.accounts[customer.id]
-		else: return 0
+	def account(self, customer):
+		return self.accounts[customer.id] if customer.id in self.accounts else 0
 	
 	def setupAccount(self, customer):
 		if customer.id in self.accounts: return False		#If you already have an account
@@ -149,30 +145,14 @@ class Bank():
 		else: return self.goods[self.model.moneyGood] / l
 		
 	@property
-	def realInterest(self):
-		return self.i - self.inflation
+	def realInterest(self): return self.i - self.inflation
 	
-	@realInterest.setter
-	def realInterest(self, value):
-		self.i = value + self.inflation
-	
+	#amt<0 to withdraw
 	def deposit(self, customer, amt):
-		if amt == 0: return 0
-		if -amt > self.goods[self.model.moneyGood]: amt = 0.1 - self.goods[self.model.moneyGood]
-		# print('Reserves are $', self.goods[self.model.moneyGood])
-		# if self.goods[self.model.moneyGood] > 0: print("Expanding" if amt>0 else "Contracting","by $",abs(amt),"which is ",abs(amt)/self.goods[self.model.moneyGood]*100,"% of reserves")
-		
-		if amt > customer.goods[self.model.moneyGood]: amt = customer.goods[self.model.moneyGood]
-		customer.goods[self.model.moneyGood] -= amt	#Charge customer
-		self.goods[self.model.moneyGood] += amt		#Deposit cash
+		amt = customer.pay(self, amt)
 		self.accounts[customer.id] += amt	#Credit account
-		
-		# print('Now reserves are $',self.goods[self.model.moneyGood])
+		if amt<0: self.lastWithdrawal -= amt
 		return amt
-	
-	def withdraw(self, customer, amt):
-		self.deposit(customer, -amt)
-		self.lastWithdrawal += amt
 	
 	def transfer(self, customer, recipient, amt):		
 		if self.accounts[customer.id] < amt: amt = self.accounts[customer.id]
@@ -198,7 +178,7 @@ class Bank():
 		
 		self.accounts[customer.id] += amt	#Increase liabilities
 		
-		return amt									#How much you actually borrowed
+		return amt							#How much you actually borrowed
 	
 	#Returns the amount you actually pay – the lesser of amt or your outstanding balance
 	def amortize(self, customer, amt):
@@ -218,7 +198,7 @@ class Bank():
 			
 		self.accounts[customer.id] -= (amt - leftover)	#Reduce liabilities
 		
-		return amt - leftover									#How much you amortized
+		return amt - leftover							#How much you amortized
 	
 	def step(self, stage):
 		self.lastWithdrawal = 0
@@ -321,7 +301,6 @@ heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 breeds = [
 	('hobbit', 'jam', 'D73229'),
 	('dwarf', 'axe', '2D8DBE'),
-	# ('orc', 'flesh', '664411'),
 	# ('elf', 'lembas', 'CCBB22')
 ]
 AgentGoods = {}
@@ -345,11 +324,9 @@ def bankChecks(gui, val=None):
 		gui.sliders['breed_agent-liqPref-'+b].config(state='disabled' if nobank else 'normal')
 
 #Since the param callback takes different parameters than the GUI callback
-def bankCheckWrapper(model, var, val):
-	bankChecks(model.gui, val)
-
+def bankCheckWrapper(model, var, val): bankChecks(model.gui, val)
 heli.addHook('terminate', bankChecks)		#Reset the disabled checkmarks when terminating a model
-heli.addHook('GUIPostInit', bankChecks)	#Set the disabled checkmarks on initialization
+heli.addHook('GUIPostInit', bankChecks)		#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
 
@@ -507,7 +484,7 @@ from utility import CES
 
 #Choose a bank if necessary
 def baseAgentInit(agent, model):
-	if model.param('agents_bank') > 0:
+	if model.param('agents_bank') > 0 and agent.primitive != 'bank':
 		agent.bank = model.agents['bank'][0]
 		agent.bank.setupAccount(agent)
 heli.addHook('baseAgentInit', baseAgentInit)
@@ -561,7 +538,7 @@ Agent.realBalances = property(realBalances)
 #Use the bank if the bank exists
 def buy(agent, partner, good, q, p):
 	if hasattr(agent, 'bank'):
-		bal = agent.bank.balance(agent)
+		bal = agent.bank.account(agent)
 		if p*q > bal:
 			amount = bal
 			leftover = (p*q - bal)/q
@@ -574,8 +551,8 @@ heli.addHook('buy', buy)
 
 #Use the bank if the bank exists
 def pay(agent, recipient, amount, model):
-	if hasattr(agent, 'bank'):
-		bal = agent.bank.balance(agent)
+	if hasattr(agent, 'bank') and recipient.primitive != 'bank' and agent.primitive != 'bank':
+		bal = agent.bank.account(agent)
 		# origamt = amount
 		if amount > bal: #If there are not enough funds
 			trans = bal
@@ -588,8 +565,8 @@ def pay(agent, recipient, amount, model):
 heli.addHook('pay', pay)
 
 def checkBalance(agent, balance, model):
-	if hasattr(agent, 'bank'):
-		balance += agent.bank.balance(agent)
+	if hasattr(agent, 'bank') and agent.primitive != 'bank':
+		balance += agent.bank.account(agent)
 		return balance
 heli.addHook('checkBalance', checkBalance)
 			
@@ -600,6 +577,7 @@ heli.addHook('checkBalance', checkBalance)
 class CentralBank(baseAgent):
 	ngdpAvg = 0
 	ngdp = 0
+	primitive = 'cb'
 	
 	def __init__(self, id, model):
 		super().__init__(id, model)
@@ -650,17 +628,12 @@ class CentralBank(baseAgent):
 		return self.model.data.agentReporter('goods', 'all', good=self.model.moneyGood, stat='sum')(self.model)
 	
 	@M0.setter
-	def M0(self, value):
-		self.expand(value - self.M0)
+	def M0(self, value): self.expand(value - self.M0)
 	
 	@property
 	def M2(self):
 		if 'bank' not in self.model.primitives or self.model.param('agents_bank') == 0: return self.M0
-	
-		total = self.bank.goods[self.model.moneyGood]
-		for a in self.model.agents['agent']: total += a.balance
-		for s in self.model.agents['store']: total += s.balance
-		return total
+		return sum([a.balance for a in self.model.allagents.values()])
 	
 	#Price level
 	#Average good prices at each store, then average all of those together weighted by the store's sale volume
@@ -679,12 +652,10 @@ class CentralBank(baseAgent):
 		# if denom==0: return 1
 		# else: return numer/denom
 
-def modelPostSetup(model):
-	model.cb = CentralBank(0, model)
+def modelPostSetup(model): model.cb = CentralBank(0, model)
 heli.addHook('modelPostSetup', modelPostSetup)
 
-def modelPostStep(model):
-	model.cb.step()	#Step the central bank last
+def modelPostStep(model): model.cb.step()	#Step the central bank last
 heli.addHook('modelPostStep', modelPostStep)
 
 #========
@@ -705,6 +676,5 @@ def mshock(model):
 	if m < 10000: m = 10000		#Things get weird when there's a money shortage
 	model.cb.M0 = m
 heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
-# heli.registerShock('M0 (every 700 periods)', 'M0', mshock, shock_everyn(700))
 
 heli.launchGUI()
