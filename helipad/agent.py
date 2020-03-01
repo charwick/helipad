@@ -157,6 +157,17 @@ class baseAgent():
 			if edge.endpoint == self or (undirected and not edge.directed): ib.append(edge)
 		return ib
 	
+	def edgesWith(self, partner, kind='edge'):
+		common = []
+		if kind is not None:
+			if not kind in self.edges: return []
+			edges = self.edges[kind]
+		else: edges = self.alledges
+		for edge in edges:
+			if self in edge.vertices and partner in edge.vertices:
+				common.append(edge)
+		return common
+	
 	@property
 	def alledges(self):
 		edges = []
@@ -223,7 +234,6 @@ class Edge():
 			else: raise ValueError('Direction must be either int, bool, or agent.')
 		if not self.directed:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
-		print(self.vertices)
 		for agent in self.vertices:
 			if not kind in agent.edges: agent.edges[kind] = []
 			agent.edges[kind].append(self)
