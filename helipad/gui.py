@@ -85,7 +85,7 @@ class GUI():
 		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
 		self.expCSV.grid(row=1, column=0, columnspan=3)
 		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, command=lambda val: setattr(self, 'updateEvery', int(val)))
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], command=lambda val: setattr(self, 'updateEvery', int(val)))
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10)
 		self.runButton.grid(row=2, column=2, pady=(15,0))
@@ -171,7 +171,7 @@ class GUI():
 		fnum += 1
 		
 		# Graph Checkboxes
-		frame7 = expandableFrame(self.parent, text='Graphs', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+		frame7 = expandableFrame(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 		i=0
 		for k, v in self.model.plots.items():
 			i += 1
@@ -446,15 +446,14 @@ def keepEvery(lst, n):
 #
 
 # A slider with defined non-linear intervals
-class logSlider(Frame):
-	values = (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000)
-	
+class logSlider(Frame):	
 	def __init__(self, parent=None, title=None, orient=HORIZONTAL, command=None,
-		length=150, bg='#FFFFFF',
-		showvalue=0, font=('Lucida Grande',12)
+		length=150, bg='#FFFFFF', showvalue=0, font=('Lucida Grande',12),
+		values=()
 	):
 		Frame.__init__(self, parent, bg=bg)
-		if title: Label(self, font=font, text=title, bg=bg).pack(side=TOP) 
+		if title: Label(self, font=font, text=title, bg=bg).pack(side=TOP)
+		self.values = values
 		
 		self.extCommand = command
 		self.number = 0

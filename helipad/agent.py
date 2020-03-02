@@ -8,7 +8,8 @@ from numpy import *
 
 #Everybody who uses money, a base class to build upon
 class baseAgent():
-	def __init__(self, id, model):
+	def __init__(self, breed, id, model):
+		self.breed = breed
 		self.id = int(id)
 		self.model = model
 		self.age = 0
@@ -194,8 +195,7 @@ class baseAgent():
 		
 class Agent(baseAgent):
 	def __init__(self, breed, id, model):
-		self.breed = breed
-		super().__init__(id, model)
+		super().__init__(breed, id, model)
 		
 		self.utils = 0
 		self.model.doHooks('agentInit', [self, model])

@@ -22,7 +22,7 @@ heli = Helipad()
 class Store(baseAgent):
 	def __init__(self, breed, id, model):
 		self.breed = breed
-		super().__init__(id, model)
+		super().__init__(breed, id, model)
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
 		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
@@ -265,7 +265,7 @@ class CentralBank(baseAgent):
 	primitive = 'cb'
 	
 	def __init__(self, id, model):
-		super().__init__(id, model)
+		super().__init__(None, id, model)
 		self.id = id
 		self.model = model
 		
