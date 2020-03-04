@@ -2,7 +2,7 @@
 
 Helipad is an agent-based modeling framework for Python. It differs from other frameworks in that it focuses on time series output rather than spatial models.
 
-Documentation is a work in progress, and can be found at http://helipad-docs.nfshost.com/
+Documentation is a work in progress, and can be found at https://helipad.dev
 
 ## How to use
 

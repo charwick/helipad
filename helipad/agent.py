@@ -6,7 +6,9 @@
 from random import choice
 from numpy import *
 
-#Everybody who uses money, a base class to build upon
+#Basic agent functions. This class should not be instantiated directly; instead it should be
+#subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
+#See below, the Agent() class for a minimal example.
 class baseAgent():
 	def __init__(self, breed, id, model):
 		self.breed = breed
@@ -16,6 +18,7 @@ class baseAgent():
 		self.dead = False
 		self.goods = {}
 		self.edges = {}
+		self.utils = 0
 		for good, params in model.goods.items():
 			if params.endowment is None: self.goods[good] = 0
 			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
@@ -24,10 +27,10 @@ class baseAgent():
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
 					
-		self.model.doHooks('baseAgentInit', [self, self.model])
+		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
 	
 	def step(self, stage):
-		self.model.doHooks('baseAgentStep', [self, self.model, stage])
+		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if stage == self.model.stages: self.age += 1
 	
 	#Give amt1 of good 1, get amt2 of good 2
@@ -132,7 +135,7 @@ class baseAgent():
 		self.model.agents[self.primitive].remove(self)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)-1)
 		for edge in self.alledges: edge.cut()
-		self.model.doHooks('baseAgentDie', [self])
+		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 		self.dead = True
 	
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
@@ -192,21 +195,10 @@ class baseAgent():
 		if bal_ is not None: bal = bal_
 		
 		return bal
-		
+
+#The default agent class corresponding to the 'agent' primitive.	
 class Agent(baseAgent):
-	def __init__(self, breed, id, model):
-		super().__init__(breed, id, model)
-		
-		self.utils = 0
-		self.model.doHooks('agentInit', [self, model])
-	
-	def step(self, stage):
-		super().step(stage)
-		self.model.doHooks('agentStep', [self, self.model, stage])
-	
-	def die(self):
-		self.model.doHooks('agentDie', [self])
-		super().die()
+	pass
 
 #Direction can take an Agent object (corresponding to the endpoint),
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
