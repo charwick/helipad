@@ -128,7 +128,7 @@ class baseAgent():
 		self.model.agents[self.primitive].append(newagent)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
-		self.model.doHooks('agentReproduce', [self, newagent, self.model])
+		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [self, newagent, self.model])
 		return newagent
 	
 	def die(self):
@@ -141,7 +141,8 @@ class baseAgent():
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
 		return Edge(self, partner, kind, direction, weight)
 	
-	def outbound(self, kind='edge', undirected=False):
+	def outbound(self, kind='edge', undirected=False, obj='edge'):
+		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
 		if kind is None: edges = self.alledges
 		else:
 			if not kind in self.edges: return []
@@ -149,9 +150,10 @@ class baseAgent():
 		ob = []
 		for edge in edges:
 			if edge.startpoint == self or (undirected and not edge.directed): ob.append(edge)
-		return ob
+		return ob if obj=='edge' else [e.partner(self) for e in ob]
 	
-	def inbound(self, kind='edge', undirected=False):
+	def inbound(self, kind='edge', undirected=False, obj='edge'):
+		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
 		if kind is None: edges = self.alledges
 		else:
 			if not kind in self.edges: return []
@@ -159,7 +161,7 @@ class baseAgent():
 		ib = []
 		for edge in edges:
 			if edge.endpoint == self or (undirected and not edge.directed): ib.append(edge)
-		return ib
+		return ib if obj=='edge' else [e.partner(self) for e in ib]
 	
 	def edgesWith(self, partner, kind='edge'):
 		common = []

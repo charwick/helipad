@@ -249,7 +249,7 @@ class GUI():
 				else: self.run()
 			
 			#User functions
-			self.model.doHooks('graphKeypress', [self, event.key])
+			self.model.doHooks('graphKeypress', [event.key, self])
 		
 		self.graph = Graph(plotsToDraw)
 		self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
@@ -300,6 +300,7 @@ class GUI():
 		self.running = False
 		self.runButton['text'] = 'Run'
 		self.runButton['command'] = self.run
+		self.model.doHooks('pause', [self])
 	
 	def terminate(self, evt=False):
 		if self.running and (self.headless or self.expCSV.get()):

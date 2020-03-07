@@ -51,7 +51,7 @@ class Data():
 				for p, s in subplots.items():
 					self[var+'-'+str(p)+'-pctile'].append(s(model))
 			self[var].append(reporter(model))
-		model.doHooks('collect', [self, model.t])
+		model.doHooks('dataCollect', [self, model.t])
 	
 	def reset(self):
 		self.all = {k: [] for k in self.all.keys()}

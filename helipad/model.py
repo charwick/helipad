@@ -422,7 +422,7 @@ class Helipad():
 		#Shuffle or sort agents as necessary
 		for prim, lst in self.agents.items():
 			if self.order == 'random': shuffle(lst)
-			o = self.doHooks([prim+'Order', 'order'], [lst, self])	#Individual and global order hooks 
+			o = self.doHooks([prim+'Order', 'order'], [prim, lst, self])	#Individual and global order hooks 
 			if o is not None: self.agents[prim] = o
 			
 		for self.stage in range(1, self.stages+1):
@@ -495,7 +495,7 @@ class Helipad():
 			for i in range(0, int(diff)):
 				maxid += 1
 				
-				breed = self.doHooks(['decideBreed_'+prim, 'decideBreed'], [maxid, self.primitives[prim]['breeds'].keys(), self])
+				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [maxid, self.primitives[prim]['breeds'].keys(), self])
 				if breed is None: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
 				if not breed in self.primitives[prim]['breeds']:
 					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
