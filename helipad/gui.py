@@ -85,7 +85,8 @@ class GUI():
 		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
 		self.expCSV.grid(row=1, column=0, columnspan=3)
 		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], command=lambda val: setattr(self, 'updateEvery', int(val)))
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
+		self.refresh.slide.set(4) #Default refresh of 20
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10)
 		self.runButton.grid(row=2, column=2, pady=(15,0))
@@ -108,7 +109,7 @@ class GUI():
 			for k, var in paramDict.items():
 				if var[1]['type'] != 'check':
 					bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
-					bpf = bpf_super.sub_frame
+					bpf = bpf_super.subframe
 				else:
 					bpf = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
 					bpf_super = bpf
@@ -175,12 +176,12 @@ class GUI():
 		i=0
 		for k, v in self.model.plots.items():
 			i += 1
-			self.checks[k] = textCheck(frame7.sub_frame, text=v.label, anchor='w', defaultValue=k in self.model.defaultPlots, bg=(bgcolors[fnum%2],'#419BF9'))
+			self.checks[k] = textCheck(frame7.subframe, text=v.label, anchor='w', defaultValue=k in self.model.defaultPlots, bg=(bgcolors[fnum%2],'#419BF9'))
 			self.checks[k].grid(row=int(ceil(i/3)), column=(i-1)%3, sticky='WE')
 
-		frame7.sub_frame.columnconfigure(0,weight=1)
-		frame7.sub_frame.columnconfigure(1,weight=1)
-		frame7.sub_frame.columnconfigure(2,weight=1)
+		frame7.subframe.columnconfigure(0,weight=1)
+		frame7.subframe.columnconfigure(1,weight=1)
+		frame7.subframe.columnconfigure(2,weight=1)
 		frame7.pack(fill="x", side=TOP)
 		
 		#Shock checkboxes
@@ -189,9 +190,9 @@ class GUI():
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			for shock in self.model.shocks.shocks.values():
 				if callable(shock['timerFunc']):
-					shock['guiElement'] = Checkbutton(frame8.sub_frame, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+					shock['guiElement'] = Checkbutton(frame8.subframe, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
 				elif shock['timerFunc'] == 'button':
-					shock['guiElement'] = Button(frame8.sub_frame, text=shock['name'], command=shockCallback(shock['name']), padx=10, pady=10)
+					shock['guiElement'] = Button(frame8.subframe, text=shock['name'], command=shockCallback(shock['name']), padx=10, pady=10)
 				
 				if hasPmw and shock['desc'] is not None:
 					self.balloon.bind(shock['guiElement'], shock['desc'])
@@ -448,9 +449,9 @@ def keepEvery(lst, n):
 
 # A slider with defined non-linear intervals
 class logSlider(Frame):	
-	def __init__(self, parent=None, title=None, orient=HORIZONTAL, command=None,
-		length=150, bg='#FFFFFF', showvalue=0, font=('Lucida Grande',12),
-		values=()
+	def __init__(self, parent=None, title=None, command=None,
+		bg='#FFFFFF', font=('Lucida Grande',12),
+		values=(), **kwargs
 	):
 		Frame.__init__(self, parent, bg=bg)
 		if title: Label(self, font=font, text=title, bg=bg).pack(side=TOP)
@@ -458,56 +459,48 @@ class logSlider(Frame):
 		
 		self.extCommand = command
 		self.number = 0
-		self.slide = Scale(self, orient=orient, command=self.setValue,
-			length=length, bg=bg, highlightthickness=0,
-			showvalue=showvalue, from_=0, to=len(self.values)-1, font=font
+		
+		#Callback function
+		def setValue(val):
+			self.number = self.values[int(val)]
+			self.text.configure(text=self.number)
+			if self.extCommand != None: self.extCommand(self.values[int(val)])
+		
+		self.slide = Scale(self, command=setValue,
+			bg=bg, showvalue=0, from_=0, to=len(self.values)-1, font=font, **kwargs
 		)
 		self.text = Label(self, font=font, width=4, bg=bg)
 		self.slide.pack(side=RIGHT, expand=1, fill=X)
 		self.text.pack(side=TOP, fill=BOTH, padx=5)
-		
-		self.slide.set(4) #Default refresh of 20
 
-	def setValue(self, val):
-		self.number = self.values[int(val)]
-		self.text.configure(text=self.number)
-		if self.extCommand != None: self.extCommand(self.values[int(val)])
-
+#A frame that can be expanded and collapsed by clicking on the title
 class expandableFrame(Frame):
 	def __init__(self, parent=None, text="", fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
 		Frame.__init__(self, parent, bg=bg)
-		self.columnconfigure(0,weight=1)
+		self.columnconfigure(0, weight=1)
 		
 		self.pady=pady
 		self.padx=padx
-		self.bg = Color(bg)
-		self.hoverbg = Color(hue=self.bg.hue, saturation=self.bg.saturation, luminance=self.bg.luminance-0.05 if self.bg.luminance-0.05 > 0 else 0)
 		
 		self.text = text
-		self.title_label = Label(self, fg=fg, bg=bg, font=font, cursor='hand2')
-		self.title_label.bind('<Button-1>', self.toggle)
-		self.title_label.grid(row=0, column=0, sticky='WE', pady=(pady, 2))
+		self.titleLabel = Label(self, fg=fg, bg=bg, font=font, cursor='hand2')
+		self.titleLabel.bind('<Button-1>', self.toggle)
+		self.titleLabel.grid(row=0, column=0, sticky='WE', pady=(pady, 2))
 		
 		self.open = IntVar()
-		self.sub_frame = Frame(self, padx=padx, pady=0, bg=bg)
+		self.subframe = Frame(self, padx=padx, pady=0, bg=bg)
 		self.open.set(int(not startOpen))
-		self.toggle(None)
+		self.toggle()
 	
-	def toggle(self, event):
+	def toggle(self, event=None):
 		if bool(self.open.get()):	#If open, close
-			self.sub_frame.grid_forget()
-			self.title_label['text'] = self.text+' '+'▸'
+			self.subframe.grid_forget()
+			self.titleLabel['text'] = self.text+' '+'▸'
 			self.open.set(0)
 		else:						#If closed, open
-			self.sub_frame.grid(row=1, column=0, padx=self.padx, pady=0, sticky='WE')
-			self.title_label['text'] = self.text+' '+'▾'
+			self.subframe.grid(row=1, column=0, padx=self.padx, pady=0, sticky='WE')
+			self.titleLabel['text'] = self.text+' '+'▾'
 			self.open.set(1)
-	
-	def hover(self, event):
-		self.title_label.config(bg=self.hoverbg)
-		
-	def leave(self, event):
-		self.title_label.config(bg=self.bg)
 
 # A checkbox-like widget whose toggle is the entire element
 # bg and fg take a two-element tuple for inactive and active states
@@ -528,20 +521,26 @@ class textCheck(Label):
 			Color(hue=self.fg[0].hue, saturation=self.fg[0].saturation, luminance=.5+self.fg[0].luminance/2),
 			Color(hue=self.fg[1].hue, saturation=self.fg[1].saturation, luminance=.5+self.fg[1].luminance/2)
 		)
-		self.hoverbg = (
+		hoverbg = (
 			Color(hue=self.bg[0].hue, saturation=self.bg[0].saturation, luminance=self.bg[0].luminance-0.075 if self.bg[0].luminance-0.075 > 0 else 0),
 			Color(hue=self.bg[1].hue, saturation=self.bg[1].saturation, luminance=self.bg[1].luminance-0.075 if self.bg[1].luminance-0.075 > 0 else 0)
 		)
-		self.hoverfg = (
+		hoverfg = (
 			Color(hue=self.fg[0].hue, saturation=self.fg[0].saturation, luminance=self.fg[0].luminance-0.075 if self.fg[0].luminance-0.075 > 0 else 0),
 			Color(hue=self.fg[1].hue, saturation=self.fg[1].saturation, luminance=self.fg[1].luminance-0.075 if self.fg[1].luminance-0.075 > 0 else 0)
 		)
 		
 		self.value = defaultValue
 		self.enabled = True
+		
+		def hover(event):
+			if self.enabled: self.config(bg=hoverbg[self.value], fg=hoverfg[self.value])
+		def leave(event):
+			if self.enabled: self.config(bg=self.bg[self.value], fg=self.fg[self.value])
+		
 		self.bind('<Button-1>', self.toggle)
-		self.bind('<Enter>', self.hover)
-		self.bind('<Leave>', self.leave)
+		self.bind('<Enter>', hover)
+		self.bind('<Leave>', leave)
 	
 	def get(self): return self.value
 	def set(self, value):
@@ -550,7 +549,7 @@ class textCheck(Label):
 		self.value = bool(value)
 		self.config(bg=self.bg[self.value], fg=self.fg[self.value])
 	
-	def toggle(self, event): self.set(not self.value)
+	def toggle(self, event=None): self.set(not self.value)
 	
 	def enable(self): self.disabled(False)
 	def disable(self): self.disabled(True)
@@ -564,22 +563,23 @@ class textCheck(Label):
 		
 		self.enabled = not bool(disable)
 		self.config(bg=bg[self.value], fg=fg[self.value])
-		
-	def hover(self, event):
-		if self.enabled: self.config(bg=self.hoverbg[self.value], fg=self.hoverfg[self.value])
-		
-	def leave(self, event):
-		if self.enabled: self.config(bg=self.bg[self.value], fg=self.fg[self.value])
 
 # A checkbox that enables/disables a text box
 class checkEntry(Frame):
 	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), default='', type='string'):
 		Frame.__init__(self, parent, bg=bg)
-		self.type=type
 		
+		#If we're enforcing int, don't allow nonnumerical input
+		self.type=type
 		if type=='int':
 			validate='key'
-			valint = self.register(self.validateInt)
+			def validateInt(code, newval):		
+				if code != '1': return True
+				for c in newval:
+					if c not in '0123456789':
+						return False
+				return True
+			valint = self.register(validateInt)
 			valf = (valint, '%d', '%S')
 		else:
 			validate='none'
@@ -605,13 +605,16 @@ class checkEntry(Frame):
 			return 0 if v=='' else int(v)
 		else: return v
 	
-	#If we're enforcing int, don't allow nonnumerical input
-	def validateInt(self, code, newval):		
-		if code != '1': return True
-		for c in newval:
-			if c not in '0123456789':
-				return False
-		return True
+	#Can pass a bool to turn on and off the checkbox, or a string or an int (depending on the type)
+	#to change the value of the textbox.
+	def set(self, val):
+		if isinstance(val, bool):
+			self.checkVar.set(val)
+		elif isinstance(val, str) or isinstance(val, int):
+			if self.type=='int': val=int(val)
+			self.checkVar.set(True)
+			self.entryValue.set(val)
+		self.disableTextfield()
 
 #Requires random and not numpy.random for some reason??
 def randomword(length):

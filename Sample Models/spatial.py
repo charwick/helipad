@@ -9,7 +9,6 @@
 from model import Helipad
 from agent import baseAgent, Agent
 from random import randint
-# from utility import CobbDouglas
 
 heli = Helipad()
 heli.order = 'random'
