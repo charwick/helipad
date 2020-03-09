@@ -4,6 +4,7 @@
 # ==========
 
 from tkinter import *
+from tkinter.ttk import Progressbar
 from colour import Color
 from itertools import combinations
 from numpy import ndarray, asanyarray, log10
@@ -68,13 +69,23 @@ class GUI():
 		def shockCallback(name):
 			return lambda: self.model.shocks.do(name)
 		
+		def switchPbar(val):
+			if not val:
+				self.progress.config(mode='indeterminate')
+				if self.running: self.progress.start()
+			else:
+				self.progress.config(mode='determinate')
+				if self.running: self.progress.stop()
+			self.model.root.update()
+		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
+			
 		
 		#Put this up here so the variable name is accessible when headless
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
-		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int')
+		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int', callback=switchPbar)
 		
 		if headless: return
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
@@ -95,7 +106,7 @@ class GUI():
 		b=0
 		for f in self.model.buttons:
 			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10)
-			button.grid(row=3, column=b%2, pady=(15,0))
+			button.grid(row=4, column=b%2, pady=(15,0))
 			if hasPmw and f[2] is not None: self.balloon.bind(button, f[2])
 			b+=1
 		
@@ -103,6 +114,13 @@ class GUI():
 		frame1.columnconfigure(1,weight=1)
 		frame1.pack(fill="x", side=TOP)
 		fnum += 1
+		
+		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
+		frame0 = Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
+		self.progress = Progressbar(frame0, length=250, style="whitebg.Horizontal.TProgressbar")
+		self.progress.grid(row=0, column=0)
+		frame0.columnconfigure(0,weight=1)
+		frame0.pack(fill="x", side=TOP)
 		
 		#Item parameter sliders
 		def buildSlider(itemDict, paramDict, setget, obj, prim=None):
@@ -226,8 +244,8 @@ class GUI():
 					plotsToDraw[k] = self.model.plots[k]
 		
 		#If there are any graphs to plot
-		if not len(plotsToDraw.items()):
-			print('Nothing to output')
+		if not len(plotsToDraw.items()) and (not self.stopafter.get() or not self.expCSV.get()):
+			print('Plotless mode requires stop period and CSV export to be enabled.')
 			return
 		
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
@@ -236,25 +254,32 @@ class GUI():
 			if not var[1]['runtime'] and k in self.sliders:
 				self.sliders[k].configure(state='disabled')
 		
-		def catchKeypress(event):
-			#Toggle legend boxes
-			if event.key == 't':
-				for g in self.graph.graph:
-					leg = g.get_legend()
-					leg.set_visible(not leg.get_visible())
-				self.graph.fig.canvas.draw()
+		#If we've got plots, instantiate the Graph object
+		if len(plotsToDraw.items()) > 0:
+			def catchKeypress(event):
+				#Toggle legend boxes
+				if event.key == 't':
+					for g in self.graph.graph:
+						leg = g.get_legend()
+						leg.set_visible(not leg.get_visible())
+					self.graph.fig.canvas.draw()
 			
-			#Pause on spacebar
-			elif event.key == ' ':
-				if self.running: self.pause()
-				else: self.run()
+				#Pause on spacebar
+				elif event.key == ' ':
+					if self.running: self.pause()
+					else: self.run()
 			
-			#User functions
-			self.model.doHooks('graphKeypress', [event.key, self])
+				#User functions
+				self.model.doHooks('graphKeypress', [event.key, self])
 		
-		self.graph = Graph(plotsToDraw)
-		self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
-		self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+			self.graph = Graph(plotsToDraw)
+			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
+			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+		else:
+			self.graph = None
+			self.stopafter.disable()
+			self.expCSV.disable()
+		
 		self.lastUpdate = 0
 		self.run()
 	
@@ -265,19 +290,26 @@ class GUI():
 			self.runButton['text'] = 'Pause'
 			self.runButton['command'] = self.pause
 		
+		if not self.stopafter.get():
+			self.progress.config(mode='indeterminate')
+			self.progress.start()
+		else:
+			self.progress.config(mode='determinate')
+		
 		# start = time.time()
 		while self.running:
 			for t in range(self.updateEvery):
 				self.model.step()
 	
 			#Update graphs
-			data = self.model.data.getLast(self.model.t - self.lastUpdate)
+			if self.graph is not None:
+				data = self.model.data.getLast(self.model.t - self.lastUpdate)
 		
-			if (self.graph.resolution > 1):
-				data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
-			self.graph.update(data)
-			self.lastUpdate = self.model.t
-			if self.graph.resolution > self.updateEvery: self.updateEvery = self.graph.resolution
+				if (self.graph.resolution > 1):
+					data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
+				self.graph.update(data)
+				self.lastUpdate = self.model.t
+				if self.graph.resolution > self.updateEvery: self.updateEvery = self.graph.resolution
 			
 			## Performance indicator
 			# newtime = time.time()
@@ -285,7 +317,10 @@ class GUI():
 			# start = newtime
 		
 			st = self.stopafter.get()
-			if st and self.model.t>=st: self.terminate()
+			if st:
+				self.progress['value'] = self.model.t/st*100
+				if self.graph is None: self.model.root.update()
+				if self.model.t>=st: self.terminate()
 		
 		remainder = self.model.t % self.updateEvery
 		if remainder > 0: self.graph.update(self.model.data.getLast(remainder)) #Last update at the end
@@ -299,6 +334,7 @@ class GUI():
 	
 	def pause(self):
 		self.running = False
+		self.progress.stop()
 		self.runButton['text'] = 'Run'
 		self.runButton['command'] = self.run
 		self.model.doHooks('pause', [self])
@@ -309,10 +345,13 @@ class GUI():
 		
 		self.running = False
 		self.model.hasModel = False
+		self.progress.stop()
 		
 		#Re-enable checkmarks and options
 		for c in self.checks.values(): c.enable()
 		for s in self.sliders.values(): s.configure(state='normal')
+		self.stopafter.enable()
+		self.expCSV.enable()
 		
 		#Passes GUI object to the callback
 		self.model.doHooks('terminate', [self])
@@ -566,7 +605,7 @@ class textCheck(Label):
 
 # A checkbox that enables/disables a text box
 class checkEntry(Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), default='', type='string'):
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), default='', type='string', callback=None):
 		Frame.__init__(self, parent, bg=bg)
 		
 		#If we're enforcing int, don't allow nonnumerical input
@@ -585,10 +624,12 @@ class checkEntry(Frame):
 			validate='none'
 			valf = None
 			
+		self.enabled = True
 		self.entryValue = StringVar()
 		self.entryValue.set(default)
 		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate=validate, validatecommand=valf)
 		self.textbox.grid(row=0, column=1)
+		self.callback = callback
 		
 		self.checkVar = BooleanVar()
 		self.checkbox = Checkbutton(self, text=title, bg='#FFFFFF', var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
@@ -596,6 +637,7 @@ class checkEntry(Frame):
 	
 	def disableTextfield(self):
 		self.textbox.config(state='disabled' if not self.checkVar.get() else 'normal')
+		if callable(self.callback): self.callback(self.get())
 	
 	#Return False or the value of the textbox
 	def get(self):
@@ -615,6 +657,15 @@ class checkEntry(Frame):
 			self.checkVar.set(True)
 			self.entryValue.set(val)
 		self.disableTextfield()
+	
+	def enable(self): self.disabled(False)
+	def disable(self): self.disabled(True)
+	def disabled(self, disable):
+		self.textbox.config(state='disabled' if disable else 'normal')
+		self.checkbox.config(state='disabled' if disable else 'normal')
+		self.enabled = not disable
+		
+		
 
 #Requires random and not numpy.random for some reason??
 def randomword(length):
