@@ -13,6 +13,10 @@ for module in needed:
 		print("This model requires "+module+". Please use Pip to install it before continuing.")
 		sys.exit()
 
+if importlib.util.find_spec('networkx') is not None:
+	import networkx as nx
+	hasNx = True
+
 from random import shuffle
 from tkinter import *
 import pandas
@@ -55,6 +59,7 @@ class Helipad():
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
 		self.moneyGood = None
+		self.allEdges = {}
 		
 		#Default parameters
 		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
@@ -434,6 +439,27 @@ class Helipad():
 		self.data.collect(self)
 		self.doHooks('modelPostStep', [self])
 		return self.t
+	
+	def network(self, kind='edge', prim=None):
+		if not hasNx:
+			warnings.warn('Network export requires Networkx.', None, 2)
+			return
+		
+		import networkx as nx
+		G = nx.Graph()
+		agents = self.allagents.values() if prim is None else self.agents[prim]
+		G.add_nodes_from([a.id for a in agents])
+		if kind in self.allEdges:
+			G.add_edges_from([(e.vertices[0].id, e.vertices[1].id) for e in self.allEdges[kind]])
+		
+		return G
+	
+	def showNetwork(self, kind='edge', prim=None):
+		import matplotlib.pyplot as plt
+		G = self.network(kind, prim)
+		plt.figure() #New window
+		nx.draw(G)
+		plt.show()
 	
 	#For receiving updated values from the GUI
 	#Update the model parameter and execute the callback if it exists

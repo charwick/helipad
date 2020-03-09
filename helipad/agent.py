@@ -228,13 +228,19 @@ class Edge():
 			else: raise ValueError('Direction must be either int, bool, or agent.')
 		if not self.directed:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
+		
+		#Add object to each agent, and to the model
 		for agent in self.vertices:
 			if not kind in agent.edges: agent.edges[kind] = []
 			agent.edges[kind].append(self)
+		if not kind in agent1.model.allEdges: agent1.model.allEdges[kind] = []
+		agent1.model.allEdges[kind].append(self)
+		
 		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
 	
 	def cut(self):
-		for agent in self.vertices: agent.edges[self.kind].remove(self)
+		for agent in self.vertices: agent.edges[self.kind].remove(self) #Remove from agents
+		self.vertices[0].model.allEdges[self.kind].remove(self)			#Remove from model
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
 	

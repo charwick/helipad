@@ -21,7 +21,6 @@ Helipad requires Python 3.6. Previous versions do not preserve dict order, so yo
 
 The following libraries are required:
 
-* Tkinter (for the user interface)
 * Colour (for the user interface)
 * Matplotlib (for plotting the time series output)
 * Pandas (for data collection)
@@ -30,8 +29,9 @@ The following libraries are optional but recommended:
 
 * Readline (for the debug console)
 * Code (for the debug console)
-* Pyobjc (for Mac interface niceties)
 * PMW (for tooltips)
+* NetworkX (for network analysis)
+* Pyobjc (for Mac interface niceties)
 
 ## Version History
 

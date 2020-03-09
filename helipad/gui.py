@@ -69,6 +69,7 @@ class GUI():
 		def shockCallback(name):
 			return lambda: self.model.shocks.do(name)
 		
+		#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
 		def switchPbar(val):
 			if not val:
 				self.progress.config(mode='indeterminate')
@@ -275,6 +276,8 @@ class GUI():
 			self.graph = Graph(plotsToDraw)
 			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+		
+		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
 		else:
 			self.graph = None
 			self.stopafter.disable()
@@ -319,7 +322,7 @@ class GUI():
 			st = self.stopafter.get()
 			if st:
 				self.progress['value'] = self.model.t/st*100
-				if self.graph is None: self.model.root.update()
+				if self.graph is None: self.model.root.update() #Make sure we don't hang the interface if plotless
 				if self.model.t>=st: self.terminate()
 		
 		remainder = self.model.t % self.updateEvery
@@ -664,8 +667,6 @@ class checkEntry(Frame):
 		self.textbox.config(state='disabled' if disable else 'normal')
 		self.checkbox.config(state='disabled' if disable else 'normal')
 		self.enabled = not disable
-		
-		
 
 #Requires random and not numpy.random for some reason??
 def randomword(length):

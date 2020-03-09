@@ -36,7 +36,7 @@ class Data():
 					data[k].append(weight*data[k][-1] + (1-weight)*data[k+'-unsmooth'][-1] if t>1 else data[k+'-unsmooth'][-1])
 				return movingAvg
 				
-			self.model.addHook('collect', smooth(kwargs['smooth'], key))
+			self.model.addHook('dataCollect', smooth(kwargs['smooth'], key))
 			self[key] = []
 			key += '-unsmooth'
 		
