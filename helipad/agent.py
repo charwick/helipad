@@ -97,17 +97,39 @@ class baseAgent():
 			self.goods[self.model.moneyGood] -= amount
 		return amount
 	
-	def reproduce(self, inherit=[], mutate={}):
+	def reproduce(self, inherit=[], mutate={}, partners=[]):
 		maxid = 0
 		for a in self.model.agents['agent']:
 			if a.id > maxid:
 				maxid = a.id
-		newagent = Agent(self.breed, maxid+1, self.model)
+		newagent = type(self)(self.breed, maxid+1, self.model)
 		
-		#Copy inherited variables
-		for a in inherit + list(mutate.keys()):
-			if hasattr(self, a):
-				setattr(newagent, a, getattr(self, a))
+		#Values in the inherit list can either be a variable name (in which case the new agent inherits
+		#the mean of all of the values for the parents), or a tuple, the first element of which is a
+		#variable name, and the second is a string representing how to merge them. Possible values are
+		#'mean' (default for numeric values), 'first' (default for non-numeric values), 'last', 'gmean',
+		#'random', and 'sum'. The second value can also take a function, which receives a list of
+		#values from the parents and returns a value for the child.
+		parents = [self] + partners
+		for a in inherit:
+			stat = None
+			if isinstance(a, tuple): a, stat = a
+			v = [getattr(p,a) for p in parents if hasattr(p,a)] #List of values, filtering those without
+			if len(v)==0: continue
+			
+			#Default statistic if unspecified. 'mean' for numbers, and 'first' for non-numbers.
+			if stat is None:
+				stat = 'mean' if isinstance(v[0], (int, float, complex)) and not isinstance(v[0], bool) else 'first'
+			
+			if stat=='mean': n = mean(v)
+			elif stat=='sum': n = sum(v)
+			elif stat=='gmean': n = exp(log(v).sum()/len(v))
+			elif stat=='first': n = v[0]
+			elif stat=='last': n = v[len(v)-1]
+			elif stat=='rand' or stat=='random': n = choice(v)
+			elif callable(stat): n = stat(v)
+			
+			setattr(newagent, a, n)
 		
 		#Mutate variables
 		#Values in the mutate dict can be either a function (which takes a value and returns a value),
@@ -124,11 +146,12 @@ class baseAgent():
 			setattr(newagent, k, newval)
 		
 		newagent.id = maxid+1
-		self.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
+		for p in parents:
+			p.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
 		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)+1)
 		
-		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [self, newagent, self.model])
+		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
 	
 	def die(self):
@@ -183,7 +206,9 @@ class baseAgent():
 	@property
 	def parent(self):
 		p = self.inbound('lineage')
-		return p[0].partner(self) if len(p) > 0 else None
+		if len(p)==0: return None
+		elif len(p)==1: return p[0]
+		else: return p
 	
 	@property
 	def children(self):

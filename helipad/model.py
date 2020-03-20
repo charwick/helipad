@@ -445,7 +445,6 @@ class Helipad():
 			warnings.warn('Network export requires Networkx.', None, 2)
 			return
 		
-		import networkx as nx
 		G = nx.Graph()
 		agents = self.allagents.values() if prim is None else self.agents[prim]
 		G.add_nodes_from([a.id for a in agents])

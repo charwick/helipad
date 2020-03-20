@@ -97,7 +97,7 @@ def agentStep(agent, model, stage):
 		mvc = model.param('movecost')
 		if otherwage > agent.lastWage*1.25 and agent.wealth > mvc: #and model.t > 10000:
 		# if agent.prod[otherloc]-mvc > agent.prod[agent.breed] and agent.wealth > mvc: #and model.t > 10000:
-			print('T=',model.t,', HC',agent.H,':',agent.breed,'wage=',agent.lastWage,',',otherloc,'wage=',otherwage)
+			# print('T=',model.t,', HC',agent.H,':',agent.breed,'wage=',agent.lastWage,',',otherloc,'wage=',otherwage)
 			agent.wealth -= mvc
 			model.movers[agent.breed] += 1
 			agent.breed = otherloc
@@ -109,8 +109,10 @@ def agentStep(agent, model, stage):
 		randn= random.normal(1, 0.2)
 		if rand < model.param('deathrate'): agent.die()
 		elif agent.wealth > model.param('breedThresh') * (randn if agent.breed=='rural' else agent.H/4):
-			# print('randn was',randn,'Reproducing with wealth',agent.wealth)
-			agent.reproduce(mutate={'H': (0.5, 'log')})
+			child = agent.reproduce(
+				inherit=['H', ('wealth', lambda w: w[0]/2)],
+				mutate={'H': (0.5, 'log')}
+			)
 			agent.wealth -= agent.wealth/2 + 1 #-= breedThresh #Fixed cost
 			model.births[agent.breed] += 1
 	
@@ -122,10 +124,6 @@ def agentStep(agent, model, stage):
 		return
 	
 heli.addHook('agentStep', agentStep)
-
-def agentReproduce(agent, child, model):
-	child.wealth = agent.wealth/2
-heli.addHook('agentReproduce', agentReproduce)
 
 #Organize some data and pause if all agents are dead
 def modelPostStep(model):
