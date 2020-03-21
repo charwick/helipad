@@ -127,7 +127,10 @@ class baseAgent():
 			elif stat=='first': n = v[0]
 			elif stat=='last': n = v[len(v)-1]
 			elif stat=='rand' or stat=='random': n = choice(v)
+			elif stat=='max': n = max(v)
+			elif stat=='min': n = min(v)
 			elif callable(stat): n = stat(v)
+			else: raise ValueError("Invalid statistic in reproduction function.")
 			
 			setattr(newagent, a, n)
 		
