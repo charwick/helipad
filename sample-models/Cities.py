@@ -3,7 +3,7 @@
 from collections import namedtuple
 import pandas
 
-from model import Helipad
+from helipad import Helipad
 from math import sqrt, log
 from numpy import *
 import random as rand2
@@ -54,7 +54,7 @@ def modelPreSetup(model):
 		setattr(model, 'birthrate'+b, 0)
 heli.addHook('modelPreSetup', modelPreSetup)
 
-from utility import CobbDouglas
+from helipad.utility import CobbDouglas
 def agentInit(agent, model):
 	agent.utility = CobbDouglas(['consumption'], {'consumption': 0.5}) #Single good
 	agent.H = 1 #Human capital

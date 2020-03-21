@@ -29,9 +29,9 @@ from numpy import random
 import matplotlib
 matplotlib.use('TkAgg')
 
-from gui import GUI
-from data import Data
-import agent
+from helipad.gui import GUI
+from helipad.data import Data
+import helipad.agent as agent
 
 #Generic extensible item class to store structured data
 class Item():

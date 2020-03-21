@@ -6,7 +6,7 @@
 # Instantiate the object and add parameters, breeds, and goods below.
 #===============
 
-from model import Helipad
+from helipad import Helipad
 # from utility import CobbDouglas
 
 heli = Helipad()

@@ -6,8 +6,7 @@
 # Instantiate the object and add parameters, breeds, and goods below.
 #===============
 
-from model import Helipad
-from agent import baseAgent, Agent
+from helipad import *
 from random import randint
 
 heli = Helipad()

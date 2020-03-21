@@ -1,5 +1,5 @@
-from model import Helipad
-from agent import Agent, baseAgent
-from utility import *
+from helipad.model import Helipad
+from helipad.agent import *
+import helipad.utility as utility
 
-__version__ = "0.4"
+__version__ = "0.4.1"

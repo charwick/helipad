@@ -4,8 +4,8 @@
 # SETUP
 #===============
 
-from model import Helipad
-from utility import CobbDouglas
+from helipad import Helipad
+from helipad.utility import CobbDouglas
 from math import sqrt, exp, floor
 import random
 

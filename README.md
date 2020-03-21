@@ -6,14 +6,20 @@ Documentation is a work in progress, and can be found at https://helipad.dev
 
 ## How to use
 
-	from model import Helipad
+You can install Helipad using Pip.
+
+	pip install helipad
+
+Once installed, getting started with a model is very simple. 
+
+	from helipad import *
 	heli = Helipad()
 	
 	#Use the heli object to set up here
 	
 	heli.launchGUI()
 
-A bootstrap model is included to get started. See the documentation for more usage details.
+The included [bootstrap model](https://github.com/charwick/helipad/blob/master/sample-models/bootstrap.py) contains a more detailed template, and the [sample models](https://github.com/charwick/helipad/tree/master/sample-models) exemplify various use cases. The documentation also includes a complete [hook and function reference](https://helipad.dev/functions/).
 
 ## Requirements
 
@@ -38,4 +44,4 @@ The following libraries are optional but recommended:
 * 0.4: Basic graph and network functionality
 * 0.3: Improvements to goods API
 * 0.2: Abstraction of agent-type primitives
-* 0.1: Initial release
+* 0.1: Initial Github release
