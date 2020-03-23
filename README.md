@@ -33,9 +33,9 @@ The following libraries are required:
 
 The following libraries are optional but recommended:
 
-* Code (for the debug console)
 * PMW (for tooltips)
 * NetworkX (for network analysis)
+* Readline and Code (for the debug console)
 * Pyobjc (for Mac interface niceties)
 
 ## Version History

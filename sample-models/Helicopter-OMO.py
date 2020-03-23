@@ -1,17 +1,11 @@
-# For instructions on how to run, see https://cameronharwick.com/running-a-python-abm/
+# A model of the relative price effects of monetary shocks via helicopter drop vs. by open market operations.
 # Download the paper at https://ssrn.com/abstract=2545488
-# 
-# #Differences from the NetLogo version:
-# -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
-# -Banking model exists and is somewhat stable
-# -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 
 from itertools import combinations
 from colour import Color
 import pandas
 
-from helipad import Helipad
-from helipad.agent import * #Necessary to register primitives
+from helipad import *
 from math import sqrt
 heli = Helipad()
 
@@ -119,10 +113,7 @@ class Bank(baseAgent):
 	#Any difference gets disbursed as interest on deposits
 	@property
 	def assets(self):
-		a = self.goods[self.model.moneyGood] #Reserves
-		for uid, l in self.credit.items():
-			a += l.owe
-		return a
+		return self.goods[self.model.moneyGood] + sum([l.owe for l in self.credit.values()]) #Reserves
 	
 	@property
 	def liabilities(self):
@@ -590,14 +581,9 @@ class CentralBank(baseAgent):
 		#Deposit with each bank in proportion to their liabilities
 		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0:
 			self.goods[self.model.moneyGood] += amount
-			denom = 0
-			for b in self.model.agents['bank']:
-				denom += b.liabilities
-			for b in self.model.agents['bank']:
-				r = b.goods[self.model.moneyGood]
-				a = amount * b.liabilities/denom
-				if -a > r: a = -r + 1
-				b.deposit(self, a)
+			r = self.model.agents['bank'][0].goods[self.model.moneyGood]
+			if -amount > r: amount = -r + 1
+			self.model.agents['bank'][0].deposit(self, amount)
 				
 		elif self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('agents_agent')

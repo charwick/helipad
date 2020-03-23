@@ -173,9 +173,7 @@ class baseAgent():
 		else:
 			if not kind in self.edges: return []
 			edges = self.edges[kind]
-		ob = []
-		for edge in edges:
-			if edge.startpoint == self or (undirected and not edge.directed): ob.append(edge)
+		ob = [edge for edge in edges if edge.startpoint == self or (undirected and not edge.directed)]
 		return ob if obj=='edge' else [e.partner(self) for e in ob]
 	
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
@@ -184,21 +182,15 @@ class baseAgent():
 		else:
 			if not kind in self.edges: return []
 			edges = self.edges[kind]
-		ib = []
-		for edge in edges:
-			if edge.endpoint == self or (undirected and not edge.directed): ib.append(edge)
+		ib = [edge for edge in edges if edge.endpoint == self or (undirected and not edge.directed)]
 		return ib if obj=='edge' else [e.partner(self) for e in ib]
 	
 	def edgesWith(self, partner, kind='edge'):
-		common = []
 		if kind is not None:
 			if not kind in self.edges: return []
 			edges = self.edges[kind]
 		else: edges = self.alledges
-		for edge in edges:
-			if self in edge.vertices and partner in edge.vertices:
-				common.append(edge)
-		return common
+		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
 	
 	@property
 	def alledges(self):

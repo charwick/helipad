@@ -1,4 +1,4 @@
-# For instructions on how to run, see https://cameronharwick.com/running-a-python-abm/
+# A model of the long-run cyclical dynamics of urbanization and human capital.
 
 from collections import namedtuple
 import pandas
@@ -146,23 +146,13 @@ heli.addHook('decideBreed', decideBreed)
 # REPORTERS AND PLOTS
 #================
 
-def urbanPop(model):
-	u=0
-	for a in model.agents['agent']:
-		if a.breed == 'urban': u += 1
-	return u
-	
-def ruralPop(model):
-	return model.param('agents_agent') - urbanPop(model)
+def urbanPop(model): return len(model.agent('urban'))
+def ruralPop(model): return len(model.agent('rural'))
 
 # returns ln(∑H²) for urban population
 def HSum(model):
 	upop = model.agent('urban')
-	if len(upop) > 0:
-		h=0
-		for a in model.agent('urban'): h += a.H
-		return h
-	else: return 1
+	return sum([a.H for a in model.agent('urban')]) if len(upop) > 0 else 1
 
 def perCapGdp(model, loc):
 	def tmp(model):

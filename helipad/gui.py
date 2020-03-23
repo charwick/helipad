@@ -250,11 +250,7 @@ class GUI():
 		
 		#Trim the plot list to the checked items and sent it to Graph
 		if self.headless: plotsToDraw = {k: self.model.plots[k] for k in self.model.defaultPlots}
-		else:
-			plotsToDraw = {}
-			for k, i in self.checks.items():
-				if i.enabled and i.get():
-					plotsToDraw[k] = self.model.plots[k]
+		else: plotsToDraw = {k: self.model.plots[k] for k, i in self.checks.items() if i.enabled and i.get()}
 		
 		#If there are any graphs to plot
 		if not len(plotsToDraw.items()) and (not self.stopafter.get() or not self.expCSV.get()):

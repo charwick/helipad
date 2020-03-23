@@ -76,20 +76,17 @@ class CES(Utility):
 		
 		#The general utility function
 		else:
-			util = 0
-			for g in self.goods:
-				util += self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast)
+			util = sum([self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods])
 			return util ** (self.elast/(self.elast-1))
 	
 	def mu(self, quantities):
 		super().mu(quantities)
-		mus = {}
 		
 		if self.elast==0:	#Leontief
-			for g in self.goods:
-				mus[g] = 1 if quantities[g] < min(quantities.values()) else 0
+			mus = {g: 1 if quantities[g] < min(quantities.values()) else 0}
 		
 		elif self.elast==1:	#Cobb-Douglas
+			mus = {}
 			for g in self.goods:
 				mus[g] = self.coeffs[g] * quantities[g] ** (self.coeffs[g] - 1)
 				for g2 in self.goods:
@@ -97,12 +94,9 @@ class CES(Utility):
 						mus[g] *= quantities[g2] ** self.coeffs[g2]
 		
 		else:				#General CES
-			coeff = 0
-			for g in self.goods: #Only need to do this once
-				coeff += self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast)
+			coeff = sum([self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods])
 			coeff = coeff ** (1/(self.elast-1))
-			for g in self.goods:
-				mus[g] = coeff * (self.coeffs[g]/quantities[g]) ** (1/self.elast)
+			mus = {g: coeff * (self.coeffs[g]/quantities[g]) ** (1/self.elast) for g in self.goods}
 		
 		return mus
 	

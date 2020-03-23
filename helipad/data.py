@@ -73,9 +73,7 @@ class Data():
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim='agent', breed=None, good=None, stat='mean', **kwargs):
 		if 'percentiles' in kwargs:
-			subplots = {}
-			for p in kwargs['percentiles']:
-				subplots[p] = self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p))
+			subplots = {p:self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
 		else: subplots = None
 		
 		def reporter(model):

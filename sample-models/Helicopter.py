@@ -1,16 +1,11 @@
-# For instructions on how to run, see https://cameronharwick.com/running-a-python-abm/
+# A model of the relative price effects of monetary shocks via helicopter drop
 # Download the paper at https://ssrn.com/abstract=2545488
-# 
-# #Differences from the NetLogo version:
-# -Target inventory calculated as 1.5 std dev above the mean demand of the last 50 periods
-# -Demand for real balances is mediated through a CES utility function rather than being stipulated ad hoc
 
 from itertools import combinations
 from colour import Color
 import pandas
 
-from helipad import Helipad
-from helipad.agent import * #Necessary to register primitives
+from helipad import *
 from math import sqrt
 heli = Helipad()
 

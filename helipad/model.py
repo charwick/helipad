@@ -156,7 +156,6 @@ class Helipad():
 		
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', 'agent'))
-		# self.data.addReporter('utilityStd', self.data.agentReporter('utils', 'agent', stat='std'))
 		
 		def pReporter(n, paramType=None, obj=None, prim=None):
 			def reporter(model):
@@ -181,14 +180,12 @@ class Helipad():
 			self.data.addReporter('M0', self.data.agentReporter('goods', 'all', good=self.moneyGood, stat='sum'))
 			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
-		#Per-breed series and reporters
+		#Per-breed and per-good series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in self.primitives['agent']['breeds'].items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', 'agent', breed=breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
-		# Per-good series and reporters
-		goods = self.goods.keys()
 		for good, g in self.nonMoneyGoods.items():
 			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 			self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
@@ -210,10 +207,10 @@ class Helipad():
 			
 	#Adds an adjustable parameter exposed in the config GUI.
 	#
-	# name (required): A unique internal name for the parameter
-	# title (required): A human-readable title for display
-	# dflt (required): The default value
-	# opts (required): Type-specific options
+	# name: A unique internal name for the parameter
+	# title: A human-readable title for display
+	# dflt: The default value
+	# opts: Type-specific options
 	
 	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
 		if paramType is None: params=self.params
@@ -346,8 +343,7 @@ class Helipad():
 	def goodParam(self, name, good=None, val=None, **kwargs):
 		return self.param(name, val, paramType='good', obj=good)
 	
-	#For adding breeds and goods
-	#Should not be called directly
+	#For adding breeds and goods. Should not be called directly
 	def addItem(self, obj, name, color, prim=None, **kwargs):
 		if obj=='good':
 			itemDict = self.goods
@@ -390,11 +386,7 @@ class Helipad():
 	
 	@property
 	def nonMoneyGoods(self):
-		g={}
-		for k,v in self.goods.items():
-			if v.money: continue
-			g[k] = v
-		return g
+		return {k:v for k,v in self.goods.items() if not v.money}
 			
 	def addHook(self, place, func):
 		if not place in self.hooks: self.hooks[place] = []
@@ -501,8 +493,7 @@ class Helipad():
 	def allagents(self):
 		agents = {}
 		for k, l in self.agents.items():
-			for a in l:
-				agents[a.id] = a
+			agents.update({a.id:a for a in l})
 		return agents
 	
 	#CALLBACK FOR DEFAULT PARAMETERS
@@ -549,11 +540,7 @@ class Helipad():
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive='agent'):
 		if isinstance(var, str):
-			agents = []
-			for a in self.agents[primitive]:
-				if a.breed == var:
-					agents.append(a)
-			return agents
+			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
 			return self.allagents[var]
 		
@@ -562,9 +549,7 @@ class Helipad():
 	#Returns summary statistics on an agent variable at a single point in time
 	def summary(self, var, prim='agent', breed=None):
 		agents = self.agents['agent'] if breed is None else self.agent(breed, prim)
-		data = []
-		for a in agents: data.append(getattr(a, var))
-		data = pandas.Series(data) #Gives us nice statistical functions
+		data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
 		stats = {
 			'n': data.size,
 			'Mean': data.mean(),

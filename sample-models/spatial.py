@@ -41,11 +41,7 @@ class Patch(baseAgent):
 	
 	@property
 	def agentsOn(self):
-		agents = []
-		for a in self.model.agents['agent']:
-			if a.x==self.x and a.y==self.y:
-				agents.append(a)
-		return agents
+		return [a for a in self.model.agents['agent'] if a.x==self.x and a.y==self.y]
 	
 heli.addPrimitive('patch', Patch, dflt=heli.dimension**2, low=0, high=100)
 
