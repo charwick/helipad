@@ -44,11 +44,14 @@ class GUI():
 			def cb(val=None):
 				if '-' in fullvar:
 					obj, var, item = fullvar.split('-')	#Per-object variables
-					val = getattr(self.model, obj+'Param')(var, item)
+					if '_' in obj:
+						obj, prim = obj.split('_')
+						val = getattr(self.model, obj+'Param')(var, item, prim=prim)
+					else: val = getattr(self.model, obj+'Param')(var, item)
 				else:
 					var = fullvar
-					val = getattr(self.model, 'param')(var)
-			
+					val = self.model.param(var)
+				
 				if callable(callback): callback(self.model, var, val)
 			return cb
 		
@@ -126,34 +129,43 @@ class GUI():
 		#Item parameter sliders
 		def buildSlider(itemDict, paramDict, setget, obj, prim=None):
 			for k, var in paramDict.items():
-				if var[1]['type'] != 'check':
-					bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
-					bpf = bpf_super.subframe
-				else:
-					bpf = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
-					bpf_super = bpf
+				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
+				bpf = bpf_super.subframe
+				
 				i=0
 				for name, b in itemDict.items():
 					bname = obj+'-'+k+'-'+name
-				
-					if var[1]['type'] == 'menu':
-						self.sliders[bname] = OptionMenu(bpf, paramDict[k][0][name], command=menuCallback(bname, var[1]['callback']), *var[1]['opts'].values())
-						self.sliders[bname].config(bg=bgcolors[fnum%2])
-					elif var[1]['type'] == 'check':
-						self.sliders[bname] = Checkbutton(bpf, text=var[1]['title'], var=paramDict[k][0][name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
-						self.sliders[bname].variable = paramDict[k][0][name] #Keep track of this because it doesn't pass the value to the callback
-					elif var[1]['type'] == 'slider':
-						self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
-						self.sliders[bname].set(setget(k, name, prim=prim))
-				
-					self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
-					if hasPmw and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
+					
+					#Circle for item color
 					lframe = Frame(bpf, bg=bgcolors[fnum%2], padx=0, pady=0)
 					c = Canvas(lframe, width=17, height=12, bg=bgcolors[fnum%2], highlightthickness=0)
 					c.create_oval(0,0,12,12,fill=b.color.hex_l, outline='')
-					c.grid(row=0,column=0, pady=(0,8))
-					Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
+					c.grid(row=0, column=0, pady=(0,8))
+					
+					#Item name label
+					if var[1]['type'] != 'check':
+						Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
+				
+						if var[1]['type'] == 'menu':
+							self.sliders[bname] = OptionMenu(bpf, paramDict[k][0][name], command=menuCallback(bname, var[1]['callback']), *var[1]['opts'].values())
+							self.sliders[bname].config(bg=bgcolors[fnum%2])
+						elif var[1]['type'] == 'slider':
+							self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
+							self.sliders[bname].set(setget(k, name, prim=prim))
+						
+						self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
+					
+					#Do everything differently if we've got a checkbox
+					else:
+						self.sliders[bname] = Checkbutton(lframe, text=name.title(), var=paramDict[k][0][name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
+						self.sliders[bname].variable = paramDict[k][0][name] #Keep track of this because it doesn't pass the value to the callback
+						self.sliders[bname].grid(row=0, column=1)
+					
+					bpf.columnconfigure(0,weight=1)
+					bpf.columnconfigure(1,weight=1)
 					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
+					if hasPmw and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
+					
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
 				

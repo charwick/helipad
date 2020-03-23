@@ -325,7 +325,7 @@ class Helipad():
 			if params[name][1]['type'] == 'menu':
 				#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
 				flip = {y:x for x,y in params[name][1]['opts'].items()}
-				if paramType is None: return flip[params[name][0].get()]							#Basic parameter
+				if paramType is None: return flip[params[name][0].get()]							#Global parameter
 				else:
 					if obj is None: return {o:flip[v.get()] for o,v in params[name][0].items()}		#Item parameter, item unspecified
 					else: return flip[params[name][0][obj].get()]									#Item parameter, item specified

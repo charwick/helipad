@@ -5,13 +5,13 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
 	name="helipad",
-	version="0.4.1",
+	version="0.4.2",
 	author="C Harwick",
 	author_email="cameron@cameronharwick.com",
 	description="An agent-based modeling framework for Python focused on time-series output.",
 	long_description=long_description,
 	long_description_content_type="text/markdown",
-	url="https://github.com/charwick/helipad",
+	url="https://helipad.dev",
 	packages=setuptools.find_packages(),
 	license='MIT',
 	install_requires=[

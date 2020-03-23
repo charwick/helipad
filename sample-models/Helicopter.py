@@ -106,9 +106,7 @@ heli.order = 'random'
 # UPDATE CALLBACKS
 
 def storeUpdater(model, var, val):
-	if model.hasModel:
-		for s in model.agents['store']:
-			setattr(s, var, val)
+	if model.hasModel: setattr(model.agents['store'][0], var, val)
 
 def ngdpUpdater(model, var, val):
 	if model.hasModel: model.cb.ngdpTarget = val if not val else model.cb.ngdp
