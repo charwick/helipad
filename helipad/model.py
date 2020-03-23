@@ -75,6 +75,32 @@ class Helipad():
 		}
 		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
 		self.defaultPlots = []
+		
+		#Check for updates
+		from helipad.__init__ import __version__
+		import xmlrpc.client, ssl
+		
+		#Is v1 bigger than v2?
+		#There's a `packaging` function to do this, but let's not bloat our dependencies.
+		def vcompare(v1, v2):
+			(v1, v2) = (v1.split('.'), (v2.split('.')))
+			
+			#Pad major releases with zeroes to make comparable
+			maxl = max([len(v1), len(v2)])
+			for v in [v1,v2]:
+				if len(v)<maxl: v += [0 for i in range(maxl-len(v))]
+			
+			for k,i in enumerate(v1):
+				if i > v2[k]: return True
+				elif i < v2[k]: return False
+			return False
+		
+		try:
+			pypi = xmlrpc.client.ServerProxy('https://pypi.org/pypi', context=ssl._create_unverified_context())
+			available = pypi.package_releases('helipad')
+			if vcompare(available[0], __version__):
+				print('A Helipad update is available! Use `pip install -U helipad` to upgrade to version',available[0])
+		except: pass #Fail silently if we're not online
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
