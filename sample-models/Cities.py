@@ -177,7 +177,6 @@ heli.addPlot('hcap', 'Human Capital', 2, logscale=True)
 heli.addPlot('wage', 'Wage', 3)
 heli.addPlot('wealth', 'Wealth', 4, logscale=True)
 heli.addPlot('rates', 'Rates', 5, logscale=True)
-heli.defaultPlots = ['pop', 'hcap', 'wage', 'wealth', 'rates']
 heli.data.addReporter('hsum', HSum)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
 heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')

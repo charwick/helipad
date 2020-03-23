@@ -33,7 +33,6 @@ The following libraries are required:
 
 The following libraries are optional but recommended:
 
-* Readline (for the debug console)
 * Code (for the debug console)
 * PMW (for tooltips)
 * NetworkX (for network analysis)

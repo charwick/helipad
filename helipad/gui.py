@@ -35,7 +35,7 @@ class GUI():
 		self.headless = headless
 		
 		bgcolors = ('#FFFFFF','#EEEEEE')
-		fnum = 0
+		fnum = 1
 		
 		#
 		# CALLBACK FUNCTION GENERATORS FOR TKINTER ELEMENTS
@@ -100,10 +100,10 @@ class GUI():
 		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
 		self.expCSV.grid(row=1, column=0, columnspan=3)
 		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], bg=bgcolors[fnum%2], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
 		self.refresh.slide.set(4) #Default refresh of 20
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10)
+		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
 		#Buttons
@@ -127,7 +127,7 @@ class GUI():
 		frame0.pack(fill="x", side=TOP)
 		
 		#Item parameter sliders
-		def buildSlider(itemDict, paramDict, setget, obj, prim=None):
+		def buildSlider(itemDict, paramDict, setget, obj, prim=None, fnum=fnum):
 			for k, var in paramDict.items():
 				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
 				bpf = bpf_super.subframe
@@ -169,11 +169,11 @@ class GUI():
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
 				
-		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, 'good')
-		fnum += 1
+		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, 'good', fnum=fnum)
+		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
 		for p,v in model.primitives.items():
 			if v['breedParams'] != {}:
-				buildSlider(v['breeds'], v['breedParams'], model.breedParam, 'breed_'+p, prim=p)
+				buildSlider(v['breeds'], v['breedParams'], model.breedParam, 'breed_'+p, prim=p, fnum=fnum)
 				fnum += 1
 		
 		#Parameter sliders
@@ -642,12 +642,12 @@ class checkEntry(Frame):
 		self.enabled = True
 		self.entryValue = StringVar()
 		self.entryValue.set(default)
-		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate=validate, validatecommand=valf)
+		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate=validate, validatecommand=valf, highlightbackground=bg)
 		self.textbox.grid(row=0, column=1)
 		self.callback = callback
 		
 		self.checkVar = BooleanVar()
-		self.checkbox = Checkbutton(self, text=title, bg='#FFFFFF', var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
+		self.checkbox = Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
 		self.checkbox.grid(row=0, column=0)
 	
 	def disableTextfield(self):

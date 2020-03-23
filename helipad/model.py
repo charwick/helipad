@@ -73,8 +73,8 @@ class Helipad():
 			'money': 'Money',
 			'utility': 'Utility'
 		}
-		for name, label in plotList.items(): self.addPlot(name, label)
-		self.defaultPlots = ['prices']
+		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
+		self.defaultPlots = []
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
@@ -91,7 +91,7 @@ class Helipad():
 		self.agents[name] = []
 			
 	#Position is the number you want it to be, *not* the array position
-	def addPlot(self, name, label, position=None, logscale=False):
+	def addPlot(self, name, label, position=None, logscale=False, selected=True):
 		plot = Item(label=label, series=[], logscale=logscale)
 		if position is None or position > len(self.plots):
 			self.plots[name] = plot
@@ -102,6 +102,8 @@ class Helipad():
 				newplots[k] = v
 				i+=1
 			self.plots = newplots
+		
+		if selected: self.defaultPlots.append(name)
 	
 	def removePlot(self, name, reassign=None):
 		if isinstance(name, list):
@@ -608,13 +610,13 @@ class Helipad():
 		# Here so that 'self' will refer to the model object
 		# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 		if sys.platform=='darwin':
-			if importlib.util.find_spec("code") is not None and importlib.util.find_spec("readline") is not None:
-				import code, readline
+			if importlib.util.find_spec("code") is not None:
+				import code
 				vars = globals().copy()
 				vars.update(locals())
 				shell = code.InteractiveConsole(vars)
 				shell.interact()
-			else: print('Use pip to install readline and code for a debug console')
+			else: print('Use pip to install `code` for a debug console')
 		
 		if headless:
 			self.root.destroy()

@@ -153,11 +153,12 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
+heli.defaultPlots.append('prices')
 heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
-heli.addPlot('ngdp', 'NGDP', 7)
-heli.addPlot('capital', 'Production', 9)
-heli.addPlot('wage', 'Wage', 11)
+heli.addPlot('ngdp', 'NGDP', 7, selected=False)
+heli.addPlot('capital', 'Production', 9, selected=False)
+heli.addPlot('wage', 'Wage', 11, selected=False)
 heli.addSeries('capital', lambda t: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
 for breed, d in heli.primitives['agent']['breeds'].items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
@@ -185,7 +186,7 @@ def ratioReporter(item1, item2):
 	def reporter(model):
 		return model.data.agentReporter('price', 'store', good=item1)(model)/model.data.agentReporter('price', 'store', good=item2)(model)
 	return reporter
-heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
+heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True, selected=True)
 heli.addSeries('ratios', lambda t: 1, '', 'CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 
 for r in combinations(heli.nonMoneyGoods.keys(), 2):

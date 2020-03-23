@@ -375,14 +375,15 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
+heli.defaultPlots.append('prices')
 heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
-heli.addPlot('ngdp', 'NGDP', 7)
-heli.addPlot('capital', 'Production', 9)
-heli.addPlot('wage', 'Wage', 11)
-heli.addPlot('debt', 'Debt')
-heli.addPlot('rr', 'Reserve Ratio')
-heli.addPlot('i', 'Interest Rate')
+heli.addPlot('ngdp', 'NGDP', 7, selected=False)
+heli.addPlot('capital', 'Production', 9, selected=False)
+heli.addPlot('wage', 'Wage', 11, selected=False)
+heli.addPlot('debt', 'Debt', selected=False)
+heli.addPlot('rr', 'Reserve Ratio', selected=False)
+heli.addPlot('i', 'Interest Rate', selected=False)
 
 heli.addSeries('capital', lambda t: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
 for breed, d in heli.primitives['agent']['breeds'].items():
