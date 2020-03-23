@@ -568,7 +568,7 @@ class textCheck(Label):
 		
 		#Generate disabled and hover colors
 		self.disabledbg = (
-			Color(hue=self.bg[0].hue, saturation=self.bg[0].saturation, luminance=.5+self.bg[0].luminance/2),
+			self.bg[0],
 			Color(hue=self.bg[1].hue, saturation=self.bg[1].saturation, luminance=.5+self.bg[1].luminance/2)
 		)
 		self.disabledfg = (

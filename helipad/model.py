@@ -608,15 +608,16 @@ class Helipad():
 		# Debug console
 		# Requires to be run from Terminal (⌘-⇧-R in TextMate)
 		# Here so that 'self' will refer to the model object
+		# Readline doesn't look like it's doing anything here, but it enables certain console features
 		# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 		if sys.platform=='darwin':
-			if importlib.util.find_spec("code") is not None:
-				import code
+			if importlib.util.find_spec("code") is not None and importlib.util.find_spec("readline") is not None:
+				import code, readline
 				vars = globals().copy()
 				vars.update(locals())
 				shell = code.InteractiveConsole(vars)
 				shell.interact()
-			else: print('Use pip to install `code` for a debug console')
+			else: print('Use pip to install readline and code for a debug console')
 		
 		if headless:
 			self.root.destroy()
