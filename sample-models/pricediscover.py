@@ -10,7 +10,7 @@ from math import sqrt, exp, floor
 import random
 
 heli = Helipad()
-heli.order = 'random'
+heli.order = 'match'
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5})
 heli.addGood('shmoo','11CC00', lambda breed: random.randint(1,1000))
@@ -25,42 +25,36 @@ def agentInit(agent, model):
 	agent.utility = CobbDouglas(['shmoo', 'soma'])
 heli.addHook('agentInit', agentInit)
 
-def agentStep(agent, model, stage):
-	if agent.lastPeriod == model.t: return #Already traded
-	partner = random.choice(model.agents['agent']);
-	while partner.lastPeriod == model.t: partner = random.choice(model.agents['agent']) #Don't trade with someone who's already traded
-	
-	myEndowU = agent.utility.calculate({'soma': agent.goods['soma'], 'shmoo': agent.goods['shmoo']})
-	theirEndowU = partner.utility.calculate({'soma': partner.goods['soma'], 'shmoo': partner.goods['shmoo']})
+def match(agents, primitive, model, stage):
+	myEndowU = agents[0].utility.calculate({'soma': agents[0].goods['soma'], 'shmoo': agents[0].goods['shmoo']})
+	theirEndowU = agents[1].utility.calculate({'soma': agents[1].goods['soma'], 'shmoo': agents[1].goods['shmoo']})
 	
 	#Get the endpoints of the contract curve
 	#Contract curve isn't linear unless the CD exponents are both 0.5. If not, *way* more complicated
-	cc1Soma = myEndowU * ((agent.goods['soma']+partner.goods['soma'])/(agent.goods['shmoo']+partner.goods['shmoo'])) ** 0.5
-	cc2Soma = agent.goods['soma'] + partner.goods['soma'] - theirEndowU  * ((agent.goods['soma']+partner.goods['soma'])/(agent.goods['shmoo']+partner.goods['shmoo'])) ** 0.5
-	cc1Shmoo = ((agent.goods['shmoo']+partner.goods['shmoo'])/(agent.goods['soma']+partner.goods['soma'])) * cc1Soma
-	cc2Shmoo = ((agent.goods['shmoo']+partner.goods['shmoo'])/(agent.goods['soma']+partner.goods['soma'])) * cc2Soma
+	cc1Soma = myEndowU * (sum([a.goods['soma'] for a in agents])/sum([a.goods['shmoo'] for a in agents])) ** 0.5
+	cc2Soma = sum([a.goods['soma'] for a in agents]) - theirEndowU  * (sum([a.goods['soma'] for a in agents])/sum([a.goods['shmoo'] for a in agents])) ** 0.5
+	cc1Shmoo = sum([a.goods['shmoo'] for a in agents])/sum([a.goods['soma'] for a in agents]) * cc1Soma
+	cc2Shmoo = sum([a.goods['shmoo'] for a in agents])/sum([a.goods['soma'] for a in agents]) * cc2Soma
 		
 	#Calculate demand: choose a random point on the contract curve
 	r = random.random()
-	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agent.goods['soma']
-	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agent.goods['shmoo']
+	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agents[0].goods['soma']
+	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agents[0].goods['shmoo']
 	
 	#Do the trades
 	if abs(somaDemand) > 0.1 and abs(shmooDemand) > 0.1:
-		agent.trade(partner, 'soma', -somaDemand, 'shmoo', shmooDemand)
-		agent.lastPrice = -somaDemand/shmooDemand
-		partner.lastPrice = -somaDemand/shmooDemand
+		agents[0].trade(agents[1], 'soma', -somaDemand, 'shmoo', shmooDemand)
+		agents[0].lastPrice = -somaDemand/shmooDemand
+		agents[1].lastPrice = -somaDemand/shmooDemand
 	else:
-		agent.lastPrice = None
-		partner.lastPrice = None
+		agents[0].lastPrice = None
+		agents[1].lastPrice = None
 			
-	#Record data and don't trade again this period
-	agent.lastPeriod = model.t
-	partner.lastPeriod = model.t
-	agent.utils = agent.utility.consume({'soma': agent.goods['soma'], 'shmoo': agent.goods['shmoo']})
-	partner.utils = partner.utility.consume({'soma': partner.goods['soma'], 'shmoo': partner.goods['shmoo']})
+	#Record data
+	agents[0].utils = agents[0].utility.consume({'soma': agents[0].goods['soma'], 'shmoo': agents[0].goods['shmoo']})
+	agents[1].utils = agents[1].utility.consume({'soma': agents[1].goods['soma'], 'shmoo': agents[1].goods['shmoo']})
 	
-heli.addHook('agentStep', agentStep)
+heli.addHook('match', match)
 
 #Stop the model when we're basically equilibrated
 def modelStep(model, stage):

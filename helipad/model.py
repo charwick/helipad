@@ -17,7 +17,7 @@ if importlib.util.find_spec('networkx') is not None:
 	import networkx as nx
 	hasNx = True
 
-from random import shuffle
+from random import shuffle, choice
 from tkinter import *
 import pandas
 from colour import Color
@@ -446,20 +446,38 @@ class Helipad():
 		self.shocks.step()
 			
 		for self.stage in range(1, self.stages+1):
+			self.doHooks('modelStep', [self, self.stage])
 			
-			#Shuffle or sort agents as necessary
+			#Sort agents and step them
 			for prim, lst in self.agents.items():
 				order = self.primitives[prim]['order'] or self.order
 				if isinstance(order, list): order = order[self.stage-1]
-			
+				
 				if order == 'random': shuffle(lst)
 				o = self.doHooks([prim+'Order', 'order'], [prim, lst, self.stage, self])	#Individual and global order hooks
 				if o is not None: self.agents[prim] = o
-			
-			self.doHooks('modelStep', [self, self.stage])
-			for t in self.agents.values():
-				for a in t:
-					a.step(self.stage)
+				
+				#Matching model
+				if 'match' in order:
+					matchN = order.split('-')
+					matchN = int(matchN[1]) if len(matchN) > 1 else 2
+					unmatched = self.agents[prim].copy()
+					while len(unmatched) > len(self.agents[prim]) % matchN:
+						agents = []
+						for a in range(matchN):
+							agent = choice(unmatched)
+							unmatched.remove(agent)
+							agents.append(agent)
+							agent.step(self.stage)
+						self.doHooks([prim+'Match', 'match'], [agents, prim, self, self.stage])
+					
+					#Step any remainder agents
+					for agent in unmatched: agent.step(self.stage)
+				
+				#Activation model	
+				else:
+					for a in self.agents[prim]:
+						a.step(self.stage)
 		
 		self.data.collect(self)
 		self.doHooks('modelPostStep', [self])
