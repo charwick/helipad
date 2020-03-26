@@ -444,15 +444,18 @@ class Helipad():
 				a.currentShortage = {g:0 for g in self.goods.keys()}
 		
 		self.shocks.step()
-		
-		#Shuffle or sort agents as necessary
-		for prim, lst in self.agents.items():
-			order = self.primitives[prim]['order'] or self.order
-			if order == 'random': shuffle(lst)
-			o = self.doHooks([prim+'Order', 'order'], [prim, lst, self])	#Individual and global order hooks
-			if o is not None: self.agents[prim] = o
 			
 		for self.stage in range(1, self.stages+1):
+			
+			#Shuffle or sort agents as necessary
+			for prim, lst in self.agents.items():
+				order = self.primitives[prim]['order'] or self.order
+				if isinstance(order, list): order = order[self.stage-1]
+			
+				if order == 'random': shuffle(lst)
+				o = self.doHooks([prim+'Order', 'order'], [prim, lst, self.stage, self])	#Individual and global order hooks
+				if o is not None: self.agents[prim] = o
+			
 			self.doHooks('modelStep', [self, self.stage])
 			for t in self.agents.values():
 				for a in t:

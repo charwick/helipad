@@ -364,8 +364,8 @@ class GUI():
 		self.stopafter.enable()
 		self.expCSV.enable()
 		
-		#Passes GUI object to the callback
-		self.model.doHooks('terminate', [self])
+		#Passes GUI object and model data to the callback
+		self.model.doHooks('terminate', [self, self.model.data.dataframe])
 		
 		if hasattr(self, 'runButton'):
 			self.runButton['text'] = 'New Model'
