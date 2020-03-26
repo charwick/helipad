@@ -102,7 +102,7 @@ class Helipad():
 				print('A Helipad update is available! Use `pip install -U helipad` to upgrade to version',available[0])
 		except: pass #Fail silently if we're not online
 	
-	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100):
+	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
 		class_.primitive = name
@@ -110,6 +110,7 @@ class Helipad():
 			'class': class_,
 			'plural': plural,
 			'priority': priority,
+			'order': order,
 			'breeds': {},
 			'breedParams': {}
 		}
@@ -446,8 +447,9 @@ class Helipad():
 		
 		#Shuffle or sort agents as necessary
 		for prim, lst in self.agents.items():
-			if self.order == 'random': shuffle(lst)
-			o = self.doHooks([prim+'Order', 'order'], [prim, lst, self])	#Individual and global order hooks 
+			order = self.primitives[prim]['order'] or self.order
+			if order == 'random': shuffle(lst)
+			o = self.doHooks([prim+'Order', 'order'], [prim, lst, self])	#Individual and global order hooks
 			if o is not None: self.agents[prim] = o
 			
 		for self.stage in range(1, self.stages+1):
