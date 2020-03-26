@@ -444,6 +444,10 @@ class Helipad():
 				a.currentShortage = {g:0 for g in self.goods.keys()}
 		
 		self.shocks.step()
+		
+		def sortFunc(model, stage, func):
+			def sf(agent): return func(agent, model, stage)
+			return sf
 			
 		for self.stage in range(1, self.stages+1):
 			self.doHooks('modelStep', [self, self.stage])
@@ -454,8 +458,12 @@ class Helipad():
 				if isinstance(order, list): order = order[self.stage-1]
 				
 				if order == 'random': shuffle(lst)
-				o = self.doHooks([prim+'Order', 'order'], [prim, lst, self.stage, self])	#Individual and global order hooks
-				if o is not None: self.agents[prim] = o
+				
+				#Can't do our regular doHooks() here since we want to pass the function to .sort()
+				#From the user's perspective though, this doesn't matter
+				#Do the more specific sorts last
+				ordhooks = (self.hooks['order'] if 'order' in self.hooks else []) + (self.hooks[prim+'Order'] if prim+'Order' in self.hooks else [])
+				for o in ordhooks: lst.sort(key=sortFunc(self, self.stage, o))
 				
 				#Matching model
 				if 'match' in order:
