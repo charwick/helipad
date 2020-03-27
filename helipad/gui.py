@@ -190,13 +190,9 @@ class GUI():
 			fnum += 1
 		
 		#Parameter sliders
-		checklists = {}
 		for k, var in self.model.params.items():
 			var = var[1]
 			if var['type'] == 'hidden': continue
-			elif var['type'] == 'checklist':
-				checklists[k] = var
-				continue
 			elif var['type'] == 'check':
 				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
 				self.sliders[k] = Checkbutton(f, text=var['title'], var=self.model.params[k][0], onvalue=True, offvalue=False, command=setVar(k), bg=bgcolors[fnum%2])
@@ -218,18 +214,6 @@ class GUI():
 				
 			f.pack(fill="x", side=TOP)
 		fnum += 1
-		
-		#Checklist parameters
-		if len(checklists):
-			for k,v in checklists.items():
-				col = v['columns'] if 'columns' in v else 3
-				self.sliders[k] = checkGrid(self.parent, text=v['title'], padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=col)
-				i=0
-				for n,o in v['opts'].items():
-					self.sliders[k].addCheck(n, o, v['dflt'][i])
-					i += 1
-				self.sliders[k].pack(fill="x", side=TOP)
-			fnum += 1
 		
 		gapl = self.model.doHooks('GUIAbovePlotList', [self, bgcolors[fnum%2]])
 		if gapl:
@@ -297,9 +281,7 @@ class GUI():
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
 		self.checks.disable()
 		for k, var in self.model.params.items():
-			if not var[1]['runtime'] and k in self.sliders:
-				if isinstance(self.sliders[k], checkGrid): self.sliders[k].disable()
-				else: self.sliders[k].configure(state='disabled')
+			if not var[1]['runtime'] and k in self.sliders: self.sliders[k].configure(state='disabled')
 		
 		#If we've got plots, instantiate the Graph object
 		if len(plotsToDraw.items()) > 0:
@@ -398,9 +380,7 @@ class GUI():
 		
 		#Re-enable checkmarks and options
 		self.checks.enable()
-		for s in self.sliders.values():
-			if isinstance(s, checkGrid): s.enable()
-			else: s.configure(state='normal')
+		for s in self.sliders.values(): s.configure(state='normal')
 		self.stopafter.enable()
 		self.expCSV.enable()
 		
@@ -718,7 +698,7 @@ class checkEntry(Frame):
 
 #An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):
-	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=None, startOpen=True):
+	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True):
 		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
 		self.bg = bg
 		self.columns = columns

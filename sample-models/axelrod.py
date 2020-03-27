@@ -114,6 +114,7 @@ def modelPreSetup(model):
 		model.data.removeReporter(b+'-proportion')
 	model.primitives['agent']['breeds'] = {}
 	
+	model.strategies.disable()
 	for k,v in model.strategies.items():
 		if v.get(): model.addBreed(k, strategies[k][1])
 	
@@ -123,6 +124,10 @@ def modelPreSetup(model):
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		model.addSeries('payoffs', b+'-proportion', b, d.color)
 heli.addHook('modelPreSetup', modelPreSetup)
+
+def terminate(gui, data):
+	gui.model.strategies.enable()
+heli.addHook('terminate', terminate)
 
 #===============
 # CONFIGURATION
