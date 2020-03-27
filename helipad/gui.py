@@ -89,7 +89,12 @@ class GUI():
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
-				
+		
+		gtop = self.model.doHooks('GUITop', [self, bgcolors[fnum%2]])
+		if gtop:
+			gtop.pack(fill="x", side=TOP)
+			fnum += 1
+		
 		#Put this up here so the variable name is accessible when headless
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int', callback=switchPbar)
@@ -128,6 +133,11 @@ class GUI():
 		self.progress.grid(row=0, column=0)
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill="x", side=TOP)
+		
+		gaip = self.model.doHooks('GUIAboveItemParams', [self, bgcolors[fnum%2]])
+		if gaip:
+			gaip.pack(fill="x", side=TOP)
+			fnum += 1
 		
 		#Item parameter sliders
 		def buildSlider(itemDict, paramDict, setget, obj, prim=None, fnum=fnum):
@@ -179,6 +189,11 @@ class GUI():
 				buildSlider(v['breeds'], v['breedParams'], model.breedParam, 'breed_'+p, prim=p, fnum=fnum)
 				fnum += 1
 		
+		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])
+		if gap:
+			gap.pack(fill="x", side=TOP)
+			fnum += 1
+		
 		#Parameter sliders
 		for k, var in self.model.params.items():
 			var = var[1]
@@ -205,11 +220,21 @@ class GUI():
 			f.pack(fill="x", side=TOP)
 		fnum += 1
 		
+		gapl = self.model.doHooks('GUIAbovePlotList', [self, bgcolors[fnum%2]])
+		if gapl:
+			gapl.pack(fill="x", side=TOP)
+			fnum += 1
+		
 		# Graph Checkboxes
 		self.checks = checkGrid(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=3)
 		for k, v in self.model.plots.items():
 			self.checks.addCheck(k, v.label, k in self.model.defaultPlots)
 		self.checks.pack(fill="x", side=TOP)
+		
+		gas = self.model.doHooks('GUIAboveShocks', [self, bgcolors[fnum%2]])
+		if gas:
+			gas.pack(fill="x", side=TOP)
+			fnum += 1
 		
 		#Shock checkboxes
 		if self.model.shocks.number > 0:
@@ -225,6 +250,11 @@ class GUI():
 					self.balloon.bind(shock['guiElement'], shock['desc'])
 				shock['guiElement'].pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
+		
+		gbot = self.model.doHooks('GUIBottom', [self, bgcolors[fnum%2]])
+		if gbot:
+			gbot.pack(fill="x", side=TOP)
+			fnum += 1
 		
 		#Set application name
 		if sys.platform=='darwin':
