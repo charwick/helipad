@@ -26,7 +26,7 @@ class GUI():
 		try:
 			import Pmw
 			self.balloon = Pmw.Balloon(parent)
-			checkGrid.pmw = self.balloon
+			textCheck.pmw = self.balloon
 		except:
 			self.balloon = None
 			print('Use pip to install Pmw in order to use tooltips')
@@ -576,7 +576,7 @@ class expandableFrame(Frame):
 # bg and fg take a two-element tuple for inactive and active states
 class textCheck(Label):
 	def __init__(self, parent=None, text=None, bg=('#FFFFFF','#419BF9'), fg=('#333333','#FFFFFF'),
-		font=('Lucida Grande',12), defaultValue=False, anchor='w'
+		font=('Lucida Grande',12), defaultValue=False, anchor='w', desc=None
 	):
 		super().__init__(parent, text=text, bg=bg[defaultValue], fg=fg[defaultValue], anchor=anchor)
 		self.bg = (Color(bg[0]), Color(bg[1]))
@@ -608,9 +608,12 @@ class textCheck(Label):
 		def leave(event):
 			if self.enabled: self.config(bg=self.bg[self.value], fg=self.fg[self.value])
 		
-		self.bind('<Button-1>', self.toggle)
-		self.bind('<Enter>', hover)
-		self.bind('<Leave>', leave)
+		#Have to do this *before* any other bindings because pmw.bind deletes all the others
+		if hasattr(self, 'pmw') and desc: self.pmw.bind(self, desc)
+		
+		self.bind('<Button-1>', self.toggle, add='+')
+		self.bind('<Enter>', hover, add='+')
+		self.bind('<Leave>', leave, add='+')
 	
 	def get(self): return self.value
 	def set(self, value):
@@ -708,10 +711,8 @@ class checkGrid(expandableFrame):
 		for i in range(columns): self.subframe.columnconfigure(i,weight=1)
 	
 	def addCheck(self, var, text, defaultValue=True, desc=None):
-		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'))
+		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc)
 		self.checks[var].grid(row=int(ceil(len(self.checks)/self.columns)), column=(len(self.checks)-1)%self.columns, sticky='WE')
-		if self.pmw and desc:
-			self.pmw.bind(self.checks[var], desc)
 	
 	def __getitem__(self, index): return self.checks[index].get()
 	def __setitem__(self, index, value): self.checks[index].set(value)
