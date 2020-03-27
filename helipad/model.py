@@ -229,7 +229,7 @@ class Helipad():
 		self.doHooks('modelPostSetup', [self])
 			
 	#Registers an adjustable parameter exposed in the config GUI.	
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, **kwargs):
+	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim]['breedParams']
 		elif paramType=='good': params=self.goodParams
@@ -282,13 +282,6 @@ class Helipad():
 		else:
 			if type == 'menu': deflt = StringVar(value=opts[dflt])
 			elif type == 'check': deflt = BooleanVar(value=dflt)
-			elif type == 'checklist':
-				deflt = {k: BooleanVar() for k,v in opts.items()}
-				k=0
-				for v in deflt.values():
-					if isinstance(dflt, list): v.set(dflt[k])
-					else: v.set(dflt)
-					k+=1
 			else: deflt = dflt
 		
 		params[name] = [deflt, {
@@ -300,7 +293,6 @@ class Helipad():
 			'callback': callback,
 			'desc': desc
 		}]
-		params[name][1].update(kwargs)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
@@ -351,8 +343,6 @@ class Helipad():
 				return flip[fullText]
 			elif params[name][1]['type'] == 'check':
 				return params[name][0].get() if paramType is None or obj is None else params[name][0][obj].get()
-			elif params[name][1]['type'] == 'checklist':
-				return {k:self.gui.sliders[name][k] for k in self.gui.sliders[name].keys()}
 			else:
 				return params[name][0] if paramType is None or obj is None else params[name][0][obj]
 	

@@ -8,6 +8,7 @@
 #===============
 
 from helipad import Helipad
+from helipad.gui import checkGrid
 import numpy.random as random
 from numpy import mean
 
@@ -25,16 +26,16 @@ heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low'
 
 heli.addGood('payoff','009900')
 
+#Store associated colors and default-checked state to cycle over later
 strategies = {
-	'alwaysCooperate': '00CC00',
-	'alwaysDefect': 'CC0000',
-	'randomly': '006600',
-	'TFT': 'CC9900',
-	'Tullock': '663311',
-	'Nydegger': '003399',
-	'Grofman': '9999CC',
+	'alwaysCooperate': (True, '00CC00'),
+	'alwaysDefect': (True, 'CC0000'),
+	'randomly': (True, '006600'),
+	'TFT': (True, 'CC9900'),
+	'Tullock': (False, '663311'),
+	'Nydegger': (False, '003399'),
+	'Grofman': (False, '9999CC'),
 }
-heli.addParameter('strategies', 'Strategies', 'checklist', dflt=[True,True,True,True,False,False,False], opts={k:k for k in strategies.keys()}, runtime=False, columns=2)
 
 #===============
 # STRATEGIES
@@ -97,6 +98,14 @@ def match(agents, primitive, model, stage):
 			
 heli.addHook('match', match)
 
+#Build the strategies toggle
+def GUIAbovePlotList(gui, bg):
+	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
+	for s,v in strategies.items():
+		gui.model.strategies.addCheck(s, s, v[0])
+	return gui.model.strategies
+heli.addHook('GUIAbovePlotList', GUIAbovePlotList)
+
 #Add breeds last-minute so we can toggle them in the control panel
 def modelPreSetup(model):
 	
@@ -105,8 +114,8 @@ def modelPreSetup(model):
 		model.data.removeReporter(b+'-proportion')
 	model.primitives['agent']['breeds'] = {}
 	
-	for k,v in model.param('strategies').items():
-		if v: model.addBreed(k, strategies[k])
+	for k,v in model.strategies.items():
+		if v.get(): model.addBreed(k, strategies[k][1])
 	
 	model.param('agents_agent', len(model.primitives['agent']['breeds'])*2) #Two of each strategy, for speed
 	

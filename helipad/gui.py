@@ -15,12 +15,6 @@ import matplotlib.pyplot as plt
 import matplotlib.style as mlpstyle
 mlpstyle.use('fast')
 
-hasPmw = False
-try:
-	import Pmw
-	hasPmw = True
-except: print('Use pip to install Pmw in order to use tooltips')
-
 class GUI():
 	running = False
 	sliders = {}
@@ -29,12 +23,13 @@ class GUI():
 		self.parent = parent
 		self.model = model
 		self.lastUpdate = None
-		if hasPmw:
+		try:
+			import Pmw
 			self.balloon = Pmw.Balloon(parent)
 			checkGrid.pmw = self.balloon
-		else:
+		except:
 			self.balloon = None
-			checkGrid.pmw = None
+			print('Use pip to install Pmw in order to use tooltips')
 		self.updateEvery = 20
 		self.headless = headless
 		
@@ -119,7 +114,7 @@ class GUI():
 		for f in self.model.buttons:
 			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10)
 			button.grid(row=4, column=b%2, pady=(15,0))
-			if hasPmw and f[2] is not None: self.balloon.bind(button, f[2])
+			if self.balloon and f[2] is not None: self.balloon.bind(button, f[2])
 			b+=1
 		
 		frame1.columnconfigure(0,weight=1)
@@ -177,7 +172,7 @@ class GUI():
 					bpf.columnconfigure(0,weight=1)
 					bpf.columnconfigure(1,weight=1)
 					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
-					if hasPmw and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
+					if self.balloon and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
 					
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
@@ -219,7 +214,7 @@ class GUI():
 					self.sliders[k].set(var['dflt'])
 					
 				self.sliders[k].pack(side=RIGHT)
-				if hasPmw and var['desc'] is not None: self.balloon.bind(self.sliders[k], var['desc'])
+				if self.balloon and var['desc'] is not None: self.balloon.bind(self.sliders[k], var['desc'])
 				
 			f.pack(fill="x", side=TOP)
 		fnum += 1
@@ -262,7 +257,7 @@ class GUI():
 				elif shock['timerFunc'] == 'button':
 					shock['guiElement'] = Button(frame8.subframe, text=shock['name'], command=shockCallback(shock['name']), padx=10, pady=10)
 				
-				if hasPmw and shock['desc'] is not None:
+				if self.balloon and shock['desc'] is not None:
 					self.balloon.bind(shock['guiElement'], shock['desc'])
 				shock['guiElement'].pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
@@ -723,7 +718,7 @@ class checkEntry(Frame):
 
 #An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):
-	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
+	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=None, startOpen=True):
 		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
 		self.bg = bg
 		self.columns = columns
