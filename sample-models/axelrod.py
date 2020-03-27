@@ -1,6 +1,7 @@
 # Replicates the repeated PD tournament from Axelrod (1980)
 # Paper here: https://www.jstor.org/stable/173932
 # Strategies indexed here: https://axelrod.readthedocs.io/en/stable/reference/overview_of_strategies.html#axelrod-s-first-tournament
+# Strategies requiring chi-squared tests for randomness or such not yet implemented
 # Difference from the original: The tournament matches stochastically, rather than being a round-robin, and repeats.
 
 #===============
@@ -23,6 +24,11 @@ heli.addParameter('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 
 heli.addParameter('cd', 'C-D payoff', 'slider', dflt=0, opts={'low': 0, 'high': 10, 'step': 0.5})
 heli.addParameter('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 0.5})
 heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
+heli.addParameter('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
+
+def reset():
+	for a in heli.agents['agent']: a.goods['payoff'] = 0
+heli.addButton('Reset Wealth', reset)
 
 heli.addGood('payoff','009900')
 
@@ -35,6 +41,11 @@ strategies = {
 	'Tullock': (False, '663311', 'Cooperates for the first 11 rounds then randomly cooperates 10% less often than the opponent has in the previous 10 rounds.'),
 	'Nydegger': (False, '003399', 'A stooge which has a memory and appears to be trustworthy, potentially cooperative, but not gullible.'),
 	'Grofman': (False, '9999CC', 'Cooperates with probability 2/7 if the players did different things on the previous move, otherwise cooperates.'),
+	'Shubik': (False, '666600', 'Punishes defection with an incrementing string of retaliations.'),
+	'Grudger': (True, '000066', 'Cooperates until the opponent defects, and then defects thereafter'),
+	'Davis': (False, '660000', 'Cooperates for 10 periods, and then plays Grudger.'),
+	'Feld': (False, '000000', 'Plays tit-for-tat, but with P[Cooperate] declining to 0.5 as the rounds approach the end'),
+	'Joss': (False, 'CCCCCC', 'Tit-For-Tat, except cooperation is only with 90% probability'),
 }
 
 #===============
@@ -59,10 +70,10 @@ def Tullock(rnd, history, own):
 	return random.choice([0, 1], size=1, p=[1-rate, rate])[0]
 
 def Nydegger(rnd, history, own):
-	if len(history) <= 2: return TFT(history, own)
+	if len(history) <= 2: return TFT(rnd, history, own)
 	if len(history) == 3:
 		if not history[0] and not own[1] and history[1]: return False
-		else: return TFT(history, own)
+		else: return TFT(rnd, history, own)
 		
 	def a(i):
 		n=0
@@ -76,6 +87,37 @@ def Grofman(rnd, history, own):
 	if not len(history): return True
 	elif history[-1] ^ own[-1]: return random.choice([0, 1], size=1, p=[5/7, 2/7])[0]
 	else: return True
+
+def Shubik(rnd, history, own):
+	k=0 #The number of rounds to retaliate
+	rs=0 #the number of rounds I've already retaliated so far
+	for r, me in enumerate(own):
+		if me and not history[r]: k += 1 #Increment k every time the opponent defected while I wasn't retaliating
+		if not me: rs += 1
+		else: rs = 0 #Make sure we're only counting current retaliations
+	
+	if not len(history): return True 
+	if not rs and not history[-1]: return False #Start retaliation if the opponent defected last period
+	if rs and rs < k: return False #Keep retaliating if you've started a string of defections and haven't reached the limit
+	return True
+
+def Grudger(rnd, history, own):
+	return False not in history
+
+def Davis(rnd, history, own):
+	if len(history) < 10: return True
+	else: return Grudger(rnd, history, own)
+
+def Feld(rnd, history, own):
+	if not len(history): return True
+	if not history[-1]: return False
+	
+	pDef = rnd/heli.param('rounds')/2
+	return random.choice([0, 1], size=1, p=[pDef, 1-pDef])[0]
+
+def Joss(rnd, history, own):
+	if not len(history) or history[-1]: return random.choice([0, 1], size=1, p=[0.1, 0.9])[0]
+	if not history[-1]: return False
 
 #===============
 # MODEL LOGIC
@@ -116,7 +158,7 @@ def modelPreSetup(model):
 	for k,v in model.strategies.items():
 		if v.get(): model.addBreed(k, strategies[k][1])
 	
-	model.param('agents_agent', len(model.primitives['agent']['breeds'])*2) #Two of each strategy, for speed
+	model.param('agents_agent', len(model.primitives['agent']['breeds'])*model.param('n')) #Three of each strategy, for speed
 	
 	for b, d in model.primitives['agent']['breeds'].items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))

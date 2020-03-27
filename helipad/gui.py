@@ -112,7 +112,7 @@ class GUI():
 		#Buttons
 		b=0
 		for f in self.model.buttons:
-			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10)
+			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
 			button.grid(row=4, column=b%2, pady=(15,0))
 			if self.balloon and f[2] is not None: self.balloon.bind(button, f[2])
 			b+=1
