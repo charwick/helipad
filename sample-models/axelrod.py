@@ -14,6 +14,8 @@ from numpy import mean
 heli = Helipad()
 heli.order = 'match'
 
+heli.params['agents_agent'][1]['type'] = 'hidden' #So we can postpone breed determination until the end
+
 #Initial parameter values match the payoffs in Table 1
 heli.addParameter('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
 heli.addParameter('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 10, 'step': 0.5})
@@ -23,13 +25,16 @@ heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low'
 
 heli.addGood('payoff','009900')
 
-heli.addBreed('alwaysCooperate', '00CC00')
-heli.addBreed('alwaysDefect', 'CC0000')
-heli.addBreed('randomly', '006600')
-heli.addBreed('TFT', 'CC9900')
-heli.addBreed('Tullock', '663311')
-heli.addBreed('Nydegger', '003399')
-heli.addBreed('Grofman', '9999CC')
+strategies = {
+	'alwaysCooperate': '00CC00',
+	'alwaysDefect': 'CC0000',
+	'randomly': '006600',
+	'TFT': 'CC9900',
+	'Tullock': '663311',
+	'Nydegger': '003399',
+	'Grofman': '9999CC',
+}
+heli.addParameter('strategies', 'Strategies', 'checklist', dflt=[True,True,True,True,False,False,False], opts={k:k for k in strategies.keys()}, runtime=False, columns=2)
 
 #===============
 # STRATEGIES
@@ -92,6 +97,24 @@ def match(agents, primitive, model, stage):
 			
 heli.addHook('match', match)
 
+#Add breeds last-minute so we can toggle them in the control panel
+def modelPreSetup(model):
+	
+	#Clear breeds from the previous run
+	for b in model.primitives['agent']['breeds']:
+		model.data.removeReporter(b+'-proportion')
+	model.primitives['agent']['breeds'] = {}
+	
+	for k,v in model.param('strategies').items():
+		if v: model.addBreed(k, strategies[k])
+	
+	model.param('agents_agent', len(model.primitives['agent']['breeds'])*2) #Two of each strategy, for speed
+	
+	for b, d in model.primitives['agent']['breeds'].items():
+		model.data.addReporter(b+'-proportion', proportionReporter(b))
+		model.addSeries('payoffs', b+'-proportion', b, d.color)
+heli.addHook('modelPreSetup', modelPreSetup)
+
 #===============
 # CONFIGURATION
 #===============
@@ -107,9 +130,6 @@ def proportionReporter(breed):
 	return func
 
 heli.addPlot('payoffs', 'Payoffs')
-for b, d in heli.primitives['agent']['breeds'].items():
-	heli.data.addReporter(b+'-proportion', proportionReporter(b))
-	heli.addSeries('payoffs', b+'-proportion', b, d.color)
 
 #===============
 # LAUNCH THE GUI

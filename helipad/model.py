@@ -6,17 +6,7 @@
 #TODO: Use multiprocessing to run the graphing in a different process
 
 #Make sure we've got the requisite modules
-import importlib, sys, warnings
-needed = ['pandas', 'matplotlib', 'colour']
-for module in needed:
-	if importlib.util.find_spec(module) is None:
-		print("This model requires "+module+". Please use Pip to install it before continuing.")
-		sys.exit()
-
-if importlib.util.find_spec('networkx') is not None:
-	import networkx as nx
-	hasNx = True
-
+import sys, warnings
 from random import shuffle, choice
 from tkinter import *
 import pandas
@@ -29,15 +19,15 @@ from numpy import random
 import matplotlib
 matplotlib.use('TkAgg')
 
-from helipad.gui import GUI
-from helipad.data import Data
-import helipad.agent as agent
-
 #Generic extensible item class to store structured data
 class Item():
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items():
 			setattr(self, k, v)
+
+from helipad.gui import GUI
+from helipad.data import Data
+import helipad.agent as agent
 
 class Helipad():
 	def __init__(self):
@@ -155,8 +145,8 @@ class Helipad():
 		
 		#Add subsidiary series (e.g. percentile bars)
 		subseries = []
-		if reporter in self.data.reporters and isinstance(self.data.reporters[reporter], tuple):
-			for p, f in self.data.reporters[reporter][1].items():
+		if reporter in self.data.reporters and isinstance(self.data.reporters[reporter].func, tuple):
+			for p, f in self.data.reporters[reporter].func[1].items():
 				subkey = reporter+'-'+str(p)+'-pctile'
 				subseries.append(subkey)
 				self.addSeries(plot, subkey, '', Color('#'+color).lighten(), style='--')
@@ -166,7 +156,9 @@ class Helipad():
 			if s.reporter == reporter:
 				self.plots[plot].series.remove(s)
 		
-		self.plots[plot].series.append(Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries))
+		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=plot)
+		self.plots[plot].series.append(series)
+		if reporter in self.data.reporters: self.data.reporters[reporter].series.append(series)
 	
 	def addButton(self, text, func, desc=None):
 		self.buttons.append((text, func, desc))
@@ -175,6 +167,10 @@ class Helipad():
 	def setup(self):
 		self.doHooks('modelPreSetup', [self])
 		self.t = 0
+		
+		#Blank breeds for any primitives not otherwise specified
+		for k,p in self.primitives.items():
+			if len(p['breeds'])==0: self.addBreed('', '000000', prim=k)
 		
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
@@ -232,14 +228,8 @@ class Helipad():
 		
 		self.doHooks('modelPostSetup', [self])
 			
-	#Adds an adjustable parameter exposed in the config GUI.
-	#
-	# name: A unique internal name for the parameter
-	# title: A human-readable title for display
-	# dflt: The default value
-	# opts: Type-specific options
-	
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
+	#Registers an adjustable parameter exposed in the config GUI.	
+	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, **kwargs):
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim]['breedParams']
 		elif paramType=='good': params=self.goodParams
@@ -290,14 +280,16 @@ class Helipad():
 						if not b in deflt: deflt[k] = None  #Make sure we've got all the breeds in the array
 				
 		else:
-			if type == 'menu':
-				deflt = StringVar()
-				deflt.set(opts[dflt])
-			elif type == 'check':
-				deflt = BooleanVar()
-				deflt.set(dflt)
-			else:
-				deflt = dflt
+			if type == 'menu': deflt = StringVar(value=opts[dflt])
+			elif type == 'check': deflt = BooleanVar(value=dflt)
+			elif type == 'checklist':
+				deflt = {k: BooleanVar() for k,v in opts.items()}
+				k=0
+				for v in deflt.values():
+					if isinstance(dflt, list): v.set(dflt[k])
+					else: v.set(dflt)
+					k+=1
+			else: deflt = dflt
 		
 		params[name] = [deflt, {
 			'title': title,
@@ -308,6 +300,7 @@ class Helipad():
 			'callback': callback,
 			'desc': desc
 		}]
+		params[name][1].update(kwargs)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
@@ -358,6 +351,8 @@ class Helipad():
 				return flip[fullText]
 			elif params[name][1]['type'] == 'check':
 				return params[name][0].get() if paramType is None or obj is None else params[name][0][obj].get()
+			elif params[name][1]['type'] == 'checklist':
+				return {k:self.gui.sliders[name][k] for k in self.gui.sliders[name].keys()}
 			else:
 				return params[name][0] if paramType is None or obj is None else params[name][0][obj]
 	
@@ -492,17 +487,17 @@ class Helipad():
 		return self.t
 	
 	def network(self, kind='edge', prim=None):
-		if not hasNx:
-			warnings.warn('Network export requires Networkx.', None, 2)
-			return
+		try:
+			import networkx as nx
+			G = nx.Graph()
+			agents = self.allagents.values() if prim is None else self.agents[prim]
+			G.add_nodes_from([a.id for a in agents])
+			if kind in self.allEdges:
+				G.add_edges_from([(e.vertices[0].id, e.vertices[1].id) for e in self.allEdges[kind]])
 		
-		G = nx.Graph()
-		agents = self.allagents.values() if prim is None else self.agents[prim]
-		G.add_nodes_from([a.id for a in agents])
-		if kind in self.allEdges:
-			G.add_edges_from([(e.vertices[0].id, e.vertices[1].id) for e in self.allEdges[kind]])
-		
-		return G
+			return G
+		except: warnings.warn('Network export requires Networkx.', None, 2)
+			
 	
 	def showNetwork(self, kind='edge', prim=None):
 		import matplotlib.pyplot as plt
@@ -627,19 +622,17 @@ class Helipad():
 		#Callback takes one parameter, model object
 		self.doHooks('GUIPreLaunch', [self])
 		
-		#Blank breeds for any primitives not otherwise specified
-		for k,p in self.primitives.items():
-			if len(p['breeds'])==0: self.addBreed('', '000000', prim=k)
-		
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
 		for k,p in self.primitives.items():
-			l = len(p['breeds'])
-			self.params['agents_'+k][1]['opts']['low'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
-			self.params['agents_'+k][1]['opts']['high'] = makeDivisible(self.params['agents_'+k][1]['opts']['high'], l, 'max')
-			self.params['agents_'+k][1]['opts']['step'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
-			self.params['agents_'+k][0] = makeDivisible(self.params['agents_'+k][0], l, 'max')
-			self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
+			if self.params['agents_'+k][1]['type'] != 'hidden':
+				l = len(p['breeds'])
+				if not l: continue
+				self.params['agents_'+k][1]['opts']['low'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
+				self.params['agents_'+k][1]['opts']['high'] = makeDivisible(self.params['agents_'+k][1]['opts']['high'], l, 'max')
+				self.params['agents_'+k][1]['opts']['step'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
+				self.params['agents_'+k][0] = makeDivisible(self.params['agents_'+k][0], l, 'max')
+				self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
 		
 		if self.moneyGood is None:
 			for i in ['prices', 'money']:
@@ -653,13 +646,13 @@ class Helipad():
 		# Readline doesn't look like it's doing anything here, but it enables certain console features
 		# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 		if sys.platform=='darwin':
-			if importlib.util.find_spec("code") is not None and importlib.util.find_spec("readline") is not None:
+			try:
 				import code, readline
 				vars = globals().copy()
 				vars.update(locals())
 				shell = code.InteractiveConsole(vars)
 				shell.interact()
-			else: print('Use pip to install readline and code for a debug console')
+			except: print('Use pip to install readline and code for a debug console')
 		
 		if headless:
 			self.root.destroy()
@@ -693,9 +686,8 @@ class Shocks():
 			'paramType': paramType,
 			'obj': obj,
 			'prim': prim,
-			'active': BooleanVar() #Saves some Tkinter code later
+			'active': BooleanVar(value=active) #Saves some Tkinter code later
 		}
-		self[name]['active'].set(active)
 		
 	def step(self):
 		for name, shock in self.shocks.items():

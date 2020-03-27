@@ -5,6 +5,7 @@
 
 import pandas, os.path
 from numpy import *
+from helipad.model import Item
 
 class Data():
 	def __init__(self, model):
@@ -20,33 +21,53 @@ class Data():
 	#or a string, either 'model' or the name of a primitive.
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
+		cols = [key]
 		
 		#Create column space for percentile marks
 		if isinstance(func, tuple):
 			mainfunc, subplots = func
-			for p, s in subplots.items():
-				self[key+'-'+str(p)+'-pctile'] = []
+			for p in subplots.keys():
+				n = key+'-'+str(p)+'-pctile'
+				self[n] = []
+				cols.append(n)
 		else: mainfunc = func
 		
 		#If smoothing, shunt original reporter to -unsmooth and create a new series under the original name
 		if 'smooth' in kwargs:
 			def smooth(weight, k):
-				def movingAvg(data, t):
+				def movingAvg(model):
 					#					  Old data 					   New data point
-					data[k].append(weight*data[k][-1] + (1-weight)*data[k+'-unsmooth'][-1] if t>1 else data[k+'-unsmooth'][-1])
+					model.data[k].append(weight*model.data[k][-1] + (1-weight)*model.data[k+'-unsmooth'][-1] if model.t>1 else model.data[k+'-unsmooth'][-1])
 				return movingAvg
 				
-			self.model.addHook('dataCollect', smooth(kwargs['smooth'], key))
+			self.model.addHook('modelPostStep', smooth(kwargs['smooth'], key)) #Have to hook it *after* the data gets collected
 			self[key] = []
 			key += '-unsmooth'
+			cols.append(key)
 		
 		if not callable(mainfunc): raise TypeError('Second argument of addReporter must be callable')
-		self.reporters[key] = func
+		self.reporters[key] = Item(func=func, children=cols, series=[])
 		self[key] = []
+	
+	#Removes a reporter, its columns from the data, and the series corresponding to it.
+	def removeReporter(self, key):
+		if self.model.hasModel:
+			raise RuntimeError('removeReporter cannot be called while a model is active.')
+		for c in self.reporters[key].children: del self.all[c]
+		for s in self.reporters[key].series:
+			# Remove subseries
+			for ss in s.subseries:
+				for sss in self.model.plots[s.plot].series:
+					if sss.reporter == ss:
+						self.model.plots[s.plot].series.remove(sss)
+						continue
+			self.model.plots[s.plot].series.remove(s)
+		del self.reporters[key]
 
 	def collect(self, model):
 		model.doHooks('dataCollect', [self, model.t])
-		for var, reporter in self.reporters.items():
+		for var, v in self.reporters.items():
+			reporter = v.func
 			if isinstance(reporter, tuple):
 				reporter, subplots = reporter
 				for p, s in subplots.items():
