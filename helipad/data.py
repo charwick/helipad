@@ -45,13 +45,13 @@ class Data():
 		self[key] = []
 
 	def collect(self, model):
+		model.doHooks('dataCollect', [self, model.t])
 		for var, reporter in self.reporters.items():
 			if isinstance(reporter, tuple):
 				reporter, subplots = reporter
 				for p, s in subplots.items():
 					self[var+'-'+str(p)+'-pctile'].append(s(model))
 			self[var].append(reporter(model))
-		model.doHooks('dataCollect', [self, model.t])
 	
 	def reset(self):
 		self.all = {k: [] for k in self.all.keys()}
