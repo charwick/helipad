@@ -29,9 +29,13 @@ class GUI():
 		self.parent = parent
 		self.model = model
 		self.lastUpdate = None
-		self.balloon = Pmw.Balloon(parent) if hasPmw else None
+		if hasPmw:
+			self.balloon = Pmw.Balloon(parent)
+			checkGrid.pmw = self.balloon
+		else:
+			self.balloon = None
+			checkGrid.pmw = None
 		self.updateEvery = 20
-		self.checks = {} #Shock checkboxes
 		self.headless = headless
 		
 		bgcolors = ('#FFFFFF','#EEEEEE')
@@ -85,8 +89,7 @@ class GUI():
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
-			
-		
+				
 		#Put this up here so the variable name is accessible when headless
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int', callback=switchPbar)
@@ -203,17 +206,10 @@ class GUI():
 		fnum += 1
 		
 		# Graph Checkboxes
-		frame7 = expandableFrame(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
-		i=0
+		self.checks = checkGrid(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=3)
 		for k, v in self.model.plots.items():
-			i += 1
-			self.checks[k] = textCheck(frame7.subframe, text=v.label, anchor='w', defaultValue=k in self.model.defaultPlots, bg=(bgcolors[fnum%2],'#419BF9'))
-			self.checks[k].grid(row=int(ceil(i/3)), column=(i-1)%3, sticky='WE')
-
-		frame7.subframe.columnconfigure(0,weight=1)
-		frame7.subframe.columnconfigure(1,weight=1)
-		frame7.subframe.columnconfigure(2,weight=1)
-		frame7.pack(fill="x", side=TOP)
+			self.checks.addCheck(k, v.label, k in self.model.defaultPlots)
+		self.checks.pack(fill="x", side=TOP)
 		
 		#Shock checkboxes
 		if self.model.shocks.number > 0:
@@ -258,7 +254,7 @@ class GUI():
 			return
 		
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
-		for c in self.checks: self.checks[c].disable()
+		self.checks.disable()
 		for k, var in self.model.params.items():
 			if not var[1]['runtime'] and k in self.sliders:
 				self.sliders[k].configure(state='disabled')
@@ -359,7 +355,7 @@ class GUI():
 		self.progress.stop()
 		
 		#Re-enable checkmarks and options
-		for c in self.checks.values(): c.enable()
+		self.checks.enable()
 		for s in self.sliders.values(): s.configure(state='normal')
 		self.stopafter.enable()
 		self.expCSV.enable()
@@ -675,6 +671,40 @@ class checkEntry(Frame):
 		self.textbox.config(state='disabled' if disable else 'normal')
 		self.checkbox.config(state='disabled' if disable else 'normal')
 		self.enabled = not disable
+
+#An expandableFrame full of textChecks, with setters and getters.
+class checkGrid(expandableFrame):
+	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
+		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
+		self.bg = bg
+		self.columns = columns
+		self.checks = {}
+		self._index=0
+		
+		for i in range(columns): self.subframe.columnconfigure(i,weight=1)
+	
+	def addCheck(self, var, text, defaultValue=True, desc=None):
+		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'))
+		self.checks[var].grid(row=int(ceil(len(self.checks)/self.columns)), column=(len(self.checks)-1)%self.columns, sticky='WE')
+		if self.pmw and desc:
+			self.pmw.bind(self.checks[var], desc)
+	
+	def __getitem__(self, index): return self.checks[index].get()
+	def __setitem__(self, index, value): self.checks[index].set(value)
+	
+	def items(self): return self.checks.items()
+	def values(self): return self.checks.values()
+	def keys(self): return self.checks.keys()
+	def disabled(self, key, val):
+		self.checks[key].disabled(val)
+	def enable(self, key=None):
+		if key: self.checks[key].enable()
+		else:
+			for c in self.values(): c.enable()
+	def disable(self, key=None):
+		if key: self.checks[key].disable()
+		else:
+			for c in self.values(): c.disable()
 
 #Requires random and not numpy.random for some reason??
 def randomword(length):

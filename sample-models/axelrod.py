@@ -23,7 +23,6 @@ heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low'
 
 heli.addGood('payoff','009900')
 
-
 heli.addBreed('alwaysCooperate', '00CC00')
 heli.addBreed('alwaysDefect', 'CC0000')
 heli.addBreed('randomly', '006600')

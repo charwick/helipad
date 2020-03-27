@@ -299,7 +299,7 @@ def bankChecks(gui, val=None):
 	nobank = gui.model.param('dist')!='omo'
 	gui.model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
-		gui.checks[i].disabled(nobank)
+		gui.checks.disabled(i, nobank)
 	for b in gui.model.primitives['agent']['breeds'].keys():
 		gui.sliders['breed_agent-liqPref-'+b].config(state='disabled' if nobank else 'normal')
 
