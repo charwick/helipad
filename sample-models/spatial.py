@@ -8,10 +8,11 @@
 
 from helipad import *
 from random import randint
+from math import sqrt
 
 heli = Helipad()
 heli.order = 'random'
-heli.dimension = 5 #Not a standard setup property, but we can store it here to use later
+heli.addParameter('dimension', 'Dimension', 'slider', dflt=10, opts={'low': 5, 'high': 20, 'step': 1})
 
 #===============
 # THE PATCH PRIMITIVE
@@ -25,34 +26,38 @@ class Patch(baseAgent):
 	
 	@property
 	def up(self):
-		return self.model.patches[self.x][self.y-1 if self.y > 0 else self.model.dimension-1]
+		return self.model.patches[self.x][self.y-1 if self.y > 0 else int(self.model.param('dimension'))-1]
 	
 	@property
 	def right(self):
-		return self.model.patches[self.x+1 if self.x < self.model.dimension-1 else 0][self.y]
+		return self.model.patches[self.x+1 if self.x < int(self.model.param('dimension'))-1 else 0][self.y]
 	
 	@property
 	def down(self):
-		return self.model.patches[self.x][self.y+1 if self.y < self.model.dimension-1 else 0]
+		return self.model.patches[self.x][self.y+1 if self.y < int(self.model.param('dimension'))-1 else 0]
 	
 	@property
 	def left(self):
-		return self.model.patches[self.x-1 if self.x > 0 else self.model.dimension-1][self.y]
+		return self.model.patches[self.x-1 if self.x > 0 else int(self.model.param('dimension'))-1][self.y]
 	
 	@property
 	def agentsOn(self):
 		return [a for a in self.model.agents['agent'] if a.x==self.x and a.y==self.y]
 	
-heli.addPrimitive('patch', Patch, dflt=heli.dimension**2, low=0, high=100)
-
+heli.addPrimitive('patch', Patch, hidden=True)
+heli.params['agents_patch'][1]['type'] = 'hidden'
 
 #===============
 # BEHAVIOR
 #===============
 
+def distance(agent1, agent2):
+	return sqrt((agent1.x-agent2.x)**2 + (agent1.y-agent2.y)**2)
+
 #Randomly position our agents
 def baseAgentInit(agent, model):
-	agent.position = [randint(0, model.dimension-1), randint(0, model.dimension-1)]
+	dim = model.param('dimension')
+	agent.position = [randint(0, dim-1), randint(0, dim-1)]
 heli.addHook('baseAgentInit', baseAgentInit)
 
 #Both agents and patches to have x and y properties
@@ -69,26 +74,28 @@ Agent.moveDown = moveDown
 def moveLeft(self): self.position = self.patch.left.position
 Agent.moveLeft = moveLeft
 def move(self, x, y):
+	dim = model.param('dimension')
 	self.position[0] += x
-	while self.position[0] > self.model.dimension-1: self.position[0] -= self.model.dimension
+	while self.position[0] > dim-1: self.position[0] -= dim
 	self.position[1] += y
-	while self.position[1] > self.model.dimension-1: self.position[1] -= self.model.dimension
+	while self.position[1] > dim-1: self.position[1] -= dim
 Agent.move = move
 def moveTo(self, x, y):
-	if x>=self.model.dimension or y>=self.model.dimension: raise IndexError('Dimension is out of range.')
+	if x>=self.model.param('dimension') or y>=self.model.param('dimension'): raise IndexError('Dimension is out of range.')
 	self.position = [x,y]
 Agent.moveTo = moveTo
 
 #Position our patches so we can get them with heli.patches[x][y]
 def patchInit(agent, model):
 	x=0
-	while len(model.patches[x]) >= model.dimension: x+=1
+	while len(model.patches[x]) >= model.param('dimension'): x+=1
 	agent.position = (x, len(model.patches[x]))
 	model.patches[x].append(agent)
 heli.addHook('patchInit', patchInit)
 
 def modelPreSetup(model):
-	model.patches = [[] for i in range(model.dimension)]
+	model.patches = [[] for i in range(int(model.param('dimension')))]
+	model.param('agents_patch', model.param('dimension')**2)
 heli.addHook('modelPreSetup', modelPreSetup)
 
 #Establish grid links

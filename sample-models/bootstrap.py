@@ -1,5 +1,5 @@
 # A template for bootstrapping new models.
-# See http://helipad-docs.nfshost.com/ for complete documentation
+# See https://helipad.dev/ for complete documentation
 
 #===============
 # SETUP

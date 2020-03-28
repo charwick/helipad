@@ -11,8 +11,8 @@ class Utility():
 	#Receives an array of goods.
 	#Can, but doesn't necessarily have to correspond to the registered goods
 	#i.e. you can have an abstract good like real balances
-	def __init__(self, goodslist):
-		self.goods = goodslist
+	def __init__(self, goods):
+		self.goods = goods
 		self.utils = 0
 		
 	def consume(self, quantities):
@@ -46,12 +46,17 @@ class Utility():
 class CES(Utility):
 	
 	#Coefficients should add to 1, but this is not enforced
-	#Coeffs should be a dict with the keys corresponding to the items of goodslist
-	def __init__(self, goodslist, elast, coeffs=None):
-		super().__init__(goodslist)
+	#Goods can be a list of goods, or a dict of goods and corresponding coefficients
+	def __init__(self, goods, elast):
+		if isinstance(goods, dict):
+			self.coeffs = goods
+			goods = goods.keys()
+		else:
+			self.coeffs = {g:1 for g in goods}
+		super().__init__(goods)
 		self.elast = elast
-		self.coeffs = {g:1 for g in goodslist} if coeffs is None else coeffs
 	
+	#Can take agent.goods, if the registered goods correspond
 	def calculate(self, quantities):
 		super().calculate(quantities)
 		
@@ -121,11 +126,14 @@ class CES(Utility):
 			
 		return demand
 
+#Goods can be a list of goods, or a dict of goods and corresponding exponents
 class CobbDouglas(CES):
-	def __init__(self, goodslist, exponents=None):
-		if exponents is None: exponents = {g: 1/len(goodslist) for g in goodslist}
-		super().__init__(goodslist, 1, exponents)
+	def __init__(self, goods):
+		if isinstance(goods, list):
+			goods = {g:1/len(goods) for g in goods}
+		
+		super().__init__(goods, 1)
 
 class Leontief(CES):
-	def __init__(self, goodslist):
-		super().__init__(goodslist, 0)
+	def __init__(self, goods):
+		super().__init__(goods, 0)

@@ -5,11 +5,9 @@
 #
 #TODO: Use multiprocessing to run the graphing in a different process
 
-#Make sure we've got the requisite modules
-import sys, warnings
+import sys, warnings, pandas
 from random import shuffle, choice
 from tkinter import *
-import pandas
 from colour import Color
 from numpy import random
 # import multiprocessing
@@ -463,7 +461,7 @@ class Helipad():
 							agents.append(agent)
 							
 							#Allow selection of matches, but only on the first agent
-							if a==1:
+							if a==0:
 								others = self.doHooks('matchSelect', [agent, pool, self, self.stage])
 								if others is not None:
 									if (isinstance(others, agent.baseAgent) and matchN==2): others = [others]

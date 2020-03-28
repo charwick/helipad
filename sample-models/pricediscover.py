@@ -26,8 +26,8 @@ def agentInit(agent, model):
 heli.addHook('agentInit', agentInit)
 
 def match(agents, primitive, model, stage):
-	myEndowU = agents[0].utility.calculate({'soma': agents[0].goods['soma'], 'shmoo': agents[0].goods['shmoo']})
-	theirEndowU = agents[1].utility.calculate({'soma': agents[1].goods['soma'], 'shmoo': agents[1].goods['shmoo']})
+	myEndowU = agents[0].utility.calculate(agents[0].goods)
+	theirEndowU = agents[1].utility.calculate(agents[1].goods)
 	
 	#Get the endpoints of the contract curve
 	#Contract curve isn't linear unless the CD exponents are both 0.5. If not, *way* more complicated

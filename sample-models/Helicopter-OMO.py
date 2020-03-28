@@ -473,7 +473,7 @@ def agentInit(agent, model):
 	agent.item = AgentGoods[agent.breed]
 	rbd = model.breedParam('rbd', agent.breed, prim='agent')
 	beta = rbd/(rbd+1)
-	agent.utility = CES(['good','rbal'], agent.model.param('sigma'), {'good': 1-beta, 'rbal': beta })
+	agent.utility = CES({'good': 1-beta, 'rbal': beta }, agent.model.param('sigma'))
 	agent.expCons = model.goodParam('prod', agent.item)
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.

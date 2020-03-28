@@ -6,13 +6,11 @@
 from tkinter import *
 from tkinter.ttk import Progressbar
 from colour import Color
-from itertools import combinations
 from numpy import ndarray, asanyarray, log10
 from math import ceil
 # import time #For performance testing
 import string, random as rand2
-import matplotlib.pyplot as plt
-import matplotlib.style as mlpstyle
+import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 mlpstyle.use('fast')
 
 class GUI():

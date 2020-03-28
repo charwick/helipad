@@ -1,12 +1,11 @@
 # A model of the long-run cyclical dynamics of urbanization and human capital.
 
 from collections import namedtuple
-import pandas
+import pandas, random as rand2
 
 from helipad import Helipad
 from math import sqrt, log
 from numpy import *
-import random as rand2
 heli = Helipad()
 
 #================
@@ -54,9 +53,9 @@ def modelPreSetup(model):
 		setattr(model, 'birthrate'+b, 0)
 heli.addHook('modelPreSetup', modelPreSetup)
 
-from helipad.utility import CobbDouglas
+# from helipad.utility import CobbDouglas
 def agentInit(agent, model):
-	agent.utility = CobbDouglas(['consumption'], {'consumption': 0.5}) #Single good
+	# agent.utility = CobbDouglas({'consumption': 0.5}) #Single good
 	agent.H = 1 #Human capital
 	agent.prod = {'urban': 0, 'rural': 0}
 	agent.wealth = 0
@@ -119,7 +118,7 @@ def agentStep(agent, model, stage):
 	#Get paid in modelStep, then pay rent
 	elif stage==2:
 		agent.wealth -= model.param('rent')/100 * agent.H + model.param('fixed')/100
-		# agent.utils = agent.utility.calculate({'consumption': n})
+		# agent.utils = agent.utility.calculate({'consumption': agent.wealth})
 		if agent.wealth <= 0: agent.die()
 		return
 	
