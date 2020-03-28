@@ -48,6 +48,14 @@ strategies = {
 	'Joss': (False, 'CCCCCC', 'Tit-For-Tat, except cooperation is only with 90% probability'),
 }
 
+#Build the strategies toggle
+def GUIAbovePlotList(gui, bg):
+	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
+	for s,v in strategies.items():
+		gui.model.strategies.addCheck(s, s, v[0], v[2] if len(v)>=3 else None)
+	return gui.model.strategies
+heli.addHook('GUIAbovePlotList', GUIAbovePlotList)
+
 #===============
 # STRATEGIES
 # Return True to cooperate, and False to defect.
@@ -137,14 +145,6 @@ def match(agents, primitive, model, stage):
 		agents[1].goods['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 			
 heli.addHook('match', match)
-
-#Build the strategies toggle
-def GUIAbovePlotList(gui, bg):
-	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
-	for s,v in strategies.items():
-		gui.model.strategies.addCheck(s, s, v[0], v[2] if len(v)>=3 else None)
-	return gui.model.strategies
-heli.addHook('GUIAbovePlotList', GUIAbovePlotList)
 
 #Add breeds last-minute so we can toggle them in the control panel
 def modelPreSetup(model):
