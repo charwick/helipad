@@ -342,7 +342,9 @@ class Helipad():
 			elif params[name][1]['type'] == 'check':
 				return params[name][0].get() if paramType is None or obj is None else params[name][0][obj].get()
 			else:
-				return params[name][0] if paramType is None or obj is None else params[name][0][obj]
+				v = params[name][0] if paramType is None or obj is None else params[name][0][obj]
+				if 'step' in params[name][1]['opts'] and isinstance(params[name][1]['opts']['step'], int): v = int(v)
+				return v
 	
 	def breedParam(self, name, breed=None, val=None, prim=None):
 		if prim is None:

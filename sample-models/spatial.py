@@ -26,19 +26,19 @@ class Patch(baseAgent):
 	
 	@property
 	def up(self):
-		return self.model.patches[self.x][self.y-1 if self.y > 0 else int(self.model.param('dimension'))-1]
+		return self.model.patches[self.x][self.y-1 if self.y > 0 else self.model.param('dimension')-1]
 	
 	@property
 	def right(self):
-		return self.model.patches[self.x+1 if self.x < int(self.model.param('dimension'))-1 else 0][self.y]
+		return self.model.patches[self.x+1 if self.x < self.model.param('dimension')-1 else 0][self.y]
 	
 	@property
 	def down(self):
-		return self.model.patches[self.x][self.y+1 if self.y < int(self.model.param('dimension'))-1 else 0]
+		return self.model.patches[self.x][self.y+1 if self.y < self.model.param('dimension')-1 else 0]
 	
 	@property
 	def left(self):
-		return self.model.patches[self.x-1 if self.x > 0 else int(self.model.param('dimension'))-1][self.y]
+		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('dimension')-1][self.y]
 	
 	@property
 	def agentsOn(self):
@@ -94,7 +94,7 @@ def patchInit(agent, model):
 heli.addHook('patchInit', patchInit)
 
 def modelPreSetup(model):
-	model.patches = [[] for i in range(int(model.param('dimension')))]
+	model.patches = [[] for i in range(model.param('dimension'))]
 	model.param('agents_patch', model.param('dimension')**2)
 heli.addHook('modelPreSetup', modelPreSetup)
 
