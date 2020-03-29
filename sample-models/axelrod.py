@@ -16,7 +16,7 @@ from numpy import mean
 heli = Helipad()
 heli.order = 'match'
 
-heli.params['agents_agent'][1]['type'] = 'hidden' #So we can postpone breed determination until the end
+heli.params['agents_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
 #Initial parameter values match the payoffs in Table 1
 heli.addParameter('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})

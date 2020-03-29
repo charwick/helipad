@@ -45,7 +45,6 @@ class Patch(baseAgent):
 		return [a for a in self.model.agents['agent'] if a.x==self.x and a.y==self.y]
 	
 heli.addPrimitive('patch', Patch, hidden=True)
-heli.params['agents_patch'][1]['type'] = 'hidden'
 
 #===============
 # BEHAVIOR

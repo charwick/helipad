@@ -272,8 +272,8 @@ class Loan():
 # CONFIGURATION
 #===============
 
-heli.addPrimitive('bank', Bank, dflt=1, low=0, high=10, priority=1)
-heli.addPrimitive('store', Store, dflt=1, low=0, high=10, priority=2)
+heli.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
+heli.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
 heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 
 # Configure how many breeds there are and what good each consumes
@@ -338,9 +338,6 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 	'lump': 'Helicopter/Lump Sum',
 	'omo': 'Open Market Operation'
 }, runtime=False, callback=bankCheckWrapper)
-
-heli.params['agents_bank'][1]['type'] = 'hidden'
-heli.params['agents_store'][1]['type'] = 'hidden'
 
 heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
 heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1}, callback=storeUpdater)

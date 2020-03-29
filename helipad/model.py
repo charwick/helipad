@@ -102,7 +102,7 @@ class Helipad():
 			'breeds': {},
 			'breedParams': {}
 		}
-		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step}, callback=self.nUpdater)
+		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
 		self.agents[name] = []
 			
 	#Position is the number you want it to be, *not* the array position
@@ -186,15 +186,15 @@ class Helipad():
 		#Keep track of parameters
 		for item, i in self.goods.items():				#Cycle through goods
 			for n,p in self.goodParams.items():			#Cycle through parameters
-				if p[1]['type'] == 'hidden': continue	#Skip hidden parameters
+				if p.type == 'hidden': continue			#Skip hidden parameters
 				self.data.addReporter(n+'-'+item, pReporter(n, paramType='good', obj=item))
 		for prim, pdata in self.primitives.items():			#Cycle through primitives
 			for breed, i in pdata['breeds'].items():		#Cycle through breeds
 				for n,p in pdata['breedParams'].items():	#Cycle through parameters
-					if p[1]['type'] == 'hidden': continue	#Skip hidden parameters
+					if p.type == 'hidden': continue			#Skip hidden parameters
 					self.data.addReporter(prim+'_'+n+'-'+item, pReporter(n, paramType='breed', obj=breed, prim=prim))
-		for n,p in self.params.items():							#Cycle through parameters
-			if p[1]['type'] == 'hidden': continue				#Skip hidden parameters
+		for n,p in self.params.items():						#Cycle through parameters
+			if p.type == 'hidden': continue					#Skip hidden parameters
 			self.data.addReporter(n, pReporter(n))
 
 		if (self.moneyGood is not None):
@@ -282,15 +282,16 @@ class Helipad():
 			elif type == 'check': deflt = BooleanVar(value=dflt)
 			else: deflt = dflt
 		
-		params[name] = [deflt, {
-			'title': title,
-			'type': type,
-			'dflt': dflt,
-			'opts': opts,
-			'runtime': runtime,
-			'callback': callback,
-			'desc': desc
-		}]
+		params[name] = Item(
+			value=deflt,
+			title=title,
+			type=type,
+			dflt=dflt,
+			opts=opts,
+			runtime=runtime,
+			callback=callback,
+			desc=desc
+		)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
@@ -319,31 +320,32 @@ class Helipad():
 		
 		#Set
 		if val is not None:
-			if params[name][1]['type'] == 'menu':
-				if paramType is None: params[name][0].set(params[name][1]['opts'][val])
-				else: params[name][0][obj].set(params[name][1]['opts'][val])
-			elif params[name][1]['type'] == 'check':
-				if paramType is None: params[name][0].set(val)
-				else: params[name][0][obj].set(val)
+			if params[name].type == 'menu':
+				if paramType is None: params[name][0].set(params[name].opts[val])
+				else: params[name].value[obj].set(params[name].opts[val])
+			elif params[name].type == 'check':
+				if paramType is None: params[name].value.set(val)
+				else: params[name].value[obj].set(val)
 			else:	
-				if paramType is None: params[name][0] = val
-				else: params[name][0][obj] = val
+				if paramType is None: params[name].value = val
+				else: params[name].value[obj] = val
 		
 		#Get
 		else:
-			if params[name][1]['type'] == 'menu':
+			if params[name].type == 'menu':
 				#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
-				flip = {y:x for x,y in params[name][1]['opts'].items()}
-				if paramType is None: return flip[params[name][0].get()]							#Global parameter
+				flip = {y:x for x,y in params[name].opts.items()}
+				if paramType is None: return flip[params[name].value.get()]							#Global parameter
 				else:
-					if obj is None: return {o:flip[v.get()] for o,v in params[name][0].items()}		#Item parameter, item unspecified
-					else: return flip[params[name][0][obj].get()]									#Item parameter, item specified
+					if obj is None: return {o:flip[v.get()] for o,v in params[name].value.items()}	#Item parameter, item unspecified
+					else: return flip[params[name].value[obj].get()]								#Item parameter, item specified
 				return flip[fullText]
-			elif params[name][1]['type'] == 'check':
-				return params[name][0].get() if paramType is None or obj is None else params[name][0][obj].get()
+			elif params[name].type == 'check':
+				return params[name].value.get() if paramType is None or obj is None else params[name].value[obj].get()
 			else:
-				v = params[name][0] if paramType is None or obj is None else params[name][0][obj]
-				if 'step' in params[name][1]['opts'] and isinstance(params[name][1]['opts']['step'], int): v = int(v)
+				v = params[name].value if paramType is None or obj is None else params[name].value[obj]
+				#Have sliders with an int step value return an int
+				if params[name].opts is not None and 'step' in params[name].opts and isinstance(params[name].opts['step'], int): v = int(v)
 				return v
 	
 	def breedParam(self, name, breed=None, val=None, prim=None):
@@ -374,15 +376,15 @@ class Helipad():
 		
 		#Make sure the parameter arrays keep up with our items
 		for k,p in paramDict.items():
-			if isinstance(p[1].dflt, dict):
-				if name in p[1].dflt: paramDict[k][0][name] = p[1].dflt[name]	#Forgive out-of-order specification
-				elif p[1]['type']=='menu':
-					paramDict[k][0][name] = StringVar()
-					paramDict[k][0][name].set(p[1]['opts'][next(iter(p[1]['opts']))])	#Choose first item of the list
-				elif p[1]['type']=='check': paramDict[k][0][name] = BooleanVar()
-				else: paramDict[k][0][name] = 0									#Set to zero
+			if isinstance(p.dflt, dict):
+				if name in p.dflt: p.value[name] = p.dflt[name]	#Forgive out-of-order specification
+				elif p.type=='menu':
+					p.value[name] = StringVar()
+					p.value[name].set(p.opts[next(iter(p.opts))])	#Choose first item of the list
+				elif p.type=='check': p.value[name] = BooleanVar()
+				else: p.value[name] = 0									#Set to zero
 			else:
-				paramDict[k][0][name] = paramDict[k][1].dflt
+				p.value[name] = p.dflt
 	
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
@@ -539,13 +541,13 @@ class Helipad():
 			else: raise ValueError('Invalid object type')
 			if var in paramDict:
 				setget(var, item, newval, prim=prim)
-			if 'callback' in paramDict[var][1] and callable(paramDict[var][1]['callback']):
-				paramDict[var][1]['callback'](self, var, item, newval)
+			if hasattr(paramDict[var], 'callback') and callable(paramDict[var].callback):
+				paramDict[var].callback(self, var, item, newval)
 		else:
 			if var in self.params:
 				self.param(var, newval)
-			if 'callback' in self.params[var][1] and callable(self.params[var][1]['callback']):
-				self.params[var][1]['callback'](self, var, newval)
+			if hasattr(self.params[var], 'callback') and callable(self.params[var].callback):
+				self.params[var].callback(self, var, newval)
 	
 	@property
 	def allagents(self):
@@ -631,14 +633,14 @@ class Helipad():
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
 		for k,p in self.primitives.items():
-			if self.params['agents_'+k][1]['type'] != 'hidden':
+			if self.params['agents_'+k].type != 'hidden':
 				l = len(p['breeds'])
 				if not l: continue
-				self.params['agents_'+k][1]['opts']['low'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
-				self.params['agents_'+k][1]['opts']['high'] = makeDivisible(self.params['agents_'+k][1]['opts']['high'], l, 'max')
-				self.params['agents_'+k][1]['opts']['step'] = makeDivisible(self.params['agents_'+k][1]['opts']['low'], l, 'max')
-				self.params['agents_'+k][0] = makeDivisible(self.params['agents_'+k][0], l, 'max')
-				self.params['agents_'+k][1]['dflt'] = makeDivisible(self.params['agents_'+k][1]['dflt'], l, 'max')
+				self.params['agents_'+k].opts['low'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
+				self.params['agents_'+k].opts['high'] = makeDivisible(self.params['agents_'+k].opts['high'], l, 'max')
+				self.params['agents_'+k].opts['step'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
+				self.params['agents_'+k].value = makeDivisible(self.params['agents_'+k].value, l, 'max')
+				self.params['agents_'+k].dflt = makeDivisible(self.params['agents_'+k].dflt, l, 'max')
 		
 		if self.moneyGood is None:
 			for i in ['prices', 'money']:

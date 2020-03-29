@@ -78,7 +78,7 @@ class Store(baseAgent):
 # CONFIGURATION
 #===============
 
-heli.addPrimitive('store', Store, dflt=1, low=0, high=10, priority=2)
+heli.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
 heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 
 # Configure how many breeds there are and what good each consumes
@@ -123,8 +123,6 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 	'prop': 'Proportional',
 	'lump': 'Lump Sum'
 }, runtime=False)
-
-heli.params['agents_store'][1]['type'] = 'hidden'
 
 heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
 heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1}, callback=storeUpdater)

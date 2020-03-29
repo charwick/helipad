@@ -135,7 +135,7 @@ class GUI():
 		#Item parameter sliders
 		def buildSlider(itemDict, paramDict, setget, obj, prim=None, fnum=fnum):
 			for k, var in paramDict.items():
-				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var[1]['title'], fg="#333", font=font)
+				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var.title, fg="#333", font=font)
 				bpf = bpf_super.subframe
 				
 				i=0
@@ -149,28 +149,28 @@ class GUI():
 					c.grid(row=0, column=0, pady=(0,8))
 					
 					#Item name label
-					if var[1]['type'] != 'check':
+					if var.type != 'check':
 						Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
 				
-						if var[1]['type'] == 'menu':
-							self.sliders[bname] = OptionMenu(bpf, paramDict[k][0][name], command=menuCallback(bname, var[1]['callback']), *var[1]['opts'].values())
+						if var.type == 'menu':
+							self.sliders[bname] = OptionMenu(bpf, var.value[name], command=menuCallback(bname, var.callback), *var.opts.values())
 							self.sliders[bname].config(bg=bgcolors[fnum%2])
-						elif var[1]['type'] == 'slider':
-							self.sliders[bname] = Scale(bpf, from_=var[1]['opts']['low'], to=var[1]['opts']['high'], resolution=var[1]['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
+						elif var.type == 'slider':
+							self.sliders[bname] = Scale(bpf, from_=var.opts['low'], to=var.opts['high'], resolution=var.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
 							self.sliders[bname].set(setget(k, name, prim=prim))
 						
 						self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
 					
 					#Do everything differently if we've got a checkbox
 					else:
-						self.sliders[bname] = Checkbutton(lframe, text=name.title(), var=paramDict[k][0][name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
-						self.sliders[bname].variable = paramDict[k][0][name] #Keep track of this because it doesn't pass the value to the callback
+						self.sliders[bname] = Checkbutton(lframe, text=name.title(), var=var.value[name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
+						self.sliders[bname].variable = var.value[name] #Keep track of this because it doesn't pass the value to the callback
 						self.sliders[bname].grid(row=0, column=1)
 					
 					bpf.columnconfigure(0,weight=1)
 					bpf.columnconfigure(1,weight=1)
 					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
-					if self.balloon and var[1]['desc'] is not None: self.balloon.bind(self.sliders[bname], var[1]['desc'])
+					if self.balloon and var.desc is not None: self.balloon.bind(self.sliders[bname], var.desc)
 					
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
@@ -189,26 +189,25 @@ class GUI():
 		
 		#Parameter sliders
 		for k, var in self.model.params.items():
-			var = var[1]
-			if var['type'] == 'hidden': continue
-			elif var['type'] == 'check':
+			if var.type == 'hidden': continue
+			elif var.type == 'check':
 				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
-				self.sliders[k] = Checkbutton(f, text=var['title'], var=self.model.params[k][0], onvalue=True, offvalue=False, command=setVar(k), bg=bgcolors[fnum%2])
-				self.sliders[k].variable = self.model.params[k][0] #Keep track of this because it doesn't pass the value to the callback
+				self.sliders[k] = Checkbutton(f, text=var.title, var=var.value, onvalue=True, offvalue=False, command=setVar(k), bg=bgcolors[fnum%2])
+				self.sliders[k].variable = var.value #Keep track of this because it doesn't pass the value to the callback
 				self.sliders[k].pack()
 			else:
 				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
-				Label(f, text=var['title'], fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
-				if var['type'] == 'menu':
+				Label(f, text=var.title, fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
+				if var.type == 'menu':
 					#Callback is different because menus automatically update their variable
-					self.sliders[k] = OptionMenu(f, self.model.params[k][0], *var['opts'].values(), command=menuCallback(k, var['callback']))
+					self.sliders[k] = OptionMenu(f, var.value, *var.opts.values(), command=menuCallback(k, var.callback))
 					self.sliders[k].config(bg=bgcolors[fnum%2])
-				elif var['type'] == 'slider':
-					self.sliders[k] = Scale(f, from_=var['opts']['low'], to=var['opts']['high'], resolution=var['opts']['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(k), bg=bgcolors[fnum%2])
-					self.sliders[k].set(var['dflt'])
+				elif var.type == 'slider':
+					self.sliders[k] = Scale(f, from_=var.opts['low'], to=var.opts['high'], resolution=var.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(k), bg=bgcolors[fnum%2])
+					self.sliders[k].set(var.dflt)
 					
 				self.sliders[k].pack(side=RIGHT)
-				if self.balloon and var['desc'] is not None: self.balloon.bind(self.sliders[k], var['desc'])
+				if self.balloon and var.desc is not None: self.balloon.bind(self.sliders[k], var.desc)
 				
 			f.pack(fill="x", side=TOP)
 		fnum += 1
@@ -279,7 +278,7 @@ class GUI():
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
 		self.checks.disable()
 		for k, var in self.model.params.items():
-			if not var[1]['runtime'] and k in self.sliders: self.sliders[k].configure(state='disabled')
+			if not var.runtime and k in self.sliders: self.sliders[k].configure(state='disabled')
 		
 		#If we've got plots, instantiate the Graph object
 		if len(plotsToDraw.items()) > 0:
