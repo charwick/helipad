@@ -67,7 +67,7 @@ class GUI():
 		#For shock buttons.
 		#Can't do an inline lambda here because lambdas apparently don't preserve variable context
 		def shockCallback(name):
-			return lambda: self.model.shocks.do(name)
+			return lambda: self.model.shocks[name].do(self.model)
 		
 		#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
 		def switchPbar(val):
@@ -233,14 +233,14 @@ class GUI():
 			fnum += 1
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			for shock in self.model.shocks.shocks.values():
-				if callable(shock['timerFunc']):
-					shock['guiElement'] = Checkbutton(frame8.subframe, text=shock['name'], var=shock['active'], onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
-				elif shock['timerFunc'] == 'button':
-					shock['guiElement'] = Button(frame8.subframe, text=shock['name'], command=shockCallback(shock['name']), padx=10, pady=10)
+				if callable(shock.timerFunc):
+					shock.guiElement = Checkbutton(frame8.subframe, text=shock.name, var=shock.boolvar, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+				elif shock.timerFunc == 'button':
+					shock.guiElement = Button(frame8.subframe, text=shock.name, command=shockCallback(shock.name), padx=10, pady=10)
 				
-				if self.balloon and shock['desc'] is not None:
-					self.balloon.bind(shock['guiElement'], shock['desc'])
-				shock['guiElement'].pack(fill=BOTH)
+				if self.balloon and shock.desc is not None:
+					self.balloon.bind(shock.guiElement, shock.desc)
+				shock.guiElement.pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
 		
 		gbot = self.model.doHooks('GUIBottom', [self, bgcolors[fnum%2]])

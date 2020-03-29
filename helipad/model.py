@@ -674,6 +674,33 @@ class Shocks():
 	def __init__(self, model):
 		self.shocks = {}
 		self.model = model
+		
+		class Shock(Item):
+			def __init__(self, **kwargs):
+				self.boolvar = BooleanVar(value=kwargs['active'])
+				del kwargs['active']
+				super().__init__(**kwargs)
+			
+			@property
+			def active(self): return self.boolvar.get()
+			
+			@active.setter
+			def active(self, active): self.boolvar.set(active)
+			
+			def do(self, model):
+				if self.var is not None:
+					newval = self.valFunc(model.param(self.var, paramType=self.paramType, obj=self.obj, prim=self.prim))	#Pass in current value
+		
+					if self.paramType is not None and self.obj is not None:
+						begin = self.paramType
+						if self.prim is not None: begin += '_'+self.prim
+						v=begin+'-'+self.var+'-'+self.obj
+					else: v=self.var
+			
+					model.updateVar(v, newval, updateGUI=True)
+				else:
+					self.valFunc(model)
+		self.Shock = Shock
 	
 	def __getitem__(self, index): return self.shocks[index]
 	def __setitem__(self, index, value): self.shocks[index] = value
@@ -685,41 +712,25 @@ class Shocks():
 	#The variable is shocked when timerFunc returns true
 	#Can pass in var=None to run an open-ended valFunc that takes the model as an object instead
 	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
-		self[name] = {
-			'name': name,
-			'desc': desc,
-			'var': var,
-			'valFunc': valFunc,
-			'timerFunc': timerFunc,
-			'paramType': paramType,
-			'obj': obj,
-			'prim': prim,
-			'active': BooleanVar(value=active) #Saves some Tkinter code later
-		}
+		self[name] = self.Shock(
+			name=name,
+			desc=desc,
+			var=var,
+			valFunc=valFunc,
+			timerFunc=timerFunc,
+			paramType=paramType,
+			obj=obj,
+			prim=prim,
+			active=active #Saves some Tkinter code later
+		)
 		
 	def step(self):
 		for name, shock in self.shocks.items():
-			if shock['active'].get() and callable(shock['timerFunc']) and shock['timerFunc'](self.model.t):
-				self.do(name)
-	
-	def do(self, name):
-		shock = self[name]
-		if shock['var'] is not None:
-			newval = shock['valFunc'](self.model.param(shock['var'], paramType=shock['paramType'], obj=shock['obj'], prim=shock['prim']))	#Pass in current value
-		
-			if shock['paramType'] is not None and shock['obj'] is not None:
-				begin = shock['paramType']
-				if shock['prim'] is not None: begin += '_'+shock['prim']
-				v=begin+'-'+shock['var']+'-'+shock['obj']
-			else: v=shock['var']
-			
-			self.model.updateVar(v, newval, updateGUI=True)
-		else:
-			shock['valFunc'](self.model)
+			if shock.active and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
+				shock.do(self.model)
 	
 	@property
-	def number(self):
-		return len(self.shocks)
+	def number(self): return len(self.shocks)
 	
 	# ===============
 	# TIMER FUNCTIONS

@@ -41,7 +41,4 @@ The following libraries are optional but recommended:
 ## Version History
 
 * 0.5: Support for matching models, and the checkGrid class
-* 0.4: Basic graph and network functionality
-* 0.3: Improvements to goods API
-* 0.2: Abstraction of agent-type primitives
-* 0.1: Initial Github release
+* 0.4: Initial PyPI release
