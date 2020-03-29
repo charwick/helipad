@@ -10,7 +10,8 @@ from helipad import Helipad
 # from utility import CobbDouglas
 
 heli = Helipad()
-heli.order = 'random' #Can be changed to 'linear'
+heli.name = 'Model Name'
+heli.order = 'random' #Can be changed to 'linear' or 'match'
 heli.stages = 1 #Change to create a multi-stage model
 
 # heli.addParameter('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})

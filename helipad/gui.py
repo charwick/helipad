@@ -178,8 +178,8 @@ class GUI():
 		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, 'good', fnum=fnum)
 		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
 		for p,v in model.primitives.items():
-			if v['breedParams'] != {}:
-				buildSlider(v['breeds'], v['breedParams'], model.breedParam, 'breed_'+p, prim=p, fnum=fnum)
+			if v.breedParams != {}:
+				buildSlider(v.breeds, v.breedParams, model.breedParam, 'breed_'+p, prim=p, fnum=fnum)
 				fnum += 1
 		
 		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])
@@ -299,6 +299,7 @@ class GUI():
 				self.model.doHooks('graphKeypress', [event.key, self])
 		
 			self.graph = Graph(plotsToDraw)
+			self.graph.fig.canvas.set_window_title(self.model.name+(' ' if self.model.name!='' else '')+'Data Plots')
 			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		

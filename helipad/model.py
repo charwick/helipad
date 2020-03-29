@@ -29,13 +29,11 @@ import helipad.agent as agent
 
 class Helipad():
 	def __init__(self):
-		# Got to initialize Tkinter first in order for StringVar() and such to work
-		self.root = Tk()
-		self.root.title('Control Panel')
-		self.root.resizable(0,0)
+		self.root = Tk()  #Got to initialize Tkinter first in order for StringVar() and such to work
 		self.data = Data(self)
 		self.shocks = Shocks(self)	
-			
+		
+		self.name = ''
 		self.agents = {}
 		self.primitives = {}
 		self.params = {}		#Global parameters
@@ -94,14 +92,14 @@ class Helipad():
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
 		class_.primitive = name
-		self.primitives[name] = {
-			'class': class_,
-			'plural': plural,
-			'priority': priority,
-			'order': order,
-			'breeds': {},
-			'breedParams': {}
-		}
+		self.primitives[name] = Item(
+			class_=class_,
+			plural=plural,
+			priority=priority,
+			order=order,
+			breeds={},
+			breedParams={}
+		)
 		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
 		self.agents[name] = []
 			
@@ -168,7 +166,7 @@ class Helipad():
 		
 		#Blank breeds for any primitives not otherwise specified
 		for k,p in self.primitives.items():
-			if len(p['breeds'])==0: self.addBreed('', '000000', prim=k)
+			if len(p.breeds)==0: self.addBreed('', '000000', prim=k)
 		
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
@@ -188,13 +186,13 @@ class Helipad():
 			for n,p in self.goodParams.items():			#Cycle through parameters
 				if p.type == 'hidden': continue			#Skip hidden parameters
 				self.data.addReporter(n+'-'+item, pReporter(n, paramType='good', obj=item))
-		for prim, pdata in self.primitives.items():			#Cycle through primitives
-			for breed, i in pdata['breeds'].items():		#Cycle through breeds
-				for n,p in pdata['breedParams'].items():	#Cycle through parameters
-					if p.type == 'hidden': continue			#Skip hidden parameters
+		for prim, pdata in self.primitives.items():		#Cycle through primitives
+			for breed, i in pdata.breeds.items():		#Cycle through breeds
+				for n,p in pdata.breedParams.items():	#Cycle through parameters
+					if p.type == 'hidden': continue		#Skip hidden parameters
 					self.data.addReporter(prim+'_'+n+'-'+item, pReporter(n, paramType='breed', obj=breed, prim=prim))
-		for n,p in self.params.items():						#Cycle through parameters
-			if p.type == 'hidden': continue					#Skip hidden parameters
+		for n,p in self.params.items():					#Cycle through parameters
+			if p.type == 'hidden': continue				#Skip hidden parameters
 			self.data.addReporter(n, pReporter(n))
 
 		if (self.moneyGood is not None):
@@ -203,7 +201,7 @@ class Helipad():
 		
 		#Per-breed and per-good series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in self.primitives['agent']['breeds'].items():
+		for breed, b in self.primitives['agent'].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', 'agent', breed=breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
@@ -219,7 +217,7 @@ class Helipad():
 		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
-		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1]['priority'])} #Sort by priority
+		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)} #Sort by priority
 		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
 		for prim in self.primitives:
 			self.nUpdater(self, prim, self.param('agents_'+prim))
@@ -229,7 +227,7 @@ class Helipad():
 	#Registers an adjustable parameter exposed in the config GUI.	
 	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
 		if paramType is None: params=self.params
-		elif paramType=='breed': params=self.primitives[prim]['breedParams']
+		elif paramType=='breed': params=self.primitives[prim].breedParams
 		elif paramType=='good': params=self.goodParams
 		else: raise ValueError('Invalid object \''+paramType+'\'')
 		
@@ -251,7 +249,7 @@ class Helipad():
 		#Global slider:					int → int
 	
 		if paramType is not None:
-			keys = self.primitives[prim]['breeds'] if paramType=='breed' else self.goods
+			keys = self.primitives[prim].breeds if paramType=='breed' else self.goods
 			if type == 'menu':
 				deflt = {b:StringVar() for b in keys}
 				if isinstance(dflt, dict):
@@ -311,7 +309,7 @@ class Helipad():
 			if prim is None:
 				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
 				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-			params=self.primitives[prim]['breedParams']
+			params=self.primitives[prim].breedParams
 		
 		if not name in params:
 			if paramType is None: paramType = ''
@@ -363,8 +361,8 @@ class Helipad():
 			itemDict = self.goods
 			paramDict = self.goodParams
 		elif obj=='breed': 
-			itemDict = self.primitives[prim]['breeds']
-			paramDict = self.primitives[prim]['breedParams']
+			itemDict = self.primitives[prim].breeds
+			paramDict = self.primitives[prim].breedParams
 		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'');
 		
 		if name in itemDict:
@@ -441,7 +439,7 @@ class Helipad():
 			
 			#Sort agents and step them
 			for prim, lst in self.agents.items():
-				order = self.primitives[prim]['order'] or self.order
+				order = self.primitives[prim].order or self.order
 				if isinstance(order, list): order = order[self.stage-1]
 				
 				if order == 'random': shuffle(lst)
@@ -535,8 +533,8 @@ class Helipad():
 				paramDict = self.goodParams
 				setget = self.goodParam
 			elif obj == 'breed':
-				itemDict = self.primitives[prim]['breeds']
-				paramDict = self.primitives[prim]['breedParams']
+				itemDict = self.primitives[prim].breeds
+				paramDict = self.primitives[prim].breedParams
 				setget = self.breedParam
 			else: raise ValueError('Invalid object type')
 			if var in paramDict:
@@ -573,11 +571,11 @@ class Helipad():
 			for i in range(0, int(diff)):
 				maxid += 1
 				
-				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [maxid, self.primitives[prim]['breeds'].keys(), self])
-				if breed is None: breed = list(self.primitives[prim]['breeds'].keys())[i%len(self.primitives[prim]['breeds'])]
-				if not breed in self.primitives[prim]['breeds']:
+				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [maxid, self.primitives[prim].breeds.keys(), self])
+				if breed is None: breed = list(self.primitives[prim].breeds.keys())[i%len(self.primitives[prim].breeds)]
+				if not breed in self.primitives[prim].breeds:
 					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
-				new = self.primitives[prim]['class'](breed, maxid, self)
+				new = self.primitives[prim].class_(breed, maxid, self)
 				array.append(new)
 		
 		#Remove agents
@@ -585,7 +583,7 @@ class Helipad():
 			shuffle(array) #Delete agents at random
 			
 			#Remove agents, maintaining the proportion between breeds
-			n = {x: 0 for x in self.primitives[prim]['breeds'].keys()}
+			n = {x: 0 for x in self.primitives[prim].breeds.keys()}
 			for a in self.agents[prim]:
 				if n[a.breed] < -diff:
 					n[a.breed] += 1
@@ -634,7 +632,7 @@ class Helipad():
 		#Do this down here so we can have breeds registered before determining options
 		for k,p in self.primitives.items():
 			if self.params['agents_'+k].type != 'hidden':
-				l = len(p['breeds'])
+				l = len(p.breeds)
 				if not l: continue
 				self.params['agents_'+k].opts['low'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
 				self.params['agents_'+k].opts['high'] = makeDivisible(self.params['agents_'+k].opts['high'], l, 'max')
@@ -662,6 +660,8 @@ class Helipad():
 				shell.interact()
 			except: print('Use pip to install readline and code for a debug console')
 		
+		self.root.title(self.name+(' ' if self.name!='' else '')+'Control Panel')
+		self.root.resizable(0,0)
 		if headless:
 			self.root.destroy()
 			self.gui.preparePlots()		#Jump straight to the graph

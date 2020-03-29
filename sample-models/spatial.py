@@ -11,6 +11,7 @@ from random import randint
 from math import sqrt
 
 heli = Helipad()
+heli.name = 'Spatial Sample'
 heli.order = 'random'
 heli.addParameter('dimension', 'Dimension', 'slider', dflt=10, opts={'low': 5, 'high': 20, 'step': 1})
 

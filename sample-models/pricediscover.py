@@ -10,6 +10,7 @@ from math import sqrt, exp, floor
 import random
 
 heli = Helipad()
+heli.name = 'Price Discover'
 heli.order = 'match'
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5})

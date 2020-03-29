@@ -19,7 +19,7 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent']['breeds']])))
+		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent'].breeds])))
 		self.price = {g:sm/(sqrt(model.goodParam('prod',g))) for g in model.nonMoneyGoods}
 		
 		self.invTarget = {g:model.goodParam('prod',g)*model.param('agents_agent') for g in model.nonMoneyGoods}
@@ -291,6 +291,7 @@ for b in breeds:
 M0 = 120000
 heli.addGood('cash', '009900', money=True)
 
+heli.name = 'Helicopter/OMO'
 heli.order = 'random'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
@@ -300,7 +301,7 @@ def bankChecks(gui, val=None):
 	gui.model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		gui.checks.disabled(i, nobank)
-	for b in gui.model.primitives['agent']['breeds'].keys():
+	for b in gui.model.primitives['agent'].breeds.keys():
 		gui.sliders['breed_agent-liqPref-'+b].config(state='disabled' if nobank else 'normal')
 
 #Since the param callback takes different parameters than the GUI callback
@@ -373,8 +374,8 @@ heli.addPlot('debt', 'Debt', selected=False)
 heli.addPlot('rr', 'Reserve Ratio', selected=False)
 heli.addPlot('i', 'Interest Rate', selected=False)
 
-heli.addSeries('capital', lambda t: 1/len(heli.primitives['agent']['breeds']), '', 'CCCCCC')
-for breed, d in heli.primitives['agent']['breeds'].items():
+heli.addSeries('capital', lambda t: 1/len(heli.primitives['agent'].breeds), '', 'CCCCCC')
+for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
 	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', good=b.good)(model))

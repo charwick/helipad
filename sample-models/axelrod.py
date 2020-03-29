@@ -14,6 +14,7 @@ import numpy.random as random
 from numpy import mean
 
 heli = Helipad()
+heli.name = 'Axelrod Tournament'
 heli.order = 'match'
 
 heli.params['agents_agent'].type = 'hidden' #So we can postpone breed determination until the end
@@ -150,17 +151,17 @@ heli.addHook('match', match)
 def modelPreSetup(model):
 	
 	#Clear breeds from the previous run
-	for b in model.primitives['agent']['breeds']:
+	for b in model.primitives['agent'].breeds:
 		model.data.removeReporter(b+'-proportion')
-	model.primitives['agent']['breeds'] = {}
+	model.primitives['agent'].breeds = {}
 	
 	model.strategies.disable()
 	for k,v in model.strategies.items():
 		if v.get(): model.addBreed(k, strategies[k][1])
 	
-	model.param('agents_agent', len(model.primitives['agent']['breeds'])*model.param('n')) #Three of each strategy, for speed
+	model.param('agents_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
 	
-	for b, d in model.primitives['agent']['breeds'].items():
+	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		model.addSeries('payoffs', b+'-proportion', b, d.color)
 heli.addHook('modelPreSetup', modelPreSetup)

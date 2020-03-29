@@ -22,6 +22,7 @@ heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'lo
 heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living')
 
+heli.name = 'Cities'
 heli.stages = 2
 heli.order = 'linear'
 
@@ -45,10 +46,10 @@ heli.land = {k: Land(k) for k in ['urban', 'rural']}
 #This is here to make sure that the agents param gets reset at the beginning of each run
 #Otherwise the parameter persists between runs
 def modelPreSetup(model):
-	model.movers = {b:0 for b in heli.primitives['agent']['breeds']}
-	model.births = {b:0 for b in heli.primitives['agent']['breeds']}
+	model.movers = {b:0 for b in heli.primitives['agent'].breeds}
+	model.births = {b:0 for b in heli.primitives['agent'].breeds}
 	model.param('agents_agent', 150)
-	for b in heli.primitives['agent']['breeds']:
+	for b in heli.primitives['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
 heli.addHook('modelPreSetup', modelPreSetup)
@@ -128,7 +129,7 @@ heli.addHook('agentStep', agentStep)
 def modelPostStep(model):
 	if len(model.agents['agent']) == 0: model.gui.pause()
 	else:
-		for b in model.primitives['agent']['breeds']:
+		for b in model.primitives['agent'].breeds:
 			pop = len(model.agent(b))
 			if pop > 0:
 				setattr(model,'moverate'+b, model.movers[b]/pop)
@@ -170,7 +171,7 @@ heli.data.addReporter('hsum', HSum)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
 heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
 
-for breed, d in heli.primitives['agent']['breeds'].items():
+for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])
 	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', 'agent', breed=breed, stat='gmean', percentiles=[25,75]))
 	heli.data.addReporter(breed+'Wage', perCapGdp(heli, breed))
