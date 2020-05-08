@@ -102,7 +102,12 @@ class Helipad():
 		)
 		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
 		self.agents[name] = []
-			
+	
+	def removePrimitive(self, name):
+		del self.primitives[name]
+		del self.agents[name]
+		del self.params['agents_'+name]
+		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, logscale=False, selected=True):
 		plot = Item(label=label, series=[], logscale=logscale)
@@ -721,7 +726,7 @@ class Shocks():
 			paramType=paramType,
 			obj=obj,
 			prim=prim,
-			active=active #Saves some Tkinter code later
+			active=active
 		)
 		
 	def step(self):
