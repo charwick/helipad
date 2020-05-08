@@ -26,7 +26,7 @@ class baseAgent():
 		
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
-					
+		
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
 	
 	def step(self, stage):
@@ -99,7 +99,7 @@ class baseAgent():
 	
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
 		maxid = 0
-		for a in self.model.agents['agent']:
+		for a in self.model.allagents.values():
 			if a.id > maxid:
 				maxid = a.id
 		newagent = type(self)(self.breed, maxid+1, self.model)

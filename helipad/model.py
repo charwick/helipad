@@ -177,9 +177,7 @@ class Helipad():
 		#Breeds and goods should already be registered at this point
 		
 		self.data.reset()
-		
-		#Unconditional variables to report
-		# self.data.addReporter('utility', self.data.agentReporter('utils', 'agent'))
+		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		
 		def pReporter(n, paramType=None, obj=None, prim=None):
 			def reporter(model):
@@ -204,10 +202,13 @@ class Helipad():
 			self.data.addReporter('M0', self.data.agentReporter('goods', 'all', good=self.moneyGood, stat='sum'))
 			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
+		#Unconditional variables to report
+		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
+		
 		#Per-breed and per-good series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in self.primitives['agent'].breeds.items():
-			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', 'agent', breed=breed))
+		for breed, b in next(iter(self.primitives.values())).breeds.items():
+			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
 		for good, g in self.nonMoneyGoods.items():
@@ -601,7 +602,8 @@ class Helipad():
 	#
 	
 	#Return agents of a breed if string; return specific agent with ID otherwise
-	def agent(self, var, primitive='agent'):
+	def agent(self, var, primitive=None):
+		if primitive is None: primitive = next(iter(self.primitives))
 		if isinstance(var, str):
 			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
@@ -610,8 +612,9 @@ class Helipad():
 		return None #If nobody matched
 		
 	#Returns summary statistics on an agent variable at a single point in time
-	def summary(self, var, prim='agent', breed=None):
-		agents = self.agents['agent'] if breed is None else self.agent(breed, prim)
+	def summary(self, var, prim=None, breed=None):
+		if prim is None: primitive = next(iter(self.primitives))
+		agents = self.agents[prim] if breed is None else self.agent(breed, prim)
 		data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
 		stats = {
 			'n': data.size,
