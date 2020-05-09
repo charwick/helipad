@@ -130,6 +130,7 @@ class Helipad():
 		if selected: self.defaultPlots.append(name)
 	
 	def removePlot(self, name, reassign=None):
+		if hasattr(self, 'GUI'): raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
 			return
@@ -190,7 +191,7 @@ class Helipad():
 				return model.param(n, paramType=paramType, obj=obj, prim=prim)
 			return reporter
 		
-		#Keep track of parameters
+		#Add reporters for all parameters
 		for item, i in self.goods.items():				#Cycle through goods
 			for n,p in self.goodParams.items():			#Cycle through parameters
 				if p.type == 'hidden': continue			#Skip hidden parameters
@@ -217,14 +218,15 @@ class Helipad():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
 	
-		for good, g in self.nonMoneyGoods.items():
-			self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-			self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
-			self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
-			self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
-			if 'store' in self.primitives and self.moneyGood is not None:
-				self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
-				self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
+		if len(self.goods) >= 2:
+			for good, g in self.nonMoneyGoods.items():
+				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
+				self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
+				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
+				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
+				if 'store' in self.primitives and self.moneyGood is not None:
+					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
+					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
 		self.hasModel = True #Declare before instantiating agents
 		
