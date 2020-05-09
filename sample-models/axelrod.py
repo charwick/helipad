@@ -70,13 +70,13 @@ def alwaysCooperate(rnd, history, own): return True
 
 def alwaysDefect(rnd, history, own): return False
 
-def randomly(rnd, history, own): return random.choice([0, 1], size=1)[0]
+def randomly(rnd, history, own): return random.choice(2, 1)[0]
 
 def Tullock(rnd, history, own):
 	if len(history) < 11: return True
 	rate = mean(history[-10:])-.1
 	if rate < 0: rate = 0
-	return random.choice([0, 1], size=1, p=[1-rate, rate])[0]
+	return random.choice(2, 1, p=[1-rate, rate])[0]
 
 def Nydegger(rnd, history, own):
 	if len(history) <= 2: return TFT(rnd, history, own)
@@ -94,7 +94,7 @@ def Nydegger(rnd, history, own):
 
 def Grofman(rnd, history, own):
 	if not len(history): return True
-	elif history[-1] ^ own[-1]: return random.choice([0, 1], size=1, p=[5/7, 2/7])[0]
+	elif history[-1] ^ own[-1]: return random.choice(2, 1, p=[5/7, 2/7])[0]
 	else: return True
 
 def Shubik(rnd, history, own):
@@ -122,10 +122,10 @@ def Feld(rnd, history, own):
 	if not history[-1]: return False
 	
 	pDef = rnd/heli.param('rounds')/2
-	return random.choice([0, 1], size=1, p=[pDef, 1-pDef])[0]
+	return random.choice(2, 1, p=[pDef, 1-pDef])[0]
 
 def Joss(rnd, history, own):
-	if not len(history) or history[-1]: return random.choice([0, 1], size=1, p=[0.1, 0.9])[0]
+	if not len(history) or history[-1]: return random.choice(2, 1, p=[0.1, 0.9])[0]
 	if not history[-1]: return False
 
 #===============
