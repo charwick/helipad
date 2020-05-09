@@ -27,10 +27,12 @@ class baseAgent():
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
 		
+		if hasattr(super(), 'runInit'): super().__init__() #For multi-level models
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
 	
 	def step(self, stage):
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
+		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
 		if stage == self.model.stages: self.age += 1
 	
 	#Give amt1 of good 1, get amt2 of good 2

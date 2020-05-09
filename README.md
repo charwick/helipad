@@ -40,5 +40,6 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* 0.6: Support for multi-level models
 * 0.5: Support for matching models, and the checkGrid class
 * 0.4: Initial PyPI release

@@ -28,8 +28,14 @@ from helipad.data import Data
 import helipad.agent as agent
 
 class Helipad():
+	runInit = True #for multiple inheritance
+	
 	def __init__(self):
-		self.root = Tk()  #Got to initialize Tkinter first in order for StringVar() and such to work
+		
+		#Got to initialize Tkinter first in order for StringVar() and such to work
+		#But only do so if it's the top-most model
+		if not hasattr(self, 'breed'): self.root = Tk()
+		
 		self.data = Data(self)
 		self.shocks = Shocks(self)	
 		
@@ -423,8 +429,9 @@ class Helipad():
 		for f in self.hooks[place]: r = f(*args)
 		return r
 				
-	def step(self):
+	def step(self, stage=1):
 		self.t += 1
+		if hasattr(self, 'dontStepAgents') and self.dontStepAgents: return self.t
 		self.doHooks('modelPreStep', [self])
 		
 		#Reset per-period variables
@@ -633,6 +640,8 @@ class Helipad():
 	#
 
 	def launchGUI(self, headless=False):
+		if not hasattr(self, 'root'): return
+		
 		self.doHooks('GUIPreLaunch', [self])
 		
 		#Set our agents slider to be a multiple of how many agent types there are
@@ -675,6 +684,16 @@ class Helipad():
 		else: self.root.mainloop()		#Launch the control panel
 		
 		self.doHooks('GUIPostLaunch', [self.gui])
+
+class MultiLevel(agent.baseAgent, Helipad):	
+	def __init__(self, breed, id, parentModel):
+		super().__init__(breed, id, parentModel)
+		self.setup()
+		self.dontStepAgents = False
+	
+	def step(self, stage):
+		self.dontStepAgents = False
+		super().step(stage)
 
 class Shocks():
 	def __init__(self, model):
