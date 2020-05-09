@@ -199,7 +199,7 @@ class Helipad():
 			self.data.addReporter(n, pReporter(n))
 
 		if (self.moneyGood is not None):
-			self.data.addReporter('M0', self.data.agentReporter('goods', 'all', good=self.moneyGood, stat='sum'))
+			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
 			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
 		#Unconditional variables to report
@@ -633,7 +633,6 @@ class Helipad():
 	#
 
 	def launchGUI(self, headless=False):
-		#Callback takes one parameter, model object
 		self.doHooks('GUIPreLaunch', [self])
 		
 		#Set our agents slider to be a multiple of how many agent types there are
@@ -675,7 +674,6 @@ class Helipad():
 			self.gui.preparePlots()		#Jump straight to the graph
 		else: self.root.mainloop()		#Launch the control panel
 		
-		#Callback takes one parameter, GUI object
 		self.doHooks('GUIPostLaunch', [self.gui])
 
 class Shocks():

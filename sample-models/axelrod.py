@@ -28,7 +28,7 @@ heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low'
 heli.addParameter('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
 
 def reset():
-	for a in heli.agents['agent']: a.goods['payoff'] = 0
+	for a in heli.agents['agent']: a.stocks['payoff'] = 0
 heli.addButton('Reset Wealth', reset)
 
 heli.addGood('payoff','009900')
@@ -142,8 +142,8 @@ def match(agents, primitive, model, stage):
 		h2.append(response2)
 	
 		#Payoffs
-		agents[0].goods['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
-		agents[1].goods['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
+		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
+		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 			
 heli.addHook('match', match)
 
@@ -176,12 +176,12 @@ heli.addHook('terminate', terminate)
 
 #Tally up the total payoff once each period, so we don't have to do it on every agent
 def dataCollect(data, t):
-	data.model.totalP = data.agentReporter('goods', good='payoff', stat='sum')(data.model)
+	data.model.totalP = data.agentReporter('stocks', good='payoff', stat='sum')(data.model)
 heli.addHook('dataCollect', dataCollect)
 
 def proportionReporter(breed):
 	def func(model):
-		return model.data.agentReporter('goods', breed=breed, good='payoff', stat='sum')(model)/model.totalP
+		return model.data.agentReporter('stocks', breed=breed, good='payoff', stat='sum')(model)/model.totalP
 	return func
 
 heli.addPlot('payoffs', 'Payoffs')

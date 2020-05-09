@@ -16,13 +16,13 @@ class baseAgent():
 		self.model = model
 		self.age = 0
 		self.dead = False
-		self.goods = {}
+		self.stocks = {}
 		self.edges = {}
 		self.utils = 0
 		for good, params in model.goods.items():
-			if params.endowment is None: self.goods[good] = 0
-			elif callable(params.endowment): self.goods[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
-			else: self.goods[good] = params.endowment
+			if params.endowment is None: self.stocks[good] = 0
+			elif callable(params.endowment): self.stocks[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
+			else: self.stocks[good] = params.endowment
 		
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
@@ -41,27 +41,27 @@ class baseAgent():
 		if amt2 != 0: price = amt1 / amt2
 		
 		#Budget constraints. Hold price constant if hit		
-		if amt1 > self.goods[good1]:
-			self.currentShortage[good1] += amt1 - self.goods[good1]
-			amt1 = self.goods[good1]
+		if amt1 > self.stocks[good1]:
+			self.currentShortage[good1] += amt1 - self.stocks[good1]
+			amt1 = self.stocks[good1]
 			if amt2 != 0: amt2 = amt1 / price
-		elif -amt1 > partner.goods[good1]:
-			partner.currentShortage[good1] += -amt1 - partner.goods[good1]
-			amt1 = -partner.goods[good1]
+		elif -amt1 > partner.stocks[good1]:
+			partner.currentShortage[good1] += -amt1 - partner.stocks[good1]
+			amt1 = -partner.stocks[good1]
 			if amt2 != 0: amt2 = amt1 / price
-		if amt2 > partner.goods[good2]:
-			partner.currentShortage[good2] += amt1 - partner.goods[good2]
-			amt2 = partner.goods[good2]
+		if amt2 > partner.stocks[good2]:
+			partner.currentShortage[good2] += amt1 - partner.stocks[good2]
+			amt2 = partner.stocks[good2]
 			amt1 = price * amt2
-		elif -amt2 > self.goods[good2]:
-			self.currentShortage[good2] += -amt1 - self.goods[good2]
-			amt2 = -self.goods[good2]
+		elif -amt2 > self.stocks[good2]:
+			self.currentShortage[good2] += -amt1 - self.stocks[good2]
+			amt2 = -self.stocks[good2]
 			amt1 = price * amt2
 
-		self.goods[good1] -= amt1
-		partner.goods[good1] += amt1
-		self.goods[good2] += amt2
-		partner.goods[good2] -= amt2
+		self.stocks[good1] -= amt1
+		partner.stocks[good1] += amt1
+		self.stocks[good2] += amt2
+		partner.stocks[good2] -= amt2
 		
 		#Record demand
 		if amt1 > 0: partner.currentDemand[good1] += amt1
@@ -78,9 +78,9 @@ class baseAgent():
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
 		
-		before = self.goods[good]
+		before = self.stocks[good]
 		self.trade(partner, self.model.moneyGood, p*q, good, q)
-		return self.goods[good] - before
+		return self.stocks[good] - before
 	
 	#Unilateral
 	def pay(self, recipient, amount):
@@ -93,8 +93,8 @@ class baseAgent():
 		if amount_ is not None: amount = amount_
 				
 		if amount != 0:
-			recipient.goods[self.model.moneyGood] += amount
-			self.goods[self.model.moneyGood] -= amount
+			recipient.stocks[self.model.moneyGood] += amount
+			self.stocks[self.model.moneyGood] -= amount
 		return amount
 	
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
@@ -212,7 +212,7 @@ class baseAgent():
 	@property
 	def balance(self):
 		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
-		bal = self.goods[self.model.moneyGood]
+		bal = self.stocks[self.model.moneyGood]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
 		if bal_ is not None: bal = bal_
 		

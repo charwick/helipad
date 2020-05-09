@@ -29,20 +29,20 @@ def agentInit(agent, model):
 heli.addHook('agentInit', agentInit)
 
 def match(agents, primitive, model, stage):
-	myEndowU = agents[0].utility.calculate(agents[0].goods)
-	theirEndowU = agents[1].utility.calculate(agents[1].goods)
+	myEndowU = agents[0].utility.calculate(agents[0].stocks)
+	theirEndowU = agents[1].utility.calculate(agents[1].stocks)
 	
 	#Get the endpoints of the contract curve
 	#Contract curve isn't linear unless the CD exponents are both 0.5. If not, *way* more complicated
-	cc1Soma = myEndowU * (sum([a.goods['soma'] for a in agents])/sum([a.goods['shmoo'] for a in agents])) ** 0.5
-	cc2Soma = sum([a.goods['soma'] for a in agents]) - theirEndowU  * (sum([a.goods['soma'] for a in agents])/sum([a.goods['shmoo'] for a in agents])) ** 0.5
-	cc1Shmoo = sum([a.goods['shmoo'] for a in agents])/sum([a.goods['soma'] for a in agents]) * cc1Soma
-	cc2Shmoo = sum([a.goods['shmoo'] for a in agents])/sum([a.goods['soma'] for a in agents]) * cc2Soma
+	cc1Soma = myEndowU * (sum([a.stocks['soma'] for a in agents])/sum([a.stocks['shmoo'] for a in agents])) ** 0.5
+	cc2Soma = sum([a.stocks['soma'] for a in agents]) - theirEndowU  * (sum([a.stocks['soma'] for a in agents])/sum([a.stocks['shmoo'] for a in agents])) ** 0.5
+	cc1Shmoo = sum([a.stocks['shmoo'] for a in agents])/sum([a.stocks['soma'] for a in agents]) * cc1Soma
+	cc2Shmoo = sum([a.stocks['shmoo'] for a in agents])/sum([a.stocks['soma'] for a in agents]) * cc2Soma
 		
 	#Calculate demand: choose a random point on the contract curve
 	r = random.random()
-	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agents[0].goods['soma']
-	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agents[0].goods['shmoo']
+	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agents[0].stocks['soma']
+	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agents[0].stocks['shmoo']
 	
 	#Do the trades
 	if abs(somaDemand) > 0.1 and abs(shmooDemand) > 0.1:
@@ -54,8 +54,8 @@ def match(agents, primitive, model, stage):
 		agents[1].lastPrice = None
 			
 	#Record data
-	agents[0].utils = agents[0].utility.consume({'soma': agents[0].goods['soma'], 'shmoo': agents[0].goods['shmoo']})
-	agents[1].utils = agents[1].utility.consume({'soma': agents[1].goods['soma'], 'shmoo': agents[1].goods['shmoo']})
+	agents[0].utils = agents[0].utility.consume({'soma': agents[0].stocks['soma'], 'shmoo': agents[0].stocks['shmoo']})
+	agents[1].utils = agents[1].utility.consume({'soma': agents[1].stocks['soma'], 'shmoo': agents[1].stocks['shmoo']})
 	
 heli.addHook('match', match)
 

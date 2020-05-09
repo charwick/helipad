@@ -93,7 +93,7 @@ class Data():
 	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
-		if prim is None: primitive = next(iter(self.model.primitives))
+		if prim is None: prim = next(iter(self.model.primitives))
 		if 'percentiles' in kwargs:
 			subplots = {p:self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
 		else: subplots = None

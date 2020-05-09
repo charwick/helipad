@@ -61,18 +61,18 @@ class Store(baseAgent):
 			#Set prices
 			#Change in the direction of hitting the inventory target
 			# self.price[i] += log(self.invTarget[i] / (self.inventory[i][0] + self.lastShortage[i])) #Jim's pricing rule?
-			self.price[i] += (self.invTarget[i] - self.goods[i] + self.model.data.getLast('shortage-'+i))/100 #/150
+			self.price[i] += (self.invTarget[i] - self.stocks[i] + self.model.data.getLast('shortage-'+i))/100 #/150
 		
 			#Adjust in proportion to the rate of inventory change
 			#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
 			lasti = self.model.data.getLast('inv-'+i,2)[0] if self.model.t > 1 else 0
-			deltaInv = lasti - self.goods[i]
+			deltaInv = lasti - self.stocks[i]
 			self.price[i] *= (1 + deltaInv/(50 ** self.model.param('pSmooth')))
 			if self.price[i] < 0: self.price[i] = 1
 		
 			#Produce stuff
 			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
-			self.goods[i] = self.goods[i] + self.portion[i] * labor * self.model.goodParam('prod',i)
+			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.goodParam('prod',i)
 
 #===============
 # CONFIGURATION
@@ -172,7 +172,7 @@ for breed, d in heli.primitives['agent'].breeds.items():
 
 #Do this one separately so it draws on top
 for good, g in heli.nonMoneyGoods.items():
-	heli.data.addReporter('inv-'+good, heli.data.agentReporter('goods', 'store', good=good))
+	heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
 	heli.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
 
 #Price ratio plots
@@ -219,7 +219,7 @@ def agentInit(agent, model):
 	agent.expCons = model.goodParam('prod', agent.item)
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
-	agent.goods[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
+	agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
 	
 heli.addHook('agentInit', agentInit)
 
@@ -231,9 +231,9 @@ def agentStep(agent, model, stage):
 	basicq = q						#Save this for later since we adjust q
 	
 	bought = agent.buy(agent.store, agent.item, q, itemPrice)
-	if agent.goods[model.moneyGood] < 0: agent.goods[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
-	agent.utils = agent.utility.calculate({'good': agent.goods[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
-	agent.goods[agent.item] = 0 #Consume goods
+	if agent.stocks[model.moneyGood] < 0: agent.stocks[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
+	agent.utils = agent.utility.calculate({'good': agent.stocks[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
+	agent.stocks[agent.item] = 0 #Consume goods
 	
 	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
 	if negadjust > basicq: negadjust = basicq
@@ -280,15 +280,15 @@ class CentralBank(baseAgent):
 		if self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('agents_agent')
 			for a in self.model.agents['agent']:
-				a.goods[self.model.moneyGood] += amt
+				a.stocks[self.model.moneyGood] += amt
 		else:
 			M0 = self.M0
 			for a in self.model.allagents.values():
-				a.goods[self.model.moneyGood] += a.goods[self.model.moneyGood]/M0 * amount
+				a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
 				
 	@property
 	def M0(self):
-		return self.model.data.agentReporter('goods', 'all', good=self.model.moneyGood, stat='sum')(self.model)
+		return self.model.data.agentReporter('stocks', 'all', good=self.model.moneyGood, stat='sum')(self.model)
 	
 	@M0.setter
 	def M0(self, value): self.expand(value - self.M0)
