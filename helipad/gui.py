@@ -414,20 +414,19 @@ class Graph():
 				self.graph[i].set_yscale('log')
 				self.graph[i].set_ylim(1/2, 2, auto=True)
 				
-			#Cycle over series
-			#serobj is our line object
+			#Create a line for each series
 			for series in plot.series:
-				serobj, = self.graph[i].plot([], label=series.label, color='#'+series.color, linestyle=series.style)
-				serobj.fdata = []
-				serobj.subseries = series.subseries
-				serobj.label = series.label
-				
+				line, = self.graph[i].plot([], label=series.label, color='#'+series.color, linestyle=series.style)
+				line.fdata = []
+				line.subseries = series.subseries
+				line.label = series.label
+			
 				#If it's a lambda function, save it for later and create a place to put its output
 				if callable(series.reporter):
-					serobj.func = series.reporter
+					line.func = series.reporter
 					key = randomword(10)
 				else: key = series.reporter
-				self.series[key] = serobj
+				self.series[key] = line
 			
 			#Set up the legend for click events on both the line and the legend
 			leg = self.graph[i].legend(loc='upper right')
@@ -435,10 +434,10 @@ class Graph():
 			for legline, label in zip(leg.get_lines(), leg.get_texts()):
 				legline.set_picker(5)
 				label.set_picker(5)
-				for s in self.series.values():
+				for s in plot.series:
 					if s.label==label.get_text():
-						label.series = s
-						legline.series = s
+						label.series = self.series[s.reporter]
+						legline.series = self.series[s.reporter]
 						legline.otherComponent = label
 						label.otherComponent = legline
 						break
