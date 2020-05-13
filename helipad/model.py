@@ -156,8 +156,7 @@ class Helipad():
 		if reporter in self.data.reporters and isinstance(self.data.reporters[reporter].func, tuple):
 			for p, f in self.data.reporters[reporter].func[1].items():
 				subkey = reporter+'-'+str(p)+'-pctile'
-				subseries.append(subkey)
-				self.addSeries(plot, subkey, '', Color('#'+color).lighten(), style='--')
+				subseries.append(self.addSeries(plot, subkey, '', Color('#'+color).lighten(), style='--'))
 
 		#Since many series are added at setup time, we have to de-dupe
 		for s in self.plots[plot].series:
@@ -167,6 +166,7 @@ class Helipad():
 		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=plot)
 		self.plots[plot].series.append(series)
 		if reporter in self.data.reporters: self.data.reporters[reporter].series.append(series)
+		return series
 	
 	def addButton(self, text, func, desc=None):
 		self.buttons.append((text, func, desc))

@@ -285,7 +285,7 @@ class GUI():
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
-					for g in self.graph.graph:
+					for g in self.graph.plots:
 						leg = g.get_legend()
 						leg.set_visible(not leg.get_visible())
 					self.graph.fig.canvas.draw()
@@ -392,10 +392,15 @@ class GUI():
 class Graph():
 	#listOfPlots is the trimmed model.plots list
 	def __init__(self, listOfPlots):
-		#fig is the figure, graph is a list of AxesSubplot objects
+		#fig is the figure, plots is a list of AxesSubplot objects
 		# plt.clf()
 		self.resolution = 1
-		self.fig, self.graph = plt.subplots(len(listOfPlots), sharex=True)
+		self.fig, plots = plt.subplots(len(listOfPlots), sharex=True)
+		if not isinstance(plots, ndarray):
+			plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
+		for plot, axes in zip(listOfPlots.values(), plots):
+			plot.axes = axes
+		self.plots = listOfPlots
 		
 		#Position graph window
 		window = plt.get_current_fig_manager().window
@@ -404,45 +409,31 @@ class Graph():
 		self.fig.set_size_inches(x_px/self.fig.dpi, window.winfo_screenheight()/self.fig.dpi)
 		window.wm_geometry("+400+0")
 		
-		if not isinstance(self.graph, ndarray):
-			self.graph = asanyarray([self.graph]) #.subplots() tries to be clever & returns a different data type if len(self.graph)==1
-		
 		#Cycle over plots
-		self.series, i = {}, 0
-		for pname, plot in listOfPlots.items():
+		for pname, plot in self.plots.items():
 			if plot.logscale:
-				self.graph[i].set_yscale('log')
-				self.graph[i].set_ylim(1/2, 2, auto=True)
+				plot.axes.set_yscale('log')
+				plot.axes.set_ylim(1/2, 2, auto=True)
 				
 			#Create a line for each series
 			for series in plot.series:
-				line, = self.graph[i].plot([], label=series.label, color='#'+series.color, linestyle=series.style)
-				line.fdata = []
-				line.subseries = series.subseries
-				line.label = series.label
-			
-				#If it's a lambda function, save it for later and create a place to put its output
-				if callable(series.reporter):
-					line.func = series.reporter
-					key = randomword(10)
-				else: key = series.reporter
-				self.series[key] = line
+				series.line, = plot.axes.plot([], label=series.label, color='#'+series.color, linestyle=series.style)
+				series.fdata = []
+				series.line.subseries = series.subseries
+				series.line.label = series.label
 			
 			#Set up the legend for click events on both the line and the legend
-			leg = self.graph[i].legend(loc='upper right')
-			j = 0
+			leg = plot.axes.legend(loc='upper right')
 			for legline, label in zip(leg.get_lines(), leg.get_texts()):
 				legline.set_picker(5)
 				label.set_picker(5)
 				for s in plot.series:
 					if s.label==label.get_text():
-						label.series = self.series[s.reporter]
-						legline.series = self.series[s.reporter]
+						label.series = s.line
+						legline.series = s.line
 						legline.otherComponent = label
 						label.otherComponent = legline
 						break
-				j+=1
-			i+=1
 		
 		#Style graphs
 		self.fig.tight_layout()
@@ -456,33 +447,38 @@ class Graph():
 	#data is the *incremental* data
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
-		time = newlen + len(next(self.series[x] for x in self.series).fdata)*self.resolution
+		time = newlen + len(next(iter(self.plots.values())).series[0].fdata)*self.resolution
+		# time = newlen + len(next(self.series[x] for x in self.series).fdata)*self.resolution
 		
-		for k, serie in self.series.items():
-			if hasattr(serie,'func'):						#Lambda functions
-				for i in range(int(newlen/self.resolution)):
-					serie.fdata.append(serie.func(time-newlen+(1+i)*self.resolution))
-			elif k in data: serie.fdata += data[k]			#Actual data
-			else: continue									#No data
+		#Append new data to cumulative series
+		for plot in self.plots.values():
+			for serie in plot.series:
+				if callable(serie.reporter):						#Lambda functions
+					for i in range(int(newlen/self.resolution)):
+						serie.fdata.append(serie.reporter(time-newlen+(1+i)*self.resolution))
+				elif serie.reporter in data: serie.fdata += data[serie.reporter] #Actual data
+				else: continue									#No data
 		
-		if 10**(log10(time/2.5)-3) >= self.resolution:		#Redo resolution at 2500, 25000, etc
+		#Redo resolution at 2500, 25000, etc
+		if 10**(log10(time/2.5)-3) >= self.resolution:
 			self.resolution *= 10
-			for k, serie in self.series.items():
-				serie.fdata = keepEvery(serie.fdata, 10)
+			for plot in self.plots.values():
+				for serie in plot.series:
+					serie.fdata = keepEvery(serie.fdata, 10)
 		
+		#Update the actual graphs
 		#Has to be after the new resolution is set
 		tseries = range(0, time, self.resolution)
-		for k, serie in self.series.items():
-			serie.set_ydata(serie.fdata)
-			serie.set_xdata(tseries)
-
-		for g in self.graph:	#g is an Axes object
-			g.relim()
-			g.autoscale_view(tight=False)
-			ylim = g.get_ylim()
+		for plot in self.plots.values():
+			for serie in plot.series:
+				serie.line.set_ydata(serie.fdata)
+				serie.line.set_xdata(tseries)
+			plot.axes.relim()
+			plot.axes.autoscale_view(tight=False)
+			ylim = plot.axes.get_ylim()
 			
 			#Prevent decaying averages on logscale graphs from compressing the entire view
-			if g.get_yscale() == 'log' and ylim[0] < 10**-6: g.set_ylim(bottom=10**-6)
+			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
 
 		plt.pause(0.0001)
 	
@@ -490,13 +486,13 @@ class Graph():
 		c1 = event.artist			#The label or line that was clicked
 		vis = not c1.series.get_visible()
 		c1.series.set_visible(vis)
-		for s in c1.series.subseries: self.series[s].set_visible(vis) #Toggle subseries (e.g. percentile bars)
+		for s in c1.series.subseries: s.line.set_visible(vis) #Toggle subseries (e.g. percentile bars)
 		c1.set_alpha(1.0 if vis else 0.2)
 		c1.otherComponent.set_alpha(1.0 if vis else 0.2)
 
 		## Won't work because autoscale_view also includes hidden lines
 		## Will have to actually remove and reinstate the line for this to work
-		# for g in self.graph:
+		# for g in self.plots:
 		# 	if c1.series in g.get_lines():
 		# 		g.relim()
 		# 		g.autoscale_view(tight=True)
