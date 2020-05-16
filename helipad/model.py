@@ -128,6 +128,7 @@ class Helipad():
 			self.plots = newplots
 		
 		if selected: self.defaultPlots.append(name)
+		return plot
 	
 	def removePlot(self, name, reassign=None):
 		if hasattr(self, 'GUI'): raise RuntimeError('Cannot remove plots after control panel is drawn')
@@ -386,7 +387,7 @@ class Helipad():
 		cobj2 = cobj.lighten()
 		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
 		
-		#Make sure the parameter arrays keep up with our items
+		#Make sure the parameter lists keep up with our items
 		for k,p in paramDict.items():
 			if isinstance(p.dflt, dict):
 				if name in p.dflt: p.value[name] = p.dflt[name]	#Forgive out-of-order specification
@@ -397,18 +398,20 @@ class Helipad():
 				else: p.value[name] = 0									#Set to zero
 			else:
 				p.value[name] = p.dflt
+		
+		return itemDict[name]
 	
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
 			else: raise KeyError('Breed must specify which primitive it belongs to')
-		self.addItem('breed', name, color, prim=prim)
+		return self.addItem('breed', name, color, prim=prim)
 		
 	def addGood(self, name, color, endowment=None, money=False):
 		if money:
 			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
 			self.moneyGood = name
-		self.addItem('good', name, color, endowment=endowment, money=money)
+		return self.addItem('good', name, color, endowment=endowment, money=money)
 	
 	@property
 	def nonMoneyGoods(self):

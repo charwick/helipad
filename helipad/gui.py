@@ -9,7 +9,6 @@ from colour import Color
 from numpy import ndarray, asanyarray, log10
 from math import ceil
 # import time #For performance testing
-import string, random as rand2
 import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 mlpstyle.use('fast')
 
@@ -448,7 +447,6 @@ class Graph():
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
 		time = newlen + len(next(iter(self.plots.values())).series[0].fdata)*self.resolution
-		# time = newlen + len(next(self.series[x] for x in self.series).fdata)*self.resolution
 		
 		#Append new data to cumulative series
 		for plot in self.plots.values():
@@ -466,8 +464,7 @@ class Graph():
 				for serie in plot.series:
 					serie.fdata = keepEvery(serie.fdata, 10)
 		
-		#Update the actual graphs
-		#Has to be after the new resolution is set
+		#Update the actual graphs. Has to be after the new resolution is set
 		tseries = range(0, time, self.resolution)
 		for plot in self.plots.values():
 			for serie in plot.series:
@@ -723,7 +720,3 @@ class checkGrid(expandableFrame):
 		if key: self.checks[key].disable()
 		else:
 			for c in self.values(): c.disable()
-
-#Requires random and not numpy.random for some reason??
-def randomword(length):
-	return ''.join(rand2.choice(string.ascii_lowercase) for i in range(length))
