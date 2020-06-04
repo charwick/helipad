@@ -510,6 +510,16 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
+	#Creates an unweighted and undirected network of a certain density
+	def createNetwork(self, density, kind='edge', prim=None):
+		if density < 0 or density > 1: raise ValueError('Network density must take a value between 0 and 1.')
+		from itertools import combinations
+		agents = self.allagents.values() if prim is None else self.agents[prim]
+		for c in combinations(agents, 2):
+			if random.randint(0,100) < density*100:
+				c[0].newEdge(c[1], kind)
+		return self.network(kind, prim)
+	
 	def network(self, kind='edge', prim=None):
 		try:
 			import networkx as nx
@@ -524,7 +534,7 @@ class Helipad():
 			
 	
 	def showNetwork(self, kind='edge', prim=None):
-		import matplotlib.pyplot as plt
+		import matplotlib.pyplot as plt, networkx as nx
 		G = self.network(kind, prim)
 		plt.figure() #New window
 		nx.draw(G)
