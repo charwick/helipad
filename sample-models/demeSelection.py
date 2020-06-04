@@ -100,11 +100,11 @@ heli.data.addReporter('selfish', selfish)
 heli.data.addReporter('fitness', avgFitness)
 
 heli.addPlot('pop', 'Population', selected=False)
-heli.addPlot('pheno', 'Phenotypes')
+heli.addPlot('pheno', 'Phenotypes', stack=True)
 heli.addPlot('fitness', 'Fitness')
 heli.addSeries('pop', 'population', 'Total population', '000000')
-heli.addSeries('pheno', 'altruists', 'Altruists', '009900')
-heli.addSeries('pheno', 'selfish', 'Selfish', '990000')
+heli.addSeries('pheno', 'altruists', 'Altruists', '33CC33')
+heli.addSeries('pheno', 'selfish', 'Selfish', 'BB2222')
 heli.addSeries('fitness', 'fitness', 'Average Fitness', '000099')
 
 #===============

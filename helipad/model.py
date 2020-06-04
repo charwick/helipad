@@ -115,8 +115,8 @@ class Helipad():
 		del self.params['agents_'+name]
 		
 	#Position is the number you want it to be, *not* the array position
-	def addPlot(self, name, label, position=None, logscale=False, selected=True):
-		plot = Item(label=label, series=[], logscale=logscale)
+	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
+		plot = Item(label=label, series=[], logscale=logscale, stack=stack)
 		if position is None or position > len(self.plots):
 			self.plots[name] = plot
 		else:		#Reconstruct the dict because there's no insert method…

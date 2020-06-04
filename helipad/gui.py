@@ -410,11 +410,18 @@ class Graph():
 		
 		#Cycle over plots
 		for pname, plot in self.plots.items():
+			plot.axes.margins(x=0)
+			if plot.stack:
+				lines = plot.axes.stackplot([], *[[] for s in plot.series], color=['#'+s.color for s in plot.series])
+				for series, poly in zip(plot.series, lines): series.poly = poly
+				plot.axes.margins(y=0)
+			
 			if plot.logscale:
 				plot.axes.set_yscale('log')
 				plot.axes.set_ylim(1/2, 2, auto=True)
 				
 			#Create a line for each series
+			#Do this even for stackplots because the line object is necessary to create the legend
 			for series in plot.series:
 				series.line, = plot.axes.plot([], label=series.label, color='#'+series.color, linestyle=series.style)
 				series.fdata = []
@@ -467,12 +474,17 @@ class Graph():
 		#Update the actual graphs. Has to be after the new resolution is set
 		tseries = range(0, time, self.resolution)
 		for plot in self.plots.values():
-			for serie in plot.series:
-				serie.line.set_ydata(serie.fdata)
-				serie.line.set_xdata(tseries)
-			plot.axes.relim()
-			plot.axes.autoscale_view(tight=False)
-			ylim = plot.axes.get_ylim()
+			#No way to update the stack (?) so redraw it from scratch
+			if plot.stack:
+				lines = plot.axes.stackplot(tseries, *[s.fdata for s in plot.series], colors=['#'+s.color for s in plot.series])
+				for series, poly in zip(plot.series, lines): series.poly = poly
+			else:
+				for serie in plot.series:
+					serie.line.set_ydata(serie.fdata)
+					serie.line.set_xdata(tseries)
+				plot.axes.relim()
+				plot.axes.autoscale_view(tight=False)
+				ylim = plot.axes.get_ylim()
 			
 			#Prevent decaying averages on logscale graphs from compressing the entire view
 			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
@@ -480,7 +492,8 @@ class Graph():
 		plt.pause(0.0001)
 	
 	def toggleLine(self, event):
-		c1 = event.artist			#The label or line that was clicked
+		c1 = event.artist					#The label or line that was clicked
+		if len(c1.series._x) == 0: return	#Ignore if it's a stackplot
 		vis = not c1.series.get_visible()
 		c1.series.set_visible(vis)
 		for s in c1.series.subseries: s.line.set_visible(vis) #Toggle subseries (e.g. percentile bars)
