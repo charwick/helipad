@@ -248,63 +248,20 @@ class Helipad():
 		
 		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
 		
-		#Instantiate the defaults.
-		#1. Are we dealing with a per-breed or a global default?
-		#1a. If per-breed, is the default universal or breed-specific?
-		#2. Do we have a menu, a check, or a slider?
-		#
-		#Per-breed universal menu:		str → dict{StringVar}
-		#Per-breed universal check:		bool → dict{BooleanVar}
-		#Per-breed universal slider:	int → dict{int}
-		#Per-breed specific menu:		dict{str} → dict{StringVar}
-		#Per-breed specific check:		dict{bool} → dict{BooleanVar}
-		#Per-breed specific slider:		dict{int} → dict{int}
-		#Global menu:					str → StringVar
-		#Global check:					bool → BooleanVar
-		#Global slider:					int → int
-	
+		args = {
+			'title': title,
+			'type': type,
+			'default': dflt,
+			'opts': opts,
+			'runtime': runtime,
+			'callback': callback,
+			'desc': desc,
+			'obj': paramType
+		}
 		if paramType is not None:
-			keys = self.primitives[prim].breeds if paramType=='breed' else self.goods
-			if type == 'menu':
-				deflt = {b:StringVar() for b in keys}
-				if isinstance(dflt, dict):
-					for k in deflt: deflt[k].set(opts[dflt[k]])
-					for b in keys:
-						if not b in deflt: deflt[k].set('') #Make sure we've got all the breeds in the array
-				else:
-					for k in deflt: deflt[k].set(opts[dflt]) #Set to opts[dflt] rather than dflt because OptionMenu deals in the whole string
-			elif type == 'check':
-				deflt = {b:BooleanVar() for b in keys}
-				if isinstance(dflt, dict):
-					for k in deflt: deflt[k].set(opts[dflt[k]])
-					for b in keys:
-						if not b in deflt: deflt[k].set(False) #Make sure we've got all the breeds in the array
-				else:
-					for k in deflt: deflt[k].set(dflt)
-			else:
-				deflt = {b:dflt for b in keys}
-				#No 'else' because the dict already contains default values if it's a per-breed universal slider
-				if isinstance(dflt, dict):
-					for k in deflt: deflt[k] = dflt[k] if k in dflt else 0
-				else:
-					for b in keys:
-						if not b in deflt: deflt[k] = None  #Make sure we've got all the breeds in the array
-				
-		else:
-			if type == 'menu': deflt = StringVar(value=opts[dflt])
-			elif type == 'check': deflt = BooleanVar(value=dflt)
-			else: deflt = dflt
+			args['keys'] = self.primitives[prim].breeds if paramType=='breed' else self.goods
 		
-		params[name] = Item(
-			value=deflt,
-			title=title,
-			type=type,
-			dflt=dflt,
-			opts=opts,
-			runtime=runtime,
-			callback=callback,
-			desc=desc
-		)
+		params[name] = Param(**args)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
@@ -331,35 +288,9 @@ class Helipad():
 			warnings.warn(paramType+' Parameter \''+name+'\' does not exist', None, 2)
 			return
 		
-		#Set
-		if val is not None:
-			if params[name].type == 'menu':
-				if paramType is None: params[name][0].set(params[name].opts[val])
-				else: params[name].value[obj].set(params[name].opts[val])
-			elif params[name].type == 'check':
-				if paramType is None: params[name].value.set(val)
-				else: params[name].value[obj].set(val)
-			else:	
-				if paramType is None: params[name].value = val
-				else: params[name].value[obj] = val
 		
-		#Get
-		else:
-			if params[name].type == 'menu':
-				#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
-				flip = {y:x for x,y in params[name].opts.items()}
-				if paramType is None: return flip[params[name].value.get()]							#Global parameter
-				else:
-					if obj is None: return {o:flip[v.get()] for o,v in params[name].value.items()}	#Item parameter, item unspecified
-					else: return flip[params[name].value[obj].get()]								#Item parameter, item specified
-				return flip[fullText]
-			elif params[name].type == 'check':
-				return params[name].value.get() if paramType is None or obj is None else params[name].value[obj].get()
-			else:
-				v = params[name].value if paramType is None or obj is None else params[name].value[obj]
-				#Have sliders with an int step value return an int
-				if params[name].opts is not None and 'step' in params[name].opts and isinstance(params[name].opts['step'], int): v = int(v)
-				return v
+		if val is not None: params[name].set(val, obj)	#Set
+		else: return params[name].get(obj)				#Get
 	
 	def breedParam(self, name, breed=None, val=None, prim=None):
 		if prim is None:
@@ -388,16 +319,7 @@ class Helipad():
 		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
 		
 		#Make sure the parameter lists keep up with our items
-		for k,p in paramDict.items():
-			if isinstance(p.dflt, dict):
-				if name in p.dflt: p.value[name] = p.dflt[name]	#Forgive out-of-order specification
-				elif p.type=='menu':
-					p.value[name] = StringVar()
-					p.value[name].set(p.opts[next(iter(p.opts))])	#Choose first item of the list
-				elif p.type=='check': p.value[name] = BooleanVar()
-				else: p.value[name] = 0									#Set to zero
-			else:
-				p.value[name] = p.dflt
+		for k,p in paramDict.items(): p.addKey(name)
 		
 		return itemDict[name]
 	
@@ -531,8 +453,7 @@ class Helipad():
 		
 			return G
 		except: warnings.warn('Network export requires Networkx.', None, 2)
-			
-	
+		
 	def showNetwork(self, kind='edge', prim=None):
 		import matplotlib.pyplot as plt, networkx as nx
 		G = self.network(kind, prim)
@@ -669,7 +590,7 @@ class Helipad():
 				self.params['agents_'+k].opts['high'] = makeDivisible(self.params['agents_'+k].opts['high'], l, 'max')
 				self.params['agents_'+k].opts['step'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
 				self.params['agents_'+k].value = makeDivisible(self.params['agents_'+k].value, l, 'max')
-				self.params['agents_'+k].dflt = makeDivisible(self.params['agents_'+k].dflt, l, 'max')
+				self.params['agents_'+k].default = makeDivisible(self.params['agents_'+k].default, l, 'max')
 		
 		if self.moneyGood is None:
 			for i in ['prices', 'money']:
@@ -796,6 +717,99 @@ class Shocks():
 	def everyn(self, n, offset=0):
 		def fn(t): return True if t%n-offset==0 else False
 		return fn
+
+class Param(Item):
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+		#Instantiate the value dict.
+		#1. Are we dealing with a per-breed or a global default?
+		#1a. If per-breed, is the default universal or breed-specific?
+		#2. Do we have a menu, a check, or a slider?
+		#
+		#Per-breed universal menu:		str → dict{StringVar}
+		#Per-breed universal check:		bool → dict{BooleanVar}
+		#Per-breed universal slider:	int → dict{int}
+		#Per-breed specific menu:		dict{str} → dict{StringVar}
+		#Per-breed specific check:		dict{bool} → dict{BooleanVar}
+		#Per-breed specific slider:		dict{int} → dict{int}
+		#Global menu:					str → StringVar
+		#Global check:					bool → BooleanVar
+		#Global slider:					int → int
+		
+		if self.obj is not None: #If it's a breed or a good parameter
+			if self.type=='menu':
+				self.value = {b:StringVar() for b in self.keys}
+				if isinstance(self.default, dict):
+					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
+					for b in self.keys:
+						if not b in self.default: self.value[b].set('') #Make sure we've got all the items in the array
+				else:
+					#Set to opts[self.default] rather than self.default because OptionMenu deals in the whole string
+					for k,v in self.value.items(): v.set(self.opts[self.default])
+			elif self.type=='check':
+				self.value = {b:BooleanVar() for b in self.keys}
+				if isinstance(self.default, dict):
+					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
+					for b in self.keys:
+						if not b in self.value: self.value[b].set(False) #Make sure we've got all the breeds in the array
+				else:
+					for k in self.value: self.value[k].set(self.default)
+			else:
+				self.value = {b:0 for b in self.keys}
+				#No 'else' because the dict already contains default values if it's a per-breed universal slider
+				if isinstance(self.default, dict):
+					self.value = {k:self.default[k] if k in self.default else 0 for k in self.keys}
+				else:
+					self.value = {k:self.default for k in self.keys}
+				
+		else: #If it's a global parameter
+			if self.type == 'menu': self.value = StringVar(value=self.opts[self.default])
+			elif self.type == 'check': self.value = BooleanVar(value=self.default)
+			else: self.value = self.default
+	
+	def set(self, val, item=None):
+		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if self.type == 'menu':
+			if self.obj is None: self.value.set(self.opts[val])
+			else: self.value[item].set(self.opts[val])
+		elif self.type == 'check':
+			if self.obj is None: self.value.set(val)
+			else: self.value[item].set(val)
+		else:	
+			if self.obj is None: self.value = val
+			else: self.value[item] = val
+	
+	#Return a bool|str|num for a global parameter or a per-object parameter if the item is specified
+	#Otherwise return dict{str:bool|str|num} with all the items
+	def get(self, item=None):
+		if self.type == 'menu':
+			#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
+			flip = {y:x for x,y in self.opts.items()}
+			if self.obj is None: return flip[self.value.get()]								#Global parameter
+			else:
+				if item is None: return {o:flip[v.get()] for o,v in self.value.items()}		#Item parameter, item unspecified
+				else: return flip[self.value[item].get()]									#Item parameter, item specified
+		elif self.type == 'check':
+			return self.value.get() if self.obj is None or item is None else self.value[item].get()
+		else:
+			v = self.value if self.obj is None or item is None else self.value[item]
+			#Have sliders with an int step value return an int
+			if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int): v = int(v)
+			return v
+	
+	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
+	def addKey(self, key):
+		if self.obj is None: print('Can\'t add keys to a global parameter…')
+		else:
+			if isinstance(self.default, dict):
+				if key in self.default: self.value[key] = self.default[key]	#Forgive out-of-order specification
+				elif self.type=='menu':
+					self.value[key] = StringVar()
+					self.value[key].set(self.opts[next(iter(self.opts))])	#Choose first item of the list
+				elif self.type=='check': self.value[key] = BooleanVar()
+				else: self.value[key] = 0									#Set to zero
+			else:
+				self.value[key] = self.default
 
 #Append to the Color class
 def lighten(self):

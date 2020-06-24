@@ -203,7 +203,7 @@ class GUI():
 					self.sliders[k].config(bg=bgcolors[fnum%2])
 				elif var.type == 'slider':
 					self.sliders[k] = Scale(f, from_=var.opts['low'], to=var.opts['high'], resolution=var.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(k), bg=bgcolors[fnum%2])
-					self.sliders[k].set(var.dflt)
+					self.sliders[k].set(var.value)
 					
 				self.sliders[k].pack(side=RIGHT)
 				if self.balloon and var.desc is not None: self.balloon.bind(self.sliders[k], var.desc)

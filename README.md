@@ -2,7 +2,7 @@
 
 Helipad is an agent-based modeling framework for Python. It differs from other frameworks in that it focuses on time series output rather than spatial models.
 
-Documentation is a work in progress, and can be found at https://helipad.dev
+Documentation and API reference can be found at https://helipad.dev
 
 ## How to use
 
@@ -40,6 +40,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* 0.7: Ability to output stackplots
 * 0.6: Support for multi-level models
 * 0.5: Support for matching models, and the checkGrid class
 * 0.4: Initial PyPI release
