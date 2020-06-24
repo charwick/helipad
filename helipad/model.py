@@ -434,23 +434,35 @@ class Helipad():
 	
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
-	def paramSweep(self, param, t, obj=None, item=None, prim=None, reporters=None):
+	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
+	def paramSweep(self, param, t, reporters=None):
 		import pandas
 		
-		#Get the param object
-		if obj is None:		pobj=self.params[param]
-		elif obj=='good':	pobj=self.goodParams[param]
-		elif obj=='breed':
-			if prim is None:
-				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
-				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-			pobj=self.primitives[prim].breedParams[param]
+		#Standardize format and get the Param objects
+		if not isinstance(param, list): param = [param]
+		params = {}
+		for p in param:
+			if not isinstance(p, tuple): p = (p,)
+			if len(p)<=2:		pobj=self.params[p[0]]
+			elif p[1]=='good':	pobj=self.goodParams[p[0]]
+			elif p[1]=='breed':
+				if len(p)<4 or p[3] is None:
+					if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+					else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+				else: prim = p[3]
+				pobj=self.primitives[prim].breedParams[p[0]]
+			params['-'.join(p)] = (p, pobj)
 		
+		#Generate the parameter space, a list of dicts
+		from itertools import product
+		space = [{p[0]:run[k] for k,p in enumerate(params.items())} for run in product(*[p[1].range for p in params.values()])]
+		
+		#Run the model
 		alldata = []
-		for v in pobj.range:
-			print('Running model with',param,'=',str(v)+'…')
+		for run in space:
+			print('Running model with',' and '.join([k+'='+str(v) for k,v in run.items()])+'…')
 			self.setup()
-			pobj.set(v, item)
+			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
 			
 			if callable(t):
 				while not t(self): now = self.step()
@@ -460,7 +472,7 @@ class Helipad():
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
 			else: data = self.data.dataframe
 				
-			alldata.append(({param: v}, data))
+			alldata.append((run, data))
 		
 		return alldata
 	
