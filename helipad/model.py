@@ -9,7 +9,7 @@ import sys, warnings, pandas
 from random import shuffle, choice
 from tkinter import *
 from colour import Color
-from numpy import random
+from numpy import random, arange
 # import multiprocessing
 
 #Has to be here so we can invoke TkAgg before Tkinter initializes
@@ -432,6 +432,38 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
+	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
+	#t can also be a function taking the model object with a finishing condition
+	def paramSweep(self, param, t, obj=None, item=None, prim=None, reporters=None):
+		import pandas
+		
+		#Get the param object
+		if obj is None:		pobj=self.params[param]
+		elif obj=='good':	pobj=self.goodParams[param]
+		elif obj=='breed':
+			if prim is None:
+				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+			pobj=self.primitives[prim].breedParams[param]
+		
+		alldata = []
+		for v in pobj.range:
+			print('Running model with',param,'=',str(v)+'…')
+			self.setup()
+			pobj.set(v, item)
+			
+			if callable(t):
+				while not t(self): now = self.step()
+			else:
+				for i in range(t): now = self.step()
+			
+			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
+			else: data = self.data.dataframe
+				
+			alldata.append(({param: v}, data))
+		
+		return alldata
+	
 	#Creates an unweighted and undirected network of a certain density
 	def createNetwork(self, density, kind='edge', prim=None):
 		if density < 0 or density > 1: raise ValueError('Network density must take a value between 0 and 1.')
@@ -796,6 +828,15 @@ class Param(Item):
 			#Have sliders with an int step value return an int
 			if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int): v = int(v)
 			return v
+	
+	@property
+	def range(self):
+		if self.type=='check': return [False, True]
+		elif self.type=='menu': return self.opts.keys()
+		elif self.type=='slider':
+			values = arange(self.opts['low'], self.opts['high'], self.opts['step']).tolist()
+			values.append(self.opts['high']) #arange doesn't include the high
+			return values
 	
 	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
 	def addKey(self, key):
