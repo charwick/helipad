@@ -465,8 +465,8 @@ class Helipad():
 		
 		#Run the model
 		alldata = []
-		for run in space:
-			print('Running model with',' and '.join([k+'='+str(v) for k,v in run.items()])+'…')
+		for i,run in enumerate(space):
+			print('Run',str(i+1)+'/'+str(len(space))+':',', '.join([k+'='+('\''+v+'\'' if isinstance(v, str) else str(v)) for k,v in run.items()])+'…')
 			for p in self.allParams: p.reset()
 			self.setup()
 			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
