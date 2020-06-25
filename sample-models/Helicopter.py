@@ -19,10 +19,10 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.goodParam('prod',g)) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.breedParam('rbd', b, prim='agent') for b in model.primitives['agent'].breeds])))
-		self.price = {g:sm/(sqrt(model.goodParam('prod',g))) for g in model.nonMoneyGoods}
+		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
+		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
 		
-		self.invTarget = {g:model.goodParam('prod',g)*model.param('agents_agent') for g in model.nonMoneyGoods}
+		self.invTarget = {g:model.param(('prod','good',g))*model.param('agents_agent') for g in model.nonMoneyGoods}
 		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
@@ -72,7 +72,7 @@ class Store(baseAgent):
 		
 			#Produce stuff
 			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
-			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.goodParam('prod',i)
+			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
 
 #===============
 # CONFIGURATION
@@ -136,10 +136,10 @@ heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 
 #Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
 def rbaltodemand(breed):
 	def reporter(model):
-		rbd = model.breedParam('rbd', breed, prim='agent')
+		rbd = model.param(('rbd', 'breed', breed, 'agent'))
 		beta = rbd/(1+rbd)
 		
-		return (beta/(1-beta)) * len(model.goods) * sqrt(model.goodParam('prod',AgentGoods[breed])) / sum([1/sqrt(pr) for pr in model.goodParam('prod').values()])
+		return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod','good',AgentGoods[breed]))) / sum([1/sqrt(pr) for pr in model.param(('prod','good')).values()])
 
 	return reporter
 
@@ -210,10 +210,10 @@ from helipad.utility import CES
 def agentInit(agent, model):
 	agent.store = model.agents['store'][0]
 	agent.item = AgentGoods[agent.breed]
-	rbd = model.breedParam('rbd', agent.breed, prim='agent')
+	rbd = model.param(('rbd', 'breed', agent.breed, 'agent'))
 	beta = rbd/(rbd+1)
 	agent.utility = CES({'good': 1-beta, 'rbal': beta }, agent.model.param('sigma'))
-	agent.expCons = model.goodParam('prod', agent.item)
+	agent.expCons = model.param(('prod', 'good', agent.item))
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 	agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)

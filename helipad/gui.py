@@ -114,7 +114,7 @@ class GUI():
 			fnum += 1
 		
 		#Item parameter sliders
-		def buildSlider(itemDict, paramDict, setget, prim=None, fnum=fnum):
+		def buildSlider(itemDict, paramDict, prim=None, fnum=fnum):
 			for k, param in paramDict.items():
 				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=param.title, fg="#333", font=font)
 				bpf = bpf_super.subframe
@@ -138,7 +138,7 @@ class GUI():
 							param.element[name].config(bg=bgcolors[fnum%2])
 						elif param.type == 'slider':
 							param.element[name] = Scale(bpf, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, name), bg=bgcolors[fnum%2])
-							param.element[name].set(setget(k, name, prim=prim))
+							param.element[name].set(param.get(name))
 						
 						param.element[name].grid(row=ceil((i+1)/2)*2-1, column=i%2)
 					
@@ -156,11 +156,11 @@ class GUI():
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
 				
-		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, fnum=fnum)
+		buildSlider(model.nonMoneyGoods, model.goodParams, fnum=fnum)
 		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
 		for p,v in model.primitives.items():
 			if v.breedParams != {}:
-				buildSlider(v.breeds, v.breedParams, model.breedParam, prim=p, fnum=fnum)
+				buildSlider(v.breeds, v.breedParams, prim=p, fnum=fnum)
 				fnum += 1
 		
 		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])

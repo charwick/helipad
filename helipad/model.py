@@ -187,24 +187,23 @@ class Helipad():
 		self.data.reset()
 		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		
-		def pReporter(n, paramType=None, obj=None, prim=None):
-			def reporter(model):
-				return model.param(n, paramType=paramType, obj=obj, prim=prim)
+		def pReporter(param, item=None):
+			def reporter(model): return param.get(item)
 			return reporter
 		
 		#Add reporters for all parameters
 		for item, i in self.goods.items():				#Cycle through goods
 			for n,p in self.goodParams.items():			#Cycle through parameters
 				if p.type == 'hidden': continue			#Skip hidden parameters
-				self.data.addReporter(n+'-'+item, pReporter(n, paramType='good', obj=item))
+				self.data.addReporter(n+'-'+item, pReporter(p, item))
 		for prim, pdata in self.primitives.items():		#Cycle through primitives
 			for breed, i in pdata.breeds.items():		#Cycle through breeds
 				for n,p in pdata.breedParams.items():	#Cycle through parameters
 					if p.type == 'hidden': continue		#Skip hidden parameters
-					self.data.addReporter(prim+'_'+n+'-'+item, pReporter(n, paramType='breed', obj=breed, prim=prim))
+					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
 		for n,p in self.params.items():					#Cycle through parameters
 			if p.type == 'hidden': continue				#Skip hidden parameters
-			self.data.addReporter(n, pReporter(n))
+			self.data.addReporter(n, pReporter(p))
 
 		if (self.moneyGood is not None):
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
@@ -274,38 +273,31 @@ class Helipad():
 		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc)
 	
 	#Get or set a parameter, depending on whether there are two or three arguments
-	#Everything past the third argument is for internal use only
-	def param(self, name, val=None, paramType=None, obj=None, prim=None):
-		if paramType is None:		params=self.params
-		elif paramType=='good':		params=self.goodParams
-		elif paramType=='breed':
-			if prim is None:
-				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
-				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-			params=self.primitives[prim].breedParams
+	def param(self, param, val=None):
+		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
+		param = self.parseParamId(param)
 		
-		if not name in params:
-			if paramType is None: paramType = ''
-			warnings.warn(paramType+' Parameter \''+name+'\' does not exist', None, 2)
-			return
-		
-		if val is not None: params[name].set(val, obj)
-		else: return params[name].get(obj)
-	
-	def breedParam(self, name, breed=None, val=None, prim=None):
-		if prim is None:
-			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
-			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-		return self.param(name, val, paramType='breed', obj=breed, prim=prim)
-	
-	def goodParam(self, name, good=None, val=None, **kwargs):
-		return self.param(name, val, paramType='good', obj=good)
+		if val is not None: param.set(val, item)
+		else: return param.get(item)
 	
 	@property
 	def allParams(self):
 		params = list(self.params.values())+list(self.goodParams.values())
 		for p in self.primitives.values(): params += list(p.breedParams.values())
 		return params
+	
+	#Parses a parameter identifier tuple and returns a Param object
+	#For internal use only
+	def parseParamId(self, p):
+		if not isinstance(p, tuple): p = (p,)
+		if len(p)==1:		return self.params[p[0]]
+		elif p[1]=='good':	return self.goodParams[p[0]]
+		elif p[1]=='breed':
+			if len(p)<4 or p[3] is None:
+				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+			else: prim = p[3]
+			return self.primitives[prim].breedParams[p[0]]
 	
 	#For adding breeds and goods. Should not be called directly
 	def addItem(self, obj, name, color, prim=None, **kwargs):
@@ -437,19 +429,6 @@ class Helipad():
 		self.data.collect(self)
 		self.doHooks('modelPostStep', [self])
 		return self.t
-	
-	#Parses a parameter identifier tuple and returns a Param object
-	#For internal use only
-	def parseParamId(self, p):
-		if not isinstance(p, tuple): p = (p,)
-		if len(p)<=2:		return self.params[p[0]]
-		elif p[1]=='good':	return self.goodParams[p[0]]
-		elif p[1]=='breed':
-			if len(p)<4 or p[3] is None:
-				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
-				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-			else: prim = p[3]
-			return self.primitives[prim].breedParams[p[0]]
 	
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
