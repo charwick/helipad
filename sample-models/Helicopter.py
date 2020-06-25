@@ -101,9 +101,6 @@ heli.order = 'random'
 
 # UPDATE CALLBACKS
 
-def storeUpdater(model, var, val):
-	if model.hasModel: setattr(model.agents['store'][0], var, val)
-
 def ngdpUpdater(model, var, val):
 	if model.hasModel: model.cb.ngdpTarget = val if not val else model.cb.ngdp
 
@@ -125,9 +122,9 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 	'lump': 'Lump Sum'
 }, runtime=False)
 
-heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
-heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1}, callback=storeUpdater)
-heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1}, callback=storeUpdater)
+heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
+heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
+heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
 #Low Es means the two are complements (0=perfect complements)
 #High Es means the two are substitutes (infinity=perfect substitutes)
 #Doesn't really affect anything though – even utility – so don't bother exposing it

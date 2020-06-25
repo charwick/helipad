@@ -14,7 +14,6 @@ mlpstyle.use('fast')
 
 class GUI():
 	running = False
-	sliders = {}
 	
 	def __init__(self, parent, model, headless=False):
 		self.parent = parent
@@ -35,32 +34,15 @@ class GUI():
 		
 		#
 		# CALLBACK FUNCTION GENERATORS FOR TKINTER ELEMENTS
-		#
-		def menuCallback(fullvar, callback=None):
-			def cb(val=None):
-				if '-' in fullvar:
-					obj, var, item = fullvar.split('-')	#Per-object variables
-					if '_' in obj:
-						obj, prim = obj.split('_')
-						val = getattr(self.model, obj+'Param')(var, item, prim=prim)
-					else: val = getattr(self.model, obj+'Param')(var, item)
-				else:
-					var = fullvar
-					val = self.model.param(var)
-				
-				if callable(callback): callback(self.model, var, val)
-			return cb
-		
-		def setVar(vname):
+		#		
+		def setVar(param, item=None):
 			def sv(val=None):
-			
-				#The checkbox callback doesn't pass the argument, so we've got to get the value the hard way
-				#But we also know it's a boolean if we don't get it
-				#Otherwise it came from a slider, which passes a string that ought to be a float
-				if val is None: val = self.sliders[vname].variable.get()
-				else: val = float(val)
-			
-				self.model.updateVar(vname, val)
+				if callable(param.callback):
+					if param.obj is None: param.callback(self.model, param.name, param.get(item))
+					else: param.callback(self.model, param.name, item, param.get(item))
+				
+				#If it's a slider, the parameter doesn't update automatically
+				if param.type=='slider': param.set(float(val), item, updateGUI=False)
 			return sv
 		
 		#For shock buttons.
@@ -132,14 +114,14 @@ class GUI():
 			fnum += 1
 		
 		#Item parameter sliders
-		def buildSlider(itemDict, paramDict, setget, obj, prim=None, fnum=fnum):
-			for k, var in paramDict.items():
-				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=var.title, fg="#333", font=font)
+		def buildSlider(itemDict, paramDict, setget, prim=None, fnum=fnum):
+			for k, param in paramDict.items():
+				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=param.title, fg="#333", font=font)
 				bpf = bpf_super.subframe
 				
 				i=0
+				param.element = {}
 				for name, b in itemDict.items():
-					bname = obj+'-'+k+'-'+name
 					
 					#Circle for item color
 					lframe = Frame(bpf, bg=bgcolors[fnum%2], padx=0, pady=0)
@@ -148,37 +130,37 @@ class GUI():
 					c.grid(row=0, column=0, pady=(0,8))
 					
 					#Item name label
-					if var.type != 'check':
+					if param.type != 'check':
 						Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
 				
-						if var.type == 'menu':
-							self.sliders[bname] = OptionMenu(bpf, var.value[name], command=menuCallback(bname, var.callback), *var.opts.values())
-							self.sliders[bname].config(bg=bgcolors[fnum%2])
-						elif var.type == 'slider':
-							self.sliders[bname] = Scale(bpf, from_=var.opts['low'], to=var.opts['high'], resolution=var.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(bname), bg=bgcolors[fnum%2])
-							self.sliders[bname].set(setget(k, name, prim=prim))
+						if param.type == 'menu':
+							param.element[name] = OptionMenu(bpf, param.value[name], command=setVar(param, name), *param.opts.values())
+							param.element[name].config(bg=bgcolors[fnum%2])
+						elif param.type == 'slider':
+							param.element[name] = Scale(bpf, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, name), bg=bgcolors[fnum%2])
+							param.element[name].set(setget(k, name, prim=prim))
 						
-						self.sliders[bname].grid(row=ceil((i+1)/2)*2-1, column=i%2)
+						param.element[name].grid(row=ceil((i+1)/2)*2-1, column=i%2)
 					
 					#Do everything differently if we've got a checkbox
 					else:
-						self.sliders[bname] = Checkbutton(lframe, text=name.title(), var=var.value[name], onvalue=True, offvalue=False, command=setVar(bname), bg=bgcolors[fnum%2])
-						self.sliders[bname].variable = var.value[name] #Keep track of this because it doesn't pass the value to the callback
-						self.sliders[bname].grid(row=0, column=1)
+						param.element[name] = Checkbutton(lframe, text=name.title(), var=param.value[name], onvalue=True, offvalue=False, command=setVar(param, name), bg=bgcolors[fnum%2])
+						param.element[name].variable = param.value[name] #Keep track of this because it doesn't pass the value to the callback
+						param.element[name].grid(row=0, column=1)
 					
 					bpf.columnconfigure(0,weight=1)
 					bpf.columnconfigure(1,weight=1)
 					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
-					if self.balloon and var.desc is not None: self.balloon.bind(self.sliders[bname], var.desc)
+					if self.balloon and param.desc is not None: self.balloon.bind(param.element[name], param.desc)
 					
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
 				
-		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, 'good', fnum=fnum)
+		buildSlider(model.nonMoneyGoods, model.goodParams, model.goodParam, fnum=fnum)
 		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
 		for p,v in model.primitives.items():
 			if v.breedParams != {}:
-				buildSlider(v.breeds, v.breedParams, model.breedParam, 'breed_'+p, prim=p, fnum=fnum)
+				buildSlider(v.breeds, v.breedParams, model.breedParam, prim=p, fnum=fnum)
 				fnum += 1
 		
 		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])
@@ -187,26 +169,26 @@ class GUI():
 			fnum += 1
 		
 		#Parameter sliders
-		for k, var in self.model.params.items():
-			if var.type == 'hidden': continue
-			elif var.type == 'check':
+		for k, param in self.model.params.items():
+			if param.type == 'hidden': continue
+			elif param.type == 'check':
 				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
-				self.sliders[k] = Checkbutton(f, text=var.title, var=var.value, onvalue=True, offvalue=False, command=setVar(k), bg=bgcolors[fnum%2])
-				self.sliders[k].variable = var.value #Keep track of this because it doesn't pass the value to the callback
-				self.sliders[k].pack()
+				param.element = Checkbutton(f, text=param.title, var=param.value, onvalue=True, offvalue=False, command=setVar(param), bg=bgcolors[fnum%2])
+				param.element.variable = param.value #Keep track of this because it doesn't pass the value to the callback
+				param.element.pack()
 			else:
 				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
-				Label(f, text=var.title, fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
-				if var.type == 'menu':
+				Label(f, text=param.title, fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
+				if param.type == 'menu':
 					#Callback is different because menus automatically update their variable
-					self.sliders[k] = OptionMenu(f, var.value, *var.opts.values(), command=menuCallback(k, var.callback))
-					self.sliders[k].config(bg=bgcolors[fnum%2])
-				elif var.type == 'slider':
-					self.sliders[k] = Scale(f, from_=var.opts['low'], to=var.opts['high'], resolution=var.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(k), bg=bgcolors[fnum%2])
-					self.sliders[k].set(var.value)
+					param.element = OptionMenu(f, param.value, *param.opts.values(), command=setVar(param))
+					param.element.config(bg=bgcolors[fnum%2])
+				elif param.type == 'slider':
+					param.element = Scale(f, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param), bg=bgcolors[fnum%2])
+					param.element.set(param.value)
 					
-				self.sliders[k].pack(side=RIGHT)
-				if self.balloon and var.desc is not None: self.balloon.bind(self.sliders[k], var.desc)
+				param.element.pack(side=RIGHT)
+				if self.balloon and param.desc is not None: self.balloon.bind(param.element, param.desc)
 				
 			f.pack(fill="x", side=TOP)
 		fnum += 1
@@ -276,8 +258,11 @@ class GUI():
 		
 		#Disable graph checkboxes and any parameters that can't be changed during runtime
 		self.checks.disable()
-		for k, var in self.model.params.items():
-			if not var.runtime and k in self.sliders: self.sliders[k].configure(state='disabled')
+		for param in self.model.allParams:
+			if not param.runtime and hasattr(param, 'element'):
+				if isinstance(param.element, dict):
+					for e in param.element.values(): e.configure(state='disabled')
+				else: param.element.configure(state='disabled')
 		
 		#If we've got plots, instantiate the Graph object
 		if len(plotsToDraw.items()) > 0:
@@ -377,7 +362,11 @@ class GUI():
 		
 		#Re-enable checkmarks and options
 		self.checks.enable()
-		for s in self.sliders.values(): s.configure(state='normal')
+		for param in self.model.allParams:
+			if not hasattr(param, 'element'): continue
+			if isinstance(param.element, dict):
+				for e in param.element.values(): e.configure(state='normal')
+			else: param.element.configure(state='normal')
 		self.stopafter.enable()
 		self.expCSV.enable()
 		

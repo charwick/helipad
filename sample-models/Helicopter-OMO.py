@@ -301,8 +301,8 @@ def bankChecks(gui, val=None):
 	gui.model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		gui.checks.disabled(i, nobank)
-	for b in gui.model.primitives['agent'].breeds.keys():
-		gui.sliders['breed_agent-liqPref-'+b].config(state='disabled' if nobank else 'normal')
+	for e in gui.model.primitives['agent'].breedParams['liqPref'].element.values():
+		e.config(state='disabled' if nobank else 'normal')
 
 #Since the param callback takes different parameters than the GUI callback
 def bankCheckWrapper(model, var, val): bankChecks(model.gui, val)
@@ -310,9 +310,6 @@ heli.addHook('terminate', bankChecks)		#Reset the disabled checkmarks when termi
 heli.addHook('GUIPostInit', bankChecks)		#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
-
-def storeUpdater(model, var, val):
-	if model.hasModel: setattr(model.agents['store'][0], var, val)
 
 def ngdpUpdater(model, var, val):
 	if model.hasModel: model.cb.ngdpTarget = val if not val else model.cb.ngdp
@@ -340,9 +337,9 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 	'omo': 'Open Market Operation'
 }, runtime=False, callback=bankCheckWrapper)
 
-heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05}, callback=storeUpdater)
-heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1}, callback=storeUpdater)
-heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1}, callback=storeUpdater)
+heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
+heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
+heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
 #Low Es means the two are complements (0=perfect complements)
 #High Es means the two are substitutes (infinity=perfect substitutes)
 #Doesn't really affect anything though – even utility – so don't bother exposing it

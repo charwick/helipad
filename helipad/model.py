@@ -249,6 +249,7 @@ class Helipad():
 		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
 		
 		args = {
+			'name': name,
 			'title': title,
 			'type': type,
 			'default': dflt,
@@ -288,8 +289,8 @@ class Helipad():
 			warnings.warn(paramType+' Parameter \''+name+'\' does not exist', None, 2)
 			return
 		
-		if val is not None: params[name].set(val, obj)	#Set
-		else: return params[name].get(obj)				#Get
+		if val is not None: params[name].set(val, obj)
+		else: return params[name].get(obj)
 	
 	def breedParam(self, name, breed=None, val=None, prim=None):
 		if prim is None:
@@ -299,6 +300,12 @@ class Helipad():
 	
 	def goodParam(self, name, good=None, val=None, **kwargs):
 		return self.param(name, val, paramType='good', obj=good)
+	
+	@property
+	def allParams(self):
+		params = list(self.params.values())+list(self.goodParams.values())
+		for p in self.primitives.values(): params += list(p.breedParams.values())
+		return params
 	
 	#For adding breeds and goods. Should not be called directly
 	def addItem(self, obj, name, color, prim=None, **kwargs):
@@ -504,41 +511,6 @@ class Helipad():
 		nx.draw(G)
 		plt.show()
 	
-	#For receiving updated values from the GUI
-	#Update the model parameter and execute the callback if it exists
-	#updateGUI is false if receiving values from the GUI; true if sending values to the GUI (e.g. shocks)
-	def updateVar(self, var, newval, updateGUI=False):
-		
-		#Makes sure changes are reflected in the sliders
-		#Checkboxes and menus update regardless of the updateGUI setting
-		if updateGUI and var in self.gui.sliders and hasattr(self.gui.sliders[var], 'set'):
-			self.gui.sliders[var].set(newval)
-		
-		if '-' in var:
-			#Names like obj-var-item, i.e. good-prod-axe
-			obj, var, item = var.split('-')	#Per-object variables
-			if '_' in obj: obj, prim = obj.split('_')
-			else: prim = None
-			
-			if obj == 'good':
-				itemDict = self.goods
-				paramDict = self.goodParams
-				setget = self.goodParam
-			elif obj == 'breed':
-				itemDict = self.primitives[prim].breeds
-				paramDict = self.primitives[prim].breedParams
-				setget = self.breedParam
-			else: raise ValueError('Invalid object type')
-			if var in paramDict:
-				setget(var, item, newval, prim=prim)
-			if hasattr(paramDict[var], 'callback') and callable(paramDict[var].callback):
-				paramDict[var].callback(self, var, item, newval)
-		else:
-			if var in self.params:
-				self.param(var, newval)
-			if hasattr(self.params[var], 'callback') and callable(self.params[var].callback):
-				self.params[var].callback(self, var, newval)
-	
 	@property
 	def allagents(self):
 		agents = {}
@@ -694,14 +666,18 @@ class Shocks():
 			def do(self, model):
 				if self.var is not None:
 					newval = self.valFunc(model.param(self.var, paramType=self.paramType, obj=self.obj, prim=self.prim))	#Pass in current value
-		
+	
 					if self.paramType is not None and self.obj is not None:
-						begin = self.paramType
-						if self.prim is not None: begin += '_'+self.prim
-						v=begin+'-'+self.var+'-'+self.obj
-					else: v=self.var
-			
-					model.updateVar(v, newval, updateGUI=True)
+						if self.paramType == 'good': param = model.goodParams[self.var]
+						elif self.paramType == 'breed': param = model.primitives[self.prim].breedParams[self.var]
+						
+						param.set(newval, self.obj)
+						if hasattr(param, 'callback') and callable(param.callback):
+							param.callback(model, self.var, self.obj, newval)
+					else:
+						model.params[self.var].set(newval)
+						if hasattr(model.params[self.var], 'callback') and callable(model.params[self.var].callback):
+							model.params[self.var].callback(model, self.var, newval)
 				else:
 					self.valFunc(model)
 		self.Shock = Shock
@@ -816,7 +792,7 @@ class Param(Item):
 			elif self.type == 'check': self.value.set(self.default)
 			else: self.value = self.default
 	
-	def set(self, val, item=None):
+	def set(self, val, item=None, updateGUI=True):
 		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
 		if self.type == 'menu':
 			if self.obj is None: self.value.set(self.opts[val])
@@ -824,9 +800,13 @@ class Param(Item):
 		elif self.type == 'check':
 			if self.obj is None: self.value.set(val)
 			else: self.value[item].set(val)
-		else:	
-			if self.obj is None: self.value = val
-			else: self.value[item] = val
+		else:
+			if self.obj is None:
+				self.value = val
+				if updateGUI and hasattr(self, 'element'): self.element.set(val)
+			else:
+				self.value[item] = val
+				if updateGUI and hasattr(self, 'element'): self.element[item].set(val)
 	
 	#Return a bool|str|num for a global parameter or a per-object parameter if the item is specified
 	#Otherwise return dict{str:bool|str|num} with all the items
