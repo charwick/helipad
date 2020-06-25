@@ -288,7 +288,6 @@ class Helipad():
 			warnings.warn(paramType+' Parameter \''+name+'\' does not exist', None, 2)
 			return
 		
-		
 		if val is not None: params[name].set(val, obj)	#Set
 		else: return params[name].get(obj)				#Get
 	
@@ -765,24 +764,34 @@ class Shocks():
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
-		#Instantiate the value dict.
-		#1. Are we dealing with a per-breed or a global default?
-		#1a. If per-breed, is the default universal or breed-specific?
-		#2. Do we have a menu, a check, or a slider?
-		#
-		#Per-breed universal menu:		str → dict{StringVar}
-		#Per-breed universal check:		bool → dict{BooleanVar}
-		#Per-breed universal slider:	int → dict{int}
-		#Per-breed specific menu:		dict{str} → dict{StringVar}
-		#Per-breed specific check:		dict{bool} → dict{BooleanVar}
-		#Per-breed specific slider:		dict{int} → dict{int}
-		#Global menu:					str → StringVar
-		#Global check:					bool → BooleanVar
-		#Global slider:					int → int
 		
-		if self.obj is not None: #If it's a breed or a good parameter
+		#Instantiate the objects once, because we don't want to overwrite them
+		if self.obj is not None:
+			if self.type=='menu': self.value = {b:StringVar() for b in self.keys}
+			elif self.type=='check': self.value = {b:BooleanVar() for b in self.keys}
+		else:
+			if self.type == 'menu': self.value = StringVar()
+			elif self.type == 'check': self.value = BooleanVar()
+		
+		self.reset() #Populate with default values
+	
+	#Instantiate the value dict from the default value.
+	#1. Are we dealing with a per-breed or a global default?
+	#1a. If per-breed, is the default universal or breed-specific?
+	#2. Do we have a menu, a check, or a slider?
+	#
+	#Per-breed universal menu:		str → dict{StringVar}
+	#Per-breed universal check:		bool → dict{BooleanVar}
+	#Per-breed universal slider:	int → dict{int}
+	#Per-breed specific menu:		dict{str} → dict{StringVar}
+	#Per-breed specific check:		dict{bool} → dict{BooleanVar}
+	#Per-breed specific slider:		dict{int} → dict{int}
+	#Global menu:					str → StringVar
+	#Global check:					bool → BooleanVar
+	#Global slider:					int → int
+	def reset(self):
+		if self.obj is not None:
 			if self.type=='menu':
-				self.value = {b:StringVar() for b in self.keys}
 				if isinstance(self.default, dict):
 					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
 					for b in self.keys:
@@ -791,7 +800,6 @@ class Param(Item):
 					#Set to opts[self.default] rather than self.default because OptionMenu deals in the whole string
 					for k,v in self.value.items(): v.set(self.opts[self.default])
 			elif self.type=='check':
-				self.value = {b:BooleanVar() for b in self.keys}
 				if isinstance(self.default, dict):
 					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
 					for b in self.keys:
@@ -799,16 +807,13 @@ class Param(Item):
 				else:
 					for k in self.value: self.value[k].set(self.default)
 			else:
-				self.value = {b:0 for b in self.keys}
-				#No 'else' because the dict already contains default values if it's a per-breed universal slider
 				if isinstance(self.default, dict):
 					self.value = {k:self.default[k] if k in self.default else 0 for k in self.keys}
 				else:
 					self.value = {k:self.default for k in self.keys}
-				
-		else: #If it's a global parameter
-			if self.type == 'menu': self.value = StringVar(value=self.opts[self.default])
-			elif self.type == 'check': self.value = BooleanVar(value=self.default)
+		else:
+			if self.type == 'menu': self.value.set(self.opts[self.default])
+			elif self.type == 'check': self.value.set(self.default)
 			else: self.value = self.default
 	
 	def set(self, val, item=None):
