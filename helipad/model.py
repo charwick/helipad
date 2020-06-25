@@ -635,7 +635,7 @@ class Helipad():
 			self.gui.preparePlots()		#Jump straight to the graph
 		else: self.root.mainloop()		#Launch the control panel
 		
-		self.doHooks('GUIPostLaunch', [self.gui])
+		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 
 class MultiLevel(agent.baseAgent, Helipad):	
 	def __init__(self, breed, id, parentModel):
