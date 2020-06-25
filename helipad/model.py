@@ -438,6 +438,19 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
+	#Parses a parameter identifier tuple and returns a Param object
+	#For internal use only
+	def parseParamId(self, p):
+		if not isinstance(p, tuple): p = (p,)
+		if len(p)<=2:		return self.params[p[0]]
+		elif p[1]=='good':	return self.goodParams[p[0]]
+		elif p[1]=='breed':
+			if len(p)<4 or p[3] is None:
+				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+			else: prim = p[3]
+			return self.primitives[prim].breedParams[p[0]]
+	
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
@@ -449,14 +462,7 @@ class Helipad():
 		params = {}
 		for p in param:
 			if not isinstance(p, tuple): p = (p,)
-			if len(p)<=2:		pobj=self.params[p[0]]
-			elif p[1]=='good':	pobj=self.goodParams[p[0]]
-			elif p[1]=='breed':
-				if len(p)<4 or p[3] is None:
-					if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
-					else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-				else: prim = p[3]
-				pobj=self.primitives[prim].breedParams[p[0]]
+			pobj = self.parseParamId(p)
 			params['-'.join(p)] = (p, pobj)
 		
 		#Generate the parameter space, a list of dicts
@@ -665,20 +671,14 @@ class Shocks():
 			def active(self, active): self.boolvar.set(active)
 			
 			def do(self, model):
-				if self.var is not None:
-					newval = self.valFunc(model.param(self.var, paramType=self.paramType, obj=self.obj, prim=self.prim))	#Pass in current value
-	
-					if self.paramType is not None and self.obj is not None:
-						if self.paramType == 'good': param = model.goodParams[self.var]
-						elif self.paramType == 'breed': param = model.primitives[self.prim].breedParams[self.var]
-						
-						param.set(newval, self.obj)
-						if hasattr(param, 'callback') and callable(param.callback):
-							param.callback(model, self.var, self.obj, newval)
-					else:
-						model.params[self.var].set(newval)
-						if hasattr(model.params[self.var], 'callback') and callable(model.params[self.var].callback):
-							model.params[self.var].callback(model, self.var, newval)
+				if self.param is not None:
+					newval = self.valFunc(self.param.get(self.item))	#Pass in current value
+					self.param.set(newval, self.item)
+					if hasattr(self.param, 'callback') and callable(self.param.callback):
+						if self.param.obj is not None and self.item is not None:
+							self.param.callback(model, self.param.name, self.item, newval)
+						else:
+							self.param.callback(model, self.param.name, newval)
 				else:
 					self.valFunc(model)
 		self.Shock = Shock
@@ -686,22 +686,25 @@ class Shocks():
 	def __getitem__(self, index): return self.shocks[index]
 	def __setitem__(self, index, value): self.shocks[index] = value
 	
-	#Var is the name of the variable to shock.
+	#param is the name of the variable to shock.
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
 	#    or the string 'button' in which case it draws a button in the control panel that shocks on press
 	#The variable is shocked when timerFunc returns true
-	#Can pass in var=None to run an open-ended valFunc that takes the model as an object instead
-	def register(self, name, var, valFunc, timerFunc, paramType=None, obj=None, prim=None, active=True, desc=None):
+	#Can pass in param=None to run an open-ended valFunc that takes the model as an object instead
+	def register(self, name, param, valFunc, timerFunc, active=True, desc=None):
+		if param is not None:
+			item = param[2] if isinstance(param, tuple) and len(param)>2 else None
+			param = self.model.parseParamId(param)
+		else: item=None
+			
 		self[name] = self.Shock(
 			name=name,
 			desc=desc,
-			var=var,
+			param=param,
+			item=item,
 			valFunc=valFunc,
 			timerFunc=timerFunc,
-			paramType=paramType,
-			obj=obj,
-			prim=prim,
 			active=active
 		)
 		

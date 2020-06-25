@@ -304,7 +304,7 @@ heli.addHook('modelPostStep', modelPostStep)
 def shock(v):
 	c = random.normal(v, 4)
 	return c if c >= 1 else 1
-heli.shocks.register('Dwarf real balances', 'rbd', shock, heli.shocks.randn(2), paramType='breed', obj='dwarf', prim='agent')
+heli.shocks.register('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2))
 
 #Shock the money supply
 def mshock(model):
