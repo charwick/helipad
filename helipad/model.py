@@ -7,15 +7,19 @@
 
 import sys, warnings, pandas
 from random import shuffle, choice
-from tkinter import *
 from colour import Color
 from numpy import random, arange
+import matplotlib
 # import multiprocessing
 
-#Has to be here so we can invoke TkAgg before Tkinter initializes
-#Necessary so Matplotlib doesn't crash Tkinter, even though they don't interact
-import matplotlib
-matplotlib.use('TkAgg')
+def isIpy():
+	try:
+		__IPYTHON__
+		return True
+	except NameError: return False
+if not isIpy():
+	from tkinter import *
+	matplotlib.use('TkAgg')
 
 #Generic extensible item class to store structured data
 class Item():
@@ -23,7 +27,6 @@ class Item():
 		for k,v in kwargs.items():
 			setattr(self, k, v)
 
-from helipad.gui import GUI
 from helipad.data import Data
 import helipad.agent as agent
 
@@ -34,7 +37,7 @@ class Helipad():
 		
 		#Got to initialize Tkinter first in order for StringVar() and such to work
 		#But only do so if it's the top-most model
-		if not hasattr(self, 'breed'): self.root = Tk()
+		if not hasattr(self, 'breed') and not isIpy(): self.root = Tk()
 		
 		self.data = Data(self)
 		self.shocks = Shocks(self)	
@@ -577,7 +580,7 @@ class Helipad():
 	#
 
 	def launchGUI(self, headless=False):
-		if not hasattr(self, 'root'): return
+		if not isIpy() and not hasattr(self, 'root'): return
 		
 		self.doHooks('GUIPreLaunch', [self])
 		
@@ -596,29 +599,34 @@ class Helipad():
 		if self.moneyGood is None:
 			for i in ['prices', 'money']:
 				del self.plots[i]
-				
-		self.gui = GUI(self.root, self, headless)
 		
-		# Debug console
-		# Requires to be run from Terminal (⌘-⇧-R in TextMate)
-		# Here so that 'self' will refer to the model object
-		# Readline doesn't look like it's doing anything here, but it enables certain console features
-		# Only works on Mac. Also Gnureadline borks everything, so don't install that.
-		if sys.platform=='darwin':
-			try:
-				import code, readline
-				vars = globals().copy()
-				vars.update(locals())
-				shell = code.InteractiveConsole(vars)
-				shell.interact()
-			except: print('Use pip to install readline and code for a debug console')
+		if not isIpy():
+			from helipad.gui import GUI
+			self.gui = GUI(self.root, self, headless)
+			
+			# Debug console
+			# Requires to be run from Terminal (⌘-⇧-R in TextMate)
+			# Here so that 'self' will refer to the model object
+			# Readline doesn't look like it's doing anything here, but it enables certain console features
+			# Only works on Mac. Also Gnureadline borks everything, so don't install that.
+			if sys.platform=='darwin':
+				try:
+					import code, readline
+					vars = globals().copy()
+					vars.update(locals())
+					shell = code.InteractiveConsole(vars)
+					shell.interact()
+				except: print('Use pip to install readline and code for a debug console')
 		
-		self.root.title(self.name+(' ' if self.name!='' else '')+'Control Panel')
-		self.root.resizable(0,0)
-		if headless:
-			self.root.destroy()
-			self.gui.preparePlots()		#Jump straight to the graph
-		else: self.root.mainloop()		#Launch the control panel
+			self.root.title(self.name+(' ' if self.name!='' else '')+'Control Panel')
+			self.root.resizable(0,0)
+			if headless:
+				self.root.destroy()
+				self.gui.preparePlots()		#Jump straight to the graph
+			else: self.root.mainloop()		#Launch the control panel
+		else:
+			from helipad.jupyter import JupyterInterface
+			self.gui = JupyterInterface(self)
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 
@@ -720,6 +728,14 @@ class Shocks():
 		def fn(t): return True if t%n-offset==0 else False
 		return fn
 
+#In the absence of Tkinter, minimal replacements
+if isIpy():
+	class StringVar:
+		def __init__(self): self.val=None
+		def get(self): return self.val
+		def set(self, val): self.val = val
+	BooleanVar = StringVar
+
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
@@ -786,10 +802,18 @@ class Param(Item):
 		else:
 			if self.obj is None:
 				self.value = val
-				if updateGUI and hasattr(self, 'element'): self.element.set(val)
+				if updateGUI and hasattr(self, 'element') and not isIpy():
+					self.element.set(val)
 			else:
 				self.value[item] = val
-				if updateGUI and hasattr(self, 'element'): self.element[item].set(val)
+				if updateGUI and hasattr(self, 'element') and not isIpy():
+					self.element[item].set(val)
+		
+		#Tkinter updates the GUI automatically when setting BooleanVar or StringVar, but not for sliders.
+		#Jupyter requires an explicit update for all parameter types.
+		if updateGUI and isIpy():
+			if self.obj is None: self.element.children[0].value = val
+			else: self.element[item].children[0].value = val
 	
 	#Return a bool|str|num for a global parameter or a per-object parameter if the item is specified
 	#Otherwise return dict{str:bool|str|num} with all the items
@@ -810,6 +834,12 @@ class Param(Item):
 				if isinstance(v, dict): v = {k: int(val) for k,val in v.items()}
 				else: v = int(v)
 			return v
+	
+	#Returns a one-parameter setter since Jupyter needs it
+	def setf(self, item=None):
+		def set(val):
+			self.set(val, item, updateGUI=False)
+		return set
 	
 	@property
 	def range(self):
