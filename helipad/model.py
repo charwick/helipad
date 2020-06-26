@@ -806,7 +806,9 @@ class Param(Item):
 		else:
 			v = self.value if self.obj is None or item is None else self.value[item]
 			#Have sliders with an int step value return an int
-			if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int): v = int(v)
+			if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int):
+				if isinstance(v, dict): v = {k: int(val) for k,val in v.items()}
+				else: v = int(v)
 			return v
 	
 	@property
