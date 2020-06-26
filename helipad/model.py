@@ -40,7 +40,8 @@ class Helipad():
 		if not hasattr(self, 'breed') and not isIpy(): self.root = Tk()
 		
 		self.data = Data(self)
-		self.shocks = Shocks(self)	
+		self.shocks = Shocks(self)
+		self.running = False
 		
 		self.name = ''
 		self.agents = {}
@@ -433,6 +434,12 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
+	def start(self):
+		self.running = True
+		while self.running: self.step()
+	
+	def stop(self): self.running = False
+			
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
@@ -451,6 +458,16 @@ class Helipad():
 		from itertools import product
 		space = [{p[0]:run[k] for k,p in enumerate(params.items())} for run in product(*[p[1].range for p in params.values()])]
 		
+		#Stop when necessary
+		def stopt(cond):
+			def tfunc(model):
+				if model.t >= cond: model.stop()
+			def ffunc(model):
+				if cond(model): model.stop()
+			return ffunc if callable(cond) else tfunc
+		stopf = stopt(t)
+		self.addHook('modelPostStep', stopf)
+		
 		#Run the model
 		alldata = []
 		for i,run in enumerate(space):
@@ -459,16 +476,14 @@ class Helipad():
 			self.setup()
 			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
 			
-			if callable(t):
-				while not t(self): now = self.step()
-			else:
-				for i in range(t): now = self.step()
+			self.start()
 			
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
 			else: data = self.data.dataframe
 				
 			alldata.append((run, data))
 		
+		self.hooks['modelPostStep'].remove(stopf) #Clear the hook for future runs
 		return alldata
 	
 	#Creates an unweighted and undirected network of a certain density

@@ -12,13 +12,12 @@ from math import ceil
 import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 mlpstyle.use('fast')
 
-class GUI():
-	running = False
-	
+class GUI():	
 	def __init__(self, parent, model, headless=False):
 		self.parent = parent
 		self.model = model
 		self.lastUpdate = None
+		self.graph = None
 		try:
 			import Pmw
 			self.balloon = Pmw.Balloon(parent)
@@ -54,10 +53,10 @@ class GUI():
 		def switchPbar(val):
 			if not val:
 				self.progress.config(mode='indeterminate')
-				if self.running: self.progress.start()
+				if self.model.running: self.progress.start()
 			else:
 				self.progress.config(mode='determinate')
-				if self.running: self.progress.stop()
+				if self.model.running: self.progress.stop()
 			self.model.root.update()
 		
 		#
@@ -240,6 +239,29 @@ class GUI():
 						info['CFBundleName'] = 'Helipad'
 			except: print('Use pip to install pyobjc for nice Mac features')
 		
+		def updateGraph(model):
+			if model.t%model.gui.updateEvery != 0: return
+			if model.gui.graph is not None:
+				data = model.gui.model.data.getLast(model.t - model.gui.lastUpdate)
+	
+				if (model.gui.graph.resolution > 1):
+					data = {k: keepEvery(v, model.gui.graph.resolution) for k,v in data.items()}
+				model.gui.graph.update(data)
+				model.gui.lastUpdate = model.t
+				if model.gui.graph.resolution > model.gui.updateEvery: model.gui.updateEvery = model.gui.graph.resolution
+			
+			## Performance indicator
+			# newtime = time.time()
+			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
+			# self.start = newtime
+	
+			st = model.gui.stopafter.get()
+			if st:
+				model.gui.progress['value'] = model.t/st*100
+				if model.gui.graph is None: model.root.update() #Make sure we don't hang the interface if plotless
+				if model.t>=st: model.gui.terminate()
+		self.model.addHook('modelPostStep', updateGraph)
+		
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
 	
@@ -276,7 +298,7 @@ class GUI():
 			
 				#Pause on spacebar
 				elif event.key == ' ':
-					if self.running: self.pause()
+					if self.model.running: self.pause()
 					else: self.run()
 			
 				#User functions
@@ -298,7 +320,6 @@ class GUI():
 	
 	#Resume a model
 	def run(self):
-		self.running = True
 		if hasattr(self, 'runButton'):
 			self.runButton['text'] = 'Pause'
 			self.runButton['command'] = self.pause
@@ -309,31 +330,8 @@ class GUI():
 		else:
 			self.progress.config(mode='determinate')
 		
-		# start = time.time()
-		while self.running:
-			for t in range(self.updateEvery):
-				self.model.step()
-	
-			#Update graphs
-			if self.graph is not None:
-				data = self.model.data.getLast(self.model.t - self.lastUpdate)
-		
-				if (self.graph.resolution > 1):
-					data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
-				self.graph.update(data)
-				self.lastUpdate = self.model.t
-				if self.graph.resolution > self.updateEvery: self.updateEvery = self.graph.resolution
-			
-			## Performance indicator
-			# newtime = time.time()
-			# print('Period', self.model.t, 'at', self.updateEvery/(newtime-start), 'periods/second')
-			# start = newtime
-		
-			st = self.stopafter.get()
-			if st:
-				self.progress['value'] = self.model.t/st*100
-				if self.graph is None: self.model.root.update() #Make sure we don't hang the interface if plotless
-				if self.model.t>=st: self.terminate()
+		#self.start = time.time()
+		self.model.start()
 		
 		remainder = self.model.t % self.updateEvery
 		if remainder > 0: self.graph.update(self.model.data.getLast(remainder)) #Last update at the end
@@ -346,17 +344,17 @@ class GUI():
 		return t
 	
 	def pause(self):
-		self.running = False
+		self.model.stop()
 		self.progress.stop()
 		self.runButton['text'] = 'Run'
 		self.runButton['command'] = self.run
 		self.model.doHooks('pause', [self])
 	
 	def terminate(self, evt=False):
-		if self.running and (self.headless or self.expCSV.get()):
+		if self.model.running and (self.headless or self.expCSV.get()):
 			self.model.data.saveCSV(self.expCSV.get() if not self.headless else 'data')
 		
-		self.running = False
+		self.model.stop()
 		self.model.hasModel = False
 		self.progress.stop()
 		
