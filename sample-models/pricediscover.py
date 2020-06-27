@@ -70,9 +70,9 @@ heli.addHook('modelStep', modelStep)
 #===============
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
-heli.addPlot('price', 'Price', logscale=True)
+heli.addPlot('price', 'Price', logscale=True, selected=True)
 heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '119900')
 
-heli.defaultPlots = ['price', 'demand', 'utility']
+for p in ['demand', 'utility']: heli.plots[p].active(True)
 
 heli.launchGUI()

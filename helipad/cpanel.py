@@ -196,9 +196,11 @@ class GUI():
 			fnum += 1
 		
 		# Graph Checkboxes
-		self.checks = checkGrid(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=3)
-		for k, v in self.model.plots.items():
-			self.checks.addCheck(k, v.label, k in self.model.defaultPlots)
+		def plotCallback(name, val):
+			self.model.plots[name].active(val, updateGUI=False)
+		self.checks = checkGrid(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=3, callback=plotCallback)
+		for k, plot in self.model.plots.items():
+			plot.check = self.checks.addCheck(k, plot.label, plot.selected)
 		self.checks.pack(fill="x", side=TOP)
 		
 		gas = self.model.doHooks('GUIAboveShocks', [self, bgcolors[fnum%2]])
@@ -436,7 +438,7 @@ class expandableFrame(Frame):
 # bg and fg take a two-element tuple for inactive and active states
 class textCheck(Label):
 	def __init__(self, parent=None, text=None, bg=('#FFFFFF','#419BF9'), fg=('#333333','#FFFFFF'),
-		font=('Lucida Grande',12), defaultValue=False, anchor='w', desc=None
+		font=('Lucida Grande',12), defaultValue=False, anchor='w', desc=None, callback=None
 	):
 		super().__init__(parent, text=text, bg=bg[defaultValue], fg=fg[defaultValue], anchor=anchor)
 		self.bg = (Color(bg[0]), Color(bg[1]))
@@ -474,6 +476,7 @@ class textCheck(Label):
 		self.bind('<Button-1>', self.toggle, add='+')
 		self.bind('<Enter>', hover, add='+')
 		self.bind('<Leave>', leave, add='+')
+		self.callback = callback
 	
 	def get(self): return self.value
 	def set(self, value):
@@ -481,6 +484,7 @@ class textCheck(Label):
 		
 		self.value = bool(value)
 		self.config(bg=self.bg[self.value], fg=self.fg[self.value])
+		if self.callback is not None: self.callback(value)
 	
 	def toggle(self, event=None): self.set(not self.value)
 	
@@ -561,18 +565,24 @@ class checkEntry(Frame):
 
 #An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):
-	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True):
+	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True, callback=None):
 		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
 		self.bg = bg
 		self.columns = columns
 		self.checks = {}
 		self._index=0
+		self.callback = callback
 		
 		for i in range(columns): self.subframe.columnconfigure(i,weight=1)
 	
 	def addCheck(self, var, text, defaultValue=True, desc=None):
-		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc)
+		if self.callback is not None:
+			def cbWrap(val): self.callback(var, val)
+		else: cbWrap = None
+		
+		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc, callback=cbWrap)
 		self.checks[var].grid(row=int(ceil(len(self.checks)/self.columns)), column=(len(self.checks)-1)%self.columns, sticky='WE')
+		return self.checks[var]
 	
 	def __getitem__(self, index): return self.checks[index].get()
 	def __setitem__(self, index, value): self.checks[index].set(value)

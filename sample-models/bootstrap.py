@@ -61,14 +61,12 @@ heli.addHook('modelStep', modelStep)
 
 #Plots are areas on the graph where series can be drawn to keep track of reporter data in real time.
 
-heli.addPlot('myplot', 'Custom Properties', logscale=False)
+heli.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 
 #Series draw reporter data on a plot. Here we draw two series on the same plot.
 
 # heli.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
 # heli.addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
-
-heli.defaultPlots.append('myplot') #Makes sure our 'myplot' plot is selected by default in the control panel
 
 #===============
 # LAUNCH THE GUI

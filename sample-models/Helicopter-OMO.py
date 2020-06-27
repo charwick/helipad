@@ -361,7 +361,7 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
-heli.defaultPlots.append('prices')
+heli.plots['prices'].active(True)
 heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('ngdp', 'NGDP', 7, selected=False)

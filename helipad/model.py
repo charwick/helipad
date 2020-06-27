@@ -9,23 +9,14 @@ import sys, warnings, pandas
 from random import shuffle, choice
 from colour import Color
 from numpy import random, arange
+from helipad.graph import Plot
+from helipad.helpers import *
 import matplotlib
 # import multiprocessing
 
-def isIpy():
-	try:
-		__IPYTHON__
-		return True
-	except NameError: return False
 if not isIpy():
 	from tkinter import *
 	matplotlib.use('TkAgg')
-
-#Generic extensible item class to store structured data
-class Item():
-	def __init__(self, **kwargs):
-		for k,v in kwargs.items():
-			setattr(self, k, v)
 
 from helipad.data import Data
 import helipad.agent as agent
@@ -70,7 +61,6 @@ class Helipad():
 			'utility': 'Utility'
 		}
 		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
-		self.defaultPlots = []
 		
 		#Check for updates
 		from helipad.__init__ import __version__
@@ -120,7 +110,7 @@ class Helipad():
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		plot = Item(label=label, series=[], logscale=logscale, stack=stack)
+		plot = Plot(label=label, series=[], logscale=logscale, stack=stack, selected=selected)
 		if position is None or position > len(self.plots):
 			self.plots[name] = plot
 		else:		#Reconstruct the dict because there's no insert method…
@@ -131,7 +121,6 @@ class Helipad():
 				i+=1
 			self.plots = newplots
 		
-		if selected: self.defaultPlots.append(name)
 		return plot
 	
 	def removePlot(self, name, reassign=None):
@@ -143,6 +132,10 @@ class Helipad():
 		if reassign is not None:
 			self.plots[reassign].series += self.plots[name].series
 		del self.plots[name]
+	
+	@property
+	def defaultPlots(self):
+		return [k for k,v in self.plots.items() if v.selected]
 	
 	#First arg is the plot it's a part of
 	#Second arg is a reporter name registered in DataCollector, or a lambda function

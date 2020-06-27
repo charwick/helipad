@@ -5,6 +5,7 @@
 
 from numpy import ndarray, asanyarray, log10
 import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
+from helipad.helpers import *
 mlpstyle.use('fast')
 
 class Graph():
@@ -130,7 +131,12 @@ class Graph():
 
 class Plot(Item):
 	def __init__(self, **kwargs):
-		super().__init(**kwargs)
+		super().__init__(**kwargs)
+	
+	def active(self, val, updateGUI=True):
+		self.selected = bool(val)
+		if updateGUI and not isIpy() and hasattr(self, 'check'):
+			self.check.set(val)
 
 def keepEvery(lst, n):
 	i,l = (1, [])
