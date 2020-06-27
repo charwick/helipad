@@ -633,7 +633,6 @@ class Helipad():
 	
 	def launchPlots(self):
 		self.setup()
-		self.lastUpdate = 0
 		
 		#Trim the plot list to the checked items and sent it to Graph
 		plotsToDraw = {k:plot for k,plot in self.plots.items() if plot.selected}
@@ -680,7 +679,6 @@ class Helipad():
 			self.stopafter.disable()
 			self.expCSV.disable()
 		
-		self.lastUpdate = 0
 		self.start()
 
 class MultiLevel(agent.baseAgent, Helipad):	

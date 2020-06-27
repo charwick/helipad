@@ -239,12 +239,12 @@ class GUI():
 		def updateGraph(model):
 			if model.t%model.gui.updateEvery != 0: return
 			if model.graph is not None:
-				data = model.gui.model.data.getLast(model.t - model.lastUpdate)
+				data = model.gui.model.data.getLast(model.t - model.graph.lastUpdate)
 	
 				if (model.graph.resolution > 1):
 					data = {k: keepEvery(v, model.graph.resolution) for k,v in data.items()}
 				model.graph.update(data)
-				model.lastUpdate = model.t
+				model.graph.lastUpdate = model.t
 				if model.graph.resolution > model.gui.updateEvery: model.gui.updateEvery = model.graph.resolution
 			
 			## Performance indicator

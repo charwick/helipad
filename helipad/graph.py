@@ -13,6 +13,7 @@ class Graph():
 	def __init__(self, listOfPlots):
 		#fig is the figure, plots is a list of AxesSubplot objects
 		# plt.clf()
+		self.lastUpdate = 0
 		self.resolution = 1
 		self.fig, plots = plt.subplots(len(listOfPlots), sharex=True)
 		if not isinstance(plots, ndarray):
