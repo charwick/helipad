@@ -9,7 +9,7 @@
 #===============
 
 from helipad import Helipad
-from helipad.gui import checkGrid
+from helipad.cpanel import checkGrid
 import numpy.random as random
 from numpy import mean
 

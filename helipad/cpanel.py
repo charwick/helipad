@@ -7,15 +7,12 @@ from tkinter import *
 from tkinter.ttk import Progressbar
 from colour import Color
 from math import ceil
-from helipad.graph import *
 # import time #For performance testing
 
 class GUI():	
 	def __init__(self, parent, model, headless=False):
 		self.parent = parent
 		self.model = model
-		self.lastUpdate = None
-		self.graph = None
 		try:
 			import Pmw
 			self.balloon = Pmw.Balloon(parent)
@@ -82,7 +79,7 @@ class GUI():
 		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], bg=bgcolors[fnum%2], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
 		self.refresh.slide.set(4) #Default refresh of 20
 		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.runButton = Button(frame1, text='Run', command=self.preparePlots, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
+		self.runButton = Button(frame1, text='Run', command=self.run, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
 		#Buttons
@@ -241,14 +238,14 @@ class GUI():
 		
 		def updateGraph(model):
 			if model.t%model.gui.updateEvery != 0: return
-			if model.gui.graph is not None:
-				data = model.gui.model.data.getLast(model.t - model.gui.lastUpdate)
+			if model.graph is not None:
+				data = model.gui.model.data.getLast(model.t - model.lastUpdate)
 	
-				if (model.gui.graph.resolution > 1):
-					data = {k: keepEvery(v, model.gui.graph.resolution) for k,v in data.items()}
-				model.gui.graph.update(data)
-				model.gui.lastUpdate = model.t
-				if model.gui.graph.resolution > model.gui.updateEvery: model.gui.updateEvery = model.gui.graph.resolution
+				if (model.graph.resolution > 1):
+					data = {k: keepEvery(v, model.graph.resolution) for k,v in data.items()}
+				model.graph.update(data)
+				model.lastUpdate = model.t
+				if model.graph.resolution > model.gui.updateEvery: model.gui.updateEvery = model.graph.resolution
 			
 			## Performance indicator
 			# newtime = time.time()
@@ -258,64 +255,12 @@ class GUI():
 			st = model.gui.stopafter.get()
 			if st:
 				model.gui.progress['value'] = model.t/st*100
-				if model.gui.graph is None: model.root.update() #Make sure we don't hang the interface if plotless
+				if model.graph is None: model.root.update() #Make sure we don't hang the interface if plotless
 				if model.t>=st: model.gui.terminate()
 		self.model.addHook('modelPostStep', updateGraph)
 		
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
-	
-	#Start a new model
-	def preparePlots(self):
-		self.model.setup()
-		
-		#Trim the plot list to the checked items and sent it to Graph
-		plotsToDraw = {k:plot for k,plot in self.model.plots.items() if plot.selected}
-		
-		#If there are any graphs to plot
-		if not len(plotsToDraw.items()) and (not self.stopafter.get() or not self.expCSV.get()):
-			print('Plotless mode requires stop period and CSV export to be enabled.')
-			return
-		
-		#Disable graph checkboxes and any parameters that can't be changed during runtime
-		self.checks.disable()
-		for param in self.model.allParams:
-			if not param.runtime and hasattr(param, 'element'):
-				if isinstance(param.element, dict):
-					for e in param.element.values(): e.configure(state='disabled')
-				else: param.element.configure(state='disabled')
-		
-		#If we've got plots, instantiate the Graph object
-		if len(plotsToDraw.items()) > 0:
-			def catchKeypress(event):
-				#Toggle legend boxes
-				if event.key == 't':
-					for g in self.graph.plots:
-						leg = g.get_legend()
-						leg.set_visible(not leg.get_visible())
-					self.graph.fig.canvas.draw()
-			
-				#Pause on spacebar
-				elif event.key == ' ':
-					if self.model.running: self.pause()
-					else: self.run()
-			
-				#User functions
-				self.model.doHooks('graphKeypress', [event.key, self])
-		
-			self.graph = Graph(plotsToDraw)
-			self.graph.fig.canvas.set_window_title(self.model.name+(' ' if self.model.name!='' else '')+'Data Plots')
-			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
-			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
-		
-		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
-		else:
-			self.graph = None
-			self.stopafter.disable()
-			self.expCSV.disable()
-		
-		self.lastUpdate = 0
-		self.run()
 	
 	#Resume a model
 	def run(self):
@@ -323,6 +268,7 @@ class GUI():
 			self.runButton['text'] = 'Pause'
 			self.runButton['command'] = self.pause
 		
+		#Adjust progress bar
 		if not self.stopafter.get():
 			self.progress.config(mode='indeterminate')
 			self.progress.start()
@@ -330,16 +276,17 @@ class GUI():
 			self.progress.config(mode='determinate')
 		
 		#self.start = time.time()
-		self.model.start()
+		if not self.model.hasModel: self.model.launchPlots()
+		else: self.model.start()
 		
 		remainder = self.model.t % self.updateEvery
-		if remainder > 0: self.graph.update(self.model.data.getLast(remainder)) #Last update at the end
+		if remainder > 0: self.model.graph.update(self.model.data.getLast(remainder)) #Last update at the end
 	
 	#Step one period at a time and update the graph
 	#For use in debugging
 	def step(self):
 		t = self.model.step()
-		self.graph.update(self.model.data.getLast(1))
+		self.model.graph.update(self.model.data.getLast(1))
 		return t
 	
 	def pause(self):
@@ -372,7 +319,7 @@ class GUI():
 		
 		if hasattr(self, 'runButton'):
 			self.runButton['text'] = 'New Model'
-			self.runButton['command'] = self.preparePlots
+			self.runButton['command'] = self.run
 
 #
 # MISCELLANEOUS INTERFACE ELEMENTS

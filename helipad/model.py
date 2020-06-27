@@ -9,7 +9,7 @@ import sys, warnings, pandas
 from random import shuffle, choice
 from colour import Color
 from numpy import random, arange
-from helipad.graph import Plot
+from helipad.graph import *
 from helipad.helpers import *
 import matplotlib
 # import multiprocessing
@@ -427,7 +427,8 @@ class Helipad():
 		self.running = True
 		while self.running: self.step()
 	
-	def stop(self): self.running = False
+	def stop(self):
+		self.running = False
 			
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
@@ -578,10 +579,6 @@ class Helipad():
 		}
 		for k, v in stats.items():
 			print(k+': ', v)
-			
-	#
-	# And, last but not least, the GUI init
-	#
 
 	def launchGUI(self, headless=False):
 		if not isIpy() and not hasattr(self, 'root'): return
@@ -633,6 +630,58 @@ class Helipad():
 			self.gui = JupyterInterface(self)
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
+	
+	def launchPlots(self):
+		self.setup()
+		self.lastUpdate = 0
+		
+		#Trim the plot list to the checked items and sent it to Graph
+		plotsToDraw = {k:plot for k,plot in self.plots.items() if plot.selected}
+		
+		#If there are any graphs to plot
+		if not len(plotsToDraw.items()) and (not self.gui.stopafter.get() or not self.gui.expCSV.get()):
+			print('Plotless mode requires stop period and CSV export to be enabled.')
+			return
+		
+		#Disable graph checkboxes and any parameters that can't be changed during runtime
+		self.gui.checks.disable()
+		for param in self.allParams:
+			if not param.runtime and hasattr(param, 'element'):
+				if isinstance(param.element, dict):
+					for e in param.element.values(): e.configure(state='disabled')
+				else: param.element.configure(state='disabled')
+		
+		#If we've got plots, instantiate the Graph object
+		if len(plotsToDraw.items()) > 0:
+			def catchKeypress(event):
+				#Toggle legend boxes
+				if event.key == 't':
+					for plot in self.graph.plots.values():
+						leg = plot.axes.get_legend()
+						leg.set_visible(not leg.get_visible())
+					self.graph.fig.canvas.draw()
+			
+				#Pause on spacebar
+				elif event.key == ' ':
+					if self.running: self.gui.pause()
+					else: self.gui.run()
+			
+				#User functions
+				self.doHooks('graphKeypress', [event.key, self])
+		
+			self.graph = Graph(plotsToDraw)
+			self.graph.fig.canvas.set_window_title(self.name+(' ' if self.name!='' else '')+'Data Plots')
+			self.graph.fig.canvas.mpl_connect('close_event', self.gui.terminate)
+			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+		
+		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
+		else:
+			self.graph = None
+			self.stopafter.disable()
+			self.expCSV.disable()
+		
+		self.lastUpdate = 0
+		self.start()
 
 class MultiLevel(agent.baseAgent, Helipad):	
 	def __init__(self, breed, id, parentModel):
