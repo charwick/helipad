@@ -821,7 +821,8 @@ class Param(Item):
 		if self.obj is not None:
 			if self.type=='menu':
 				if isinstance(self.default, dict):
-					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
+					for k,v in self.value.items():
+						if k in self.default: v.set(self.opts[self.default[k]])
 					for b in self.keys:
 						if not b in self.default: self.value[b].set('') #Make sure we've got all the items in the array
 				else:
@@ -829,7 +830,8 @@ class Param(Item):
 					for k,v in self.value.items(): v.set(self.opts[self.default])
 			elif self.type=='check':
 				if isinstance(self.default, dict):
-					for k,v in self.value.items(): v.set(self.opts[self.default[k]])
+					for k,v in self.value.items():
+						if k in self.default: v.set(self.default[k])
 					for b in self.keys:
 						if not b in self.value: self.value[b].set(False) #Make sure we've got all the breeds in the array
 				else:
