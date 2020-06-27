@@ -185,7 +185,6 @@ for r in combinations(heli.nonMoneyGoods.keys(), 2):
 	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
 	c3 = Color(red=(c1.red+c2.red)/2, green=(c1.green+c2.green)/2, blue=(c1.blue+c2.blue)/2)
 	heli.addSeries('ratios', 'ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c3)
-heli.defaultPlots.extend(['rbal', 'ratios', 'inventory'])
 
 #Misc plots
 heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)

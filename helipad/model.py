@@ -133,10 +133,6 @@ class Helipad():
 			self.plots[reassign].series += self.plots[name].series
 		del self.plots[name]
 	
-	@property
-	def defaultPlots(self):
-		return [k for k,v in self.plots.items() if v.selected]
-	
 	#First arg is the plot it's a part of
 	#Second arg is a reporter name registered in DataCollector, or a lambda function
 	#Third arg is the series name. Use '' to not show in the legend.
