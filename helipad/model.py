@@ -616,7 +616,7 @@ class Helipad():
 				del self.plots[i]
 		
 		if not isIpy():
-			from helipad.gui import GUI
+			from helipad.cpanel import GUI
 			self.gui = GUI(self.root, self, headless)
 			
 			# Debug console
