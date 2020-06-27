@@ -11,6 +11,7 @@ from colour import Color
 from numpy import random, arange
 from helipad.graph import *
 from helipad.helpers import *
+from helipad.param import *
 import matplotlib
 # import multiprocessing
 
@@ -254,7 +255,8 @@ class Helipad():
 		if paramType is not None:
 			args['keys'] = self.primitives[prim].breeds if paramType=='breed' else self.goods
 		
-		params[name] = Param(**args)
+		pclass = globals()[type.title()+'Param'] if type.title()+'Param' in globals() else Param
+		params[name] = pclass(**args)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
@@ -778,144 +780,6 @@ class Shocks():
 	def everyn(self, n, offset=0):
 		def fn(t): return True if t%n-offset==0 else False
 		return fn
-
-#In the absence of Tkinter, minimal replacements
-if isIpy():
-	class StringVar:
-		def __init__(self): self.val=None
-		def get(self): return self.val
-		def set(self, val): self.val = val
-	BooleanVar = StringVar
-
-class Param(Item):
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-		
-		#Instantiate the objects once, because we don't want to overwrite them
-		if self.obj is not None:
-			if self.type=='menu': self.value = {b:StringVar() for b in self.keys}
-			elif self.type=='check': self.value = {b:BooleanVar() for b in self.keys}
-		else:
-			if self.type == 'menu': self.value = StringVar()
-			elif self.type == 'check': self.value = BooleanVar()
-		
-		self.reset() #Populate with default values
-	
-	#Instantiate the value dict from the default value.
-	#1. Are we dealing with a per-breed or a global default?
-	#1a. If per-breed, is the default universal or breed-specific?
-	#2. Do we have a menu, a check, or a slider?
-	#
-	#Per-breed universal menu:		str → dict{StringVar}
-	#Per-breed universal check:		bool → dict{BooleanVar}
-	#Per-breed universal slider:	int → dict{int}
-	#Per-breed specific menu:		dict{str} → dict{StringVar}
-	#Per-breed specific check:		dict{bool} → dict{BooleanVar}
-	#Per-breed specific slider:		dict{int} → dict{int}
-	#Global menu:					str → StringVar
-	#Global check:					bool → BooleanVar
-	#Global slider:					int → int
-	def reset(self):
-		if self.obj is not None:
-			if self.type=='menu':
-				if isinstance(self.default, dict):
-					for k,v in self.value.items():
-						if k in self.default: v.set(self.opts[self.default[k]])
-					for b in self.keys:
-						if not b in self.default: self.value[b].set('') #Make sure we've got all the items in the array
-				else:
-					#Set to opts[self.default] rather than self.default because OptionMenu deals in the whole string
-					for k,v in self.value.items(): v.set(self.opts[self.default])
-			elif self.type=='check':
-				if isinstance(self.default, dict):
-					for k,v in self.value.items():
-						if k in self.default: v.set(self.default[k])
-					for b in self.keys:
-						if not b in self.value: self.value[b].set(False) #Make sure we've got all the breeds in the array
-				else:
-					for k in self.value: self.value[k].set(self.default)
-			else:
-				if isinstance(self.default, dict):
-					self.value = {k:self.default[k] if k in self.default else 0 for k in self.keys}
-				else:
-					self.value = {k:self.default for k in self.keys}
-		else:
-			if self.type == 'menu': self.value.set(self.opts[self.default])
-			elif self.type == 'check': self.value.set(self.default)
-			else: self.value = self.default
-	
-	def set(self, val, item=None, updateGUI=True):
-		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
-		if self.type == 'menu':
-			if self.obj is None: self.value.set(self.opts[val])
-			else: self.value[item].set(self.opts[val])
-		elif self.type == 'check':
-			if self.obj is None: self.value.set(val)
-			else: self.value[item].set(val)
-		else:
-			if self.obj is None:
-				self.value = val
-				if updateGUI and hasattr(self, 'element') and not isIpy():
-					self.element.set(val)
-			else:
-				self.value[item] = val
-				if updateGUI and hasattr(self, 'element') and not isIpy():
-					self.element[item].set(val)
-		
-		#Tkinter updates the GUI automatically when setting BooleanVar or StringVar, but not for sliders.
-		#Jupyter requires an explicit update for all parameter types.
-		if updateGUI and isIpy():
-			if self.obj is None: self.element.children[0].value = val
-			else: self.element[item].children[0].value = val
-	
-	#Return a bool|str|num for a global parameter or a per-object parameter if the item is specified
-	#Otherwise return dict{str:bool|str|num} with all the items
-	def get(self, item=None):
-		if self.type == 'menu':
-			#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
-			flip = {y:x for x,y in self.opts.items()}
-			if self.obj is None: return flip[self.value.get()]								#Global parameter
-			else:
-				if item is None: return {o:flip[v.get()] for o,v in self.value.items()}		#Item parameter, item unspecified
-				else: return flip[self.value[item].get()]									#Item parameter, item specified
-		elif self.type == 'check':
-			return self.value.get() if self.obj is None or item is None else self.value[item].get()
-		else:
-			v = self.value if self.obj is None or item is None else self.value[item]
-			#Have sliders with an int step value return an int
-			if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int):
-				if isinstance(v, dict): v = {k: int(val) for k,val in v.items()}
-				else: v = int(v)
-			return v
-	
-	#Returns a one-parameter setter since Jupyter needs it
-	def setf(self, item=None):
-		def set(val):
-			self.set(val, item, updateGUI=False)
-		return set
-	
-	@property
-	def range(self):
-		if self.type=='check': return [False, True]
-		elif self.type=='menu': return self.opts.keys()
-		elif self.type=='slider':
-			values = arange(self.opts['low'], self.opts['high'], self.opts['step']).tolist()
-			values.append(self.opts['high']) #arange doesn't include the high
-			return values
-	
-	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
-	def addKey(self, key):
-		if self.obj is None: print('Can\'t add keys to a global parameter…')
-		else:
-			if isinstance(self.default, dict):
-				if key in self.default: self.value[key] = self.default[key]	#Forgive out-of-order specification
-				elif self.type=='menu':
-					self.value[key] = StringVar()
-					self.value[key].set(self.opts[next(iter(self.opts))])	#Choose first item of the list
-				elif self.type=='check': self.value[key] = BooleanVar()
-				else: self.value[key] = 0									#Set to zero
-			else:
-				self.value[key] = self.default
 
 #Append to the Color class
 def lighten(self):
