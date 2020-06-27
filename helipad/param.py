@@ -18,6 +18,7 @@ else:
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
+		if self.obj and not hasattr(self, 'value'): self.value = {b:None for b in kwargs['keys']}
 		self.reset() #Populate with default values
 	
 	#Set values from defaults
@@ -25,12 +26,13 @@ class Param(Item):
 	#Per-breed universal generic:	int → dict{int}
 	#Per-breed specific generic:	dict{int} → dict{int}
 	def reset(self):
-		if self.obj is None: self.value = self.default
+		if self.obj is None: self.set(self.default)
 		else:
 			if isinstance(self.default, dict):
-				self.value = {k:self.default[k] if k in self.default else 0 for k in self.keys}
+				for i in self.keys:
+					self.set(self.default[i] if i in self.default else self.defaultVal, i)
 			else:
-				self.value = {k:self.default for k in self.keys}
+				for i in self.keys: self.set(self.default, i)
 	
 	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI=True):
@@ -67,28 +69,16 @@ class Param(Item):
 		elif key in self.default:
 			self.value[key] = self.default[key]	#Forgive out-of-order specification
 		else: return True
+	
+	#If there's no user-specified default value, this is what gets returned
+	@property
+	def defaultVal(self): return None
 
 class MenuParam(Param):
 	def __init__(self, **kwargs):
 		#Instantiate the objects once, because we don't want to overwrite them
 		self.value = StringVar() if kwargs['obj'] is None else {b:StringVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
-		
-	#Set values from defaults
-	#Global menu:					str → StringVar
-	#Per-breed universal menu:		str → dict{StringVar}
-	#Per-breed specific menu:		dict{str} → dict{StringVar}
-	def reset(self):
-		if self.obj is None: self.value.set(self.opts[self.default])
-		else:
-			if isinstance(self.default, dict):
-				for k,v in self.value.items():
-					if k in self.default: v.set(self.opts[self.default[k]])
-				for b in self.keys:
-					if not b in self.default: self.value[b].set('') #Make sure we've got all the items in the array
-			else:
-				#Set to opts[self.default] rather than self.default because OptionMenu deals in the whole string
-				for k,v in self.value.items(): v.set(self.opts[self.default])
 	
 	def set(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
@@ -109,29 +99,19 @@ class MenuParam(Param):
 	def addKey(self, key):
 		if super().addkey(key) is None: return
 		self.value[key] = StringVar()
-		self.value[key].set(self.opts[next(iter(self.opts))])	#Choose first item of the list
-			
+		self.value[key].set(self.opts[self.defaultVal])
+	
+	#Choose first item of the list
+	@property
+	def defaultVal(self): return next(iter(self.opts))
 
 class CheckParam(Param):
+	defaultVal = False
+	
 	def __init__(self, **kwargs):
 		#Instantiate the objects once, because we don't want to overwrite them
 		self.value = BooleanVar() if kwargs['obj'] is None else {b:BooleanVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
-	
-	#Set values from defaults
-	#Global check:					bool → BooleanVar
-	#Per-breed universal check:		bool → dict{BooleanVar}
-	#Per-breed specific check:		dict{bool} → dict{BooleanVar}
-	def reset(self):
-		if self.obj is None: self.value.set(self.default)
-		else:
-			if isinstance(self.default, dict):
-				for k,v in self.value.items():
-					if k in self.default: v.set(self.default[k])
-				for b in self.keys:
-					if not b in self.value: self.value[b].set(False) #Make sure we've got all the breeds in the array
-			else:
-				for k in self.value: self.value[k].set(self.default)
 	
 	def set(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
@@ -148,8 +128,7 @@ class CheckParam(Param):
 		if super().addkey(key) is None: return
 		self.value[key] = BooleanVar()
 
-class SliderParam(Param):
-	
+class SliderParam(Param):	
 	#Because the slider tkinter widget doesn't use a Var() object like the others, we have
 	#to explicitly push the value to the slider if necessary
 	def set(self, val, item=None, updateGUI=True):
