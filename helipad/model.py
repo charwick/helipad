@@ -244,7 +244,6 @@ class Helipad():
 		args = {
 			'name': name,
 			'title': title,
-			'type': type,
 			'default': dflt,
 			'opts': opts,
 			'runtime': runtime,
@@ -255,7 +254,10 @@ class Helipad():
 		if paramType is not None:
 			args['keys'] = self.primitives[prim].breeds if paramType=='breed' else self.goods
 		
-		pclass = globals()[type.title()+'Param'] if type.title()+'Param' in globals() else Param
+		if type.title()+'Param' in globals(): pclass = globals()[type.title()+'Param']
+		else:
+			pclass = Param
+			args['type'] = type
 		params[name] = pclass(**args)
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):

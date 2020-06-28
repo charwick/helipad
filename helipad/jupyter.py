@@ -26,6 +26,7 @@ class JupyterInterface:
 				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
 			elif param.type=='checkentry':
 				i = interactive(func, b=isinstance(val, str) or val, s=val if isinstance(val, str) else '')
+				# i = HBox(i.children)
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
 	

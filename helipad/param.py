@@ -18,6 +18,7 @@ else:
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
+		if not hasattr(self, 'obj'): self.obj=None
 		if self.obj and not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']}
 		self.reset() #Populate with default values
 	
@@ -75,9 +76,11 @@ class Param(Item):
 	def defaultVal(self): return None
 
 class MenuParam(Param):
+	type = 'menu'
+	
 	def __init__(self, **kwargs):
 		#Instantiate the objects once, because we don't want to overwrite them
-		self.value = StringVar() if kwargs['obj'] is None else {b:StringVar() for b in kwargs['keys']}
+		self.value = StringVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:StringVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
 	
 	def set(self, val, item=None, updateGUI=True):
@@ -107,10 +110,11 @@ class MenuParam(Param):
 
 class CheckParam(Param):
 	defaultVal = False
+	type='check'
 	
 	def __init__(self, **kwargs):
 		#Instantiate the objects once, because we don't want to overwrite them
-		self.value = BooleanVar() if kwargs['obj'] is None else {b:BooleanVar() for b in kwargs['keys']}
+		self.value = BooleanVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:BooleanVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
 	
 	def set(self, val, item=None, updateGUI=True):
@@ -128,7 +132,9 @@ class CheckParam(Param):
 		if super().addkey(key) is None: return
 		self.value[key] = BooleanVar()
 
-class SliderParam(Param):	
+class SliderParam(Param):
+	type='slider'
+	
 	#Because the slider tkinter widget doesn't use a Var() object like the others, we have
 	#to explicitly push the value to the slider if necessary
 	def set(self, val, item=None, updateGUI=True):
@@ -161,10 +167,11 @@ class SliderParam(Param):
 
 class CheckentryParam(Param):
 	defaultVal = ''
+	type='checkentry'
 	
 	def __init__(self, **kwargs):
-		self.bvar = True if kwargs['obj'] is None else {k:True for k in kwargs['keys']}
-		self.svar = self.defaultVal if kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
+		self.bvar = True if 'obj' not in kwargs or kwargs['obj'] is None else {k:True for k in kwargs['keys']}
+		self.svar = self.defaultVal if 'obj' not in kwargs or kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
 		self.value = None
 		super().__init__(**kwargs)
 	

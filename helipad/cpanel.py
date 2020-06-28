@@ -9,6 +9,8 @@ from colour import Color
 from math import ceil
 # import time #For performance testing
 
+font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
+
 class GUI():	
 	def __init__(self, parent, model, headless=False):
 		self.parent = parent
@@ -68,7 +70,6 @@ class GUI():
 		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int', callback=switchPbar)
 		
 		if headless: return
-		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
 		
 		self.stopafter.grid(row=0,column=0, columnspan=3)
 		
@@ -107,63 +108,92 @@ class GUI():
 			gaip.pack(fill="x", side=TOP)
 			fnum += 1
 		
-		#Item parameter sliders
-		def buildSlider(itemDict, paramDict, prim=None, fnum=fnum):
-			for k, param in paramDict.items():
-				bpf_super = expandableFrame(bg=bgcolors[fnum%2], padx=5, pady=10, text=param.title, fg="#333", font=font)
-				bpf = bpf_super.subframe
-				
+		def drawCircle(frame, color, bg):
+			circle = Canvas(frame, width=17, height=12, bg=bg, highlightthickness=0)
+			circle.create_oval(0,0,12,12,fill=color, outline='')
+			return circle
+		
+		def renderParam(frame, param, item=None, bg='#EEEEEE'):
+			if param.type == 'hidden': return
+	
+			if param.obj is not None and item is None:
+				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
+				efSub = expFrame.subframe
 				i=0
 				param.element = {}
-				for name, b in itemDict.items():
-					
-					#Circle for item color
-					lframe = Frame(bpf, bg=bgcolors[fnum%2], padx=0, pady=0)
-					c = Canvas(lframe, width=17, height=12, bg=bgcolors[fnum%2], highlightthickness=0)
-					c.create_oval(0,0,12,12,fill=b.color.hex_l, outline='')
-					c.grid(row=0, column=0, pady=(0,8))
-					
+				for name, b in param.keys.items():
+					if hasattr(b, 'money') and b.money: continue
+			
 					#Do this separately because they should all be stacked
+					f = renderParam(efSub, param, item=name, bg=bg)
 					if param.type == 'checkentry':
-						dflt = param.get(name)
-						param.element[name] = checkEntry(lframe, name.title(), bg=bgcolors[fnum%2], width=15)
-						param.element[name].set(dflt)
-						param.element[name].grid(row=0, column=1)
-						bpf.columnconfigure(0,weight=1)
-						lframe.grid(row=i, column=0)
+						f.grid(row=i, column=0)
+						efSub.columnconfigure(0,weight=1)
+					
+					#Everything else goes in the two-column format
 					else:					
-						#Item name label
-						#Do everything differently if we've got a checkbox or checkentry
-						if param.type == 'check':
-							param.element[name] = Checkbutton(lframe, text=name.title(), var=param.value[name], onvalue=True, offvalue=False, command=setVar(param, name), bg=bgcolors[fnum%2])
-							param.element[name].variable = param.value[name] #Keep track of this because it doesn't pass the value to the callback
-							param.element[name].grid(row=0, column=1)
-					
-						else:
-							Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
-				
-							if param.type == 'menu':
-								param.element[name] = OptionMenu(bpf, param.value[name], command=setVar(param, name), *param.opts.values())
-								param.element[name].config(bg=bgcolors[fnum%2])
-							elif param.type == 'slider':
-								param.element[name] = Scale(bpf, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, name), bg=bgcolors[fnum%2])
-								param.element[name].set(param.get(name))
-						
-							param.element[name].grid(row=ceil((i+1)/2)*2-1, column=i%2)						
-					
-						bpf.columnconfigure(0,weight=1)
-						bpf.columnconfigure(1,weight=1)
-						lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
-						if self.balloon and param.desc is not None: self.balloon.bind(param.element[name], param.desc)
-					
+						f.grid(row=ceil((i+1)/2)*2, column=i%2)
+						efSub.columnconfigure(0,weight=1)
+						efSub.columnconfigure(1,weight=1)
+			
 					i+=1
-				bpf_super.pack(fill="x", side=TOP)
+				return expFrame
+			else:
+				title = param.title if item is None else item.title()
+				wrap = Frame(frame, bg=bg, padx=10 if item is None else 0, pady=8 if item is None else 0)
 				
-		buildSlider(model.nonMoneyGoods, model.goodParams, fnum=fnum)
+				#Get .value directly rather than .get because we need the Var() items
+				#Except for checkentry since it doesn't store its values in .value
+				if param.value is not None:
+					val = param.value if item is None else param.value[item]
+				
+				#These put the circle beside the widget
+				if param.type in ['check', 'checkentry']:
+					if param.type=='check':
+						el = Checkbutton(wrap, text=title, var=val, onvalue=True, offvalue=False, command=setVar(param, item), bg=bg)
+					elif param.type=='checkentry':
+						dflt = param.get(item)
+						el = checkEntry(wrap, title, bg=bg, width=15, padx=10, pady=8 if item is None else 5)
+						el.set(dflt)
+					el.grid(row=0, column=1)
+					if item is not None: drawCircle(wrap, param.keys[item].color.hex_l, bg).grid(row=0, column=0)
+		
+				#These need a separate label
+				else:					
+					if param.type == 'menu':
+						el = OptionMenu(wrap, val, *param.opts.values(), command=setVar(param, item))
+						el.config(bg=bg)
+					elif param.type == 'slider':
+						el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, item), bg=bg)
+						el.set(param.get(item))
+					
+						
+					if item is None:
+						label = Label(wrap, text=title, fg="#333", bg=bg).pack(side=LEFT, padx=8, pady=3)
+						el.pack(side=RIGHT)
+					else:
+						lframe = Frame(wrap, bg=bg, padx=0, pady=0)
+						label = Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
+						drawCircle(lframe, param.keys[item].color.hex_l, bg).grid(row=0, column=0, pady=(0,8))
+						lframe.grid(row=1, column=0)
+						el.grid(row=0,column=0)
+					
+					if self.balloon and param.desc is not None: self.balloon.bind(el, param.desc)
+				
+				if item is None:
+					param.element = el
+				else: param.element[item] = el
+				return wrap
+		
+		for k, param in model.goodParams.items():
+			e = renderParam(None, param, bg=bgcolors[fnum%2])
+			if e is not None: e.pack(fill="x")
 		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
 		for p,v in model.primitives.items():
 			if v.breedParams != {}:
-				buildSlider(v.breeds, v.breedParams, prim=p, fnum=fnum)
+				for k, param in v.breedParams.items():
+					e = renderParam(None, param, bg=bgcolors[fnum%2])
+					if e is not None: e.pack(fill="x")
 				fnum += 1
 		
 		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])
@@ -173,37 +203,8 @@ class GUI():
 		
 		#Parameter sliders
 		for k, param in self.model.params.items():
-			if param.type == 'hidden': continue
-			
-			#These don't need a separate label
-			elif param.type == 'check':
-				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
-				param.element = Checkbutton(f, text=param.title, var=param.value, onvalue=True, offvalue=False, command=setVar(param), bg=bgcolors[fnum%2])
-				param.element.variable = param.value #Keep track of this because it doesn't pass the value to the callback
-				param.element.pack()
-			elif param.type == 'checkentry':
-				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
-				dflt = param.get()
-				param.element = checkEntry(f, param.title, bg=bgcolors[fnum%2], width=15)
-				param.element.set(dflt)
-				param.element.pack()
-			
-			#These do need a separate label
-			else:
-				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
-				Label(f, text=param.title, fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)
-				if param.type == 'menu':
-					#Callback is different because menus automatically update their variable
-					param.element = OptionMenu(f, param.value, *param.opts.values(), command=setVar(param))
-					param.element.config(bg=bgcolors[fnum%2])
-				elif param.type == 'slider':
-					param.element = Scale(f, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param), bg=bgcolors[fnum%2])
-					param.element.set(param.value)
-					
-				param.element.pack(side=RIGHT)
-				if self.balloon and param.desc is not None: self.balloon.bind(param.element, param.desc)
-				
-			f.pack(fill="x", side=TOP)
+			e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
+			if e is not None: e.pack(fill=None if param.type=='check' else X)
 		fnum += 1
 		
 		gapl = self.model.doHooks('GUIAbovePlotList', [self, bgcolors[fnum%2]])
@@ -468,8 +469,8 @@ class textCheck(Label):
 
 # A checkbox that enables/disables a text box
 class checkEntry(Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), default='', type='string', callback=None):
-		Frame.__init__(self, parent, bg=bg)
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), padx=0, pady=0, default='', type='string', callback=None):
+		Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
 		
 		#If we're enforcing int, don't allow nonnumerical input
 		self.type=type
