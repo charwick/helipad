@@ -21,16 +21,20 @@ class JupyterInterface:
 			if param.type=='slider':
 				i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
 			elif param.type=='check':
-				i = interactive(func, val=param.default)
+				i = interactive(func, val=val)
 			elif param.type=='menu':
 				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
+			elif param.type=='checkentry':
+				i = interactive(func, b=isinstance(val, str) or val, s=val if isinstance(val, str) else '')
+				if val==False: i.children[1].disabled = True
+				i.children[1].description = ''
 	
 			if i is not None:
 				circle='<span class="helipad_circle" style="background:'+circle.hex_l+'"></span>' if circle is not None else ''
 				i.children[0].description = circle+title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
 				i.children[0].description_tooltip = param.desc if param.desc is not None else ''
-				i.children[0].value = val
+				if param.type!='checkentry': i.children[0].value = val
 	
 			return i
 		

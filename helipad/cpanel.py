@@ -123,29 +123,38 @@ class GUI():
 					c.create_oval(0,0,12,12,fill=b.color.hex_l, outline='')
 					c.grid(row=0, column=0, pady=(0,8))
 					
-					#Item name label
-					if param.type != 'check':
-						Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
-				
-						if param.type == 'menu':
-							param.element[name] = OptionMenu(bpf, param.value[name], command=setVar(param, name), *param.opts.values())
-							param.element[name].config(bg=bgcolors[fnum%2])
-						elif param.type == 'slider':
-							param.element[name] = Scale(bpf, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, name), bg=bgcolors[fnum%2])
-							param.element[name].set(param.get(name))
-						
-						param.element[name].grid(row=ceil((i+1)/2)*2-1, column=i%2)
-					
-					#Do everything differently if we've got a checkbox
-					else:
-						param.element[name] = Checkbutton(lframe, text=name.title(), var=param.value[name], onvalue=True, offvalue=False, command=setVar(param, name), bg=bgcolors[fnum%2])
-						param.element[name].variable = param.value[name] #Keep track of this because it doesn't pass the value to the callback
+					#Do this separately because they should all be stacked
+					if param.type == 'checkentry':
+						dflt = param.get(name)
+						param.element[name] = checkEntry(lframe, name.title(), bg=bgcolors[fnum%2], width=15)
+						param.element[name].set(dflt)
 						param.element[name].grid(row=0, column=1)
+						bpf.columnconfigure(0,weight=1)
+						lframe.grid(row=i, column=0)
+					else:					
+						#Item name label
+						#Do everything differently if we've got a checkbox or checkentry
+						if param.type == 'check':
+							param.element[name] = Checkbutton(lframe, text=name.title(), var=param.value[name], onvalue=True, offvalue=False, command=setVar(param, name), bg=bgcolors[fnum%2])
+							param.element[name].variable = param.value[name] #Keep track of this because it doesn't pass the value to the callback
+							param.element[name].grid(row=0, column=1)
 					
-					bpf.columnconfigure(0,weight=1)
-					bpf.columnconfigure(1,weight=1)
-					lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
-					if self.balloon and param.desc is not None: self.balloon.bind(param.element[name], param.desc)
+						else:
+							Label(lframe, text=name.title(), fg="#333", bg=bgcolors[fnum%2]).grid(row=0, column=1, pady=(0,8))
+				
+							if param.type == 'menu':
+								param.element[name] = OptionMenu(bpf, param.value[name], command=setVar(param, name), *param.opts.values())
+								param.element[name].config(bg=bgcolors[fnum%2])
+							elif param.type == 'slider':
+								param.element[name] = Scale(bpf, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, name), bg=bgcolors[fnum%2])
+								param.element[name].set(param.get(name))
+						
+							param.element[name].grid(row=ceil((i+1)/2)*2-1, column=i%2)						
+					
+						bpf.columnconfigure(0,weight=1)
+						bpf.columnconfigure(1,weight=1)
+						lframe.grid(row=ceil((i+1)/2)*2, column=i%2)
+						if self.balloon and param.desc is not None: self.balloon.bind(param.element[name], param.desc)
 					
 					i+=1
 				bpf_super.pack(fill="x", side=TOP)
@@ -165,11 +174,21 @@ class GUI():
 		#Parameter sliders
 		for k, param in self.model.params.items():
 			if param.type == 'hidden': continue
+			
+			#These don't need a separate label
 			elif param.type == 'check':
 				f = Frame(self.parent, bg=bgcolors[fnum%2], pady=5)
 				param.element = Checkbutton(f, text=param.title, var=param.value, onvalue=True, offvalue=False, command=setVar(param), bg=bgcolors[fnum%2])
 				param.element.variable = param.value #Keep track of this because it doesn't pass the value to the callback
 				param.element.pack()
+			elif param.type == 'checkentry':
+				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
+				dflt = param.get()
+				param.element = checkEntry(f, param.title, bg=bgcolors[fnum%2], width=15)
+				param.element.set(dflt)
+				param.element.pack()
+			
+			#These do need a separate label
 			else:
 				f = Frame(self.parent, bg=bgcolors[fnum%2], padx=10, pady=8)
 				Label(f, text=param.title, fg="#333", bg=bgcolors[fnum%2]).pack(side=LEFT, padx=8, pady=3)

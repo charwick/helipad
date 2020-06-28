@@ -18,7 +18,7 @@ else:
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
-		if self.obj and not hasattr(self, 'value'): self.value = {b:None for b in kwargs['keys']}
+		if self.obj and not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']}
 		self.reset() #Populate with default values
 	
 	#Set values from defaults
@@ -39,7 +39,7 @@ class Param(Item):
 		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
 		
 		#Jupyter requires an explicit update for all parameter types.
-		if updateGUI and isIpy():
+		if updateGUI and isIpy() and hasattr(self, 'element'):
 			if self.obj is None: self.element.children[0].value = val
 			else: self.element[item].children[0].value = val
 	
@@ -133,14 +133,10 @@ class SliderParam(Param):
 	#to explicitly push the value to the slider if necessary
 	def set(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
-		if self.obj is None:
-			self.value = val
-			if updateGUI and hasattr(self, 'element') and not isIpy():
-				self.element.set(val)
-		else:
-			self.value[item] = val
-			if updateGUI and hasattr(self, 'element') and not isIpy():
-				self.element[item].set(val)
+		super().set(val, item, updateGUI)
+		if updateGUI and hasattr(self, 'element') and not isIpy():
+			if self.obj is None: self.element.set(val)
+			else: self.element[item].set(val)
 	
 	def get(self, item=None):
 		v = super().get(item)
@@ -159,3 +155,60 @@ class SliderParam(Param):
 	def addKey(self, key):
 		if super().addkey(key) is None: return
 		self.value[key] = 0
+	
+	@property
+	def defaultVal(self): return self.opts['low']
+
+class CheckentryParam(Param):
+	defaultVal = ''
+	
+	def __init__(self, **kwargs):
+		self.bvar = True if kwargs['obj'] is None else {k:True for k in kwargs['keys']}
+		self.svar = self.defaultVal if kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
+		self.value = None
+		super().__init__(**kwargs)
+	
+	def get(self, item=None):
+		#Global parameter
+		if self.obj is None:
+			if hasattr(self, 'element') and not isIpy(): return self.element.get()
+			else: return self.svar if self.bvar else False
+		#Per-item parameter, get all
+		elif item is None:
+			if hasattr(self, 'element') and not isIpy(): return {k: v.get() for k,v in self.element.items()}
+			else: return {k: self.svar[k] if self.bvar[k] else False for k in self.keys}
+		#Per-item parameter, get one
+		else:
+			if hasattr(self, 'element') and item in self.element and not isIpy(): return self.element[item].get()
+			else: return self.svar[item] if self.bvar[item] else False
+	
+	def set(self, val, item=None, updateGUI=True):
+		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
+		if self.obj is None:
+			if hasattr(self, 'element') and not isIpy(): self.element.set(val)
+			elif isinstance(val, bool):
+				self.bvar = val
+				if isIpy() and hasattr(self, 'element'): self.element.children[1].disabled = not val
+			elif isinstance(val, str):
+				self.bvar = True
+				self.svar = val
+				if isIpy() and hasattr(self, 'element'): self.element.children[1].disabled = False
+		else:
+			if hasattr(self, 'element') and not isIpy(): self.element[item].set(val)
+			elif isinstance(val, bool): self.bvar[item] = val
+			elif isinstance(val, str):
+				self.bvar[item] = True
+				self.svar[item] = val
+		
+		if updateGUI and isIpy() and hasattr(self, 'element'):
+			els = self.element.children if self.obj is None else self.element[item].children
+			els[0].value = val != False 
+			if isinstance(val, str): els[1].value = val
+		
+	#Override because it's a complex type
+	def setf(self, item=None):
+		def sets(b, s):
+			self.set(s if b else False, item, updateGUI=False)
+			els = self.element if item is None else self.element[item]
+			els.children[1].disabled = not b
+		return sets
