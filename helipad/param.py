@@ -173,6 +173,7 @@ class CheckentryParam(Param):
 		self.bvar = True if 'obj' not in kwargs or kwargs['obj'] is None else {k:True for k in kwargs['keys']}
 		self.svar = self.defaultVal if 'obj' not in kwargs or kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
 		self.value = None
+		kwargs['entryType'] = int if 'entryType' in kwargs and kwargs['entryType']=='int' else str
 		super().__init__(**kwargs)
 	
 	def get(self, item=None):
@@ -196,21 +197,21 @@ class CheckentryParam(Param):
 			elif isinstance(val, bool):
 				self.bvar = val
 				if isIpy() and hasattr(self, 'element'): self.element.children[1].disabled = not val
-			elif isinstance(val, str):
+			elif isinstance(val, self.entryType):
 				self.bvar = True
 				self.svar = val
 				if isIpy() and hasattr(self, 'element'): self.element.children[1].disabled = False
 		else:
 			if hasattr(self, 'element') and not isIpy(): self.element[item].set(val)
 			elif isinstance(val, bool): self.bvar[item] = val
-			elif isinstance(val, str):
+			elif isinstance(val, self.entryType):
 				self.bvar[item] = True
 				self.svar[item] = val
 		
 		if updateGUI and isIpy() and hasattr(self, 'element'):
 			els = self.element.children if self.obj is None else self.element[item].children
 			els[0].value = val != False 
-			if isinstance(val, str): els[1].value = val
+			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 		
 	#Override because it's a complex type
 	def setf(self, item=None):

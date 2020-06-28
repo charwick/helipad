@@ -9,8 +9,6 @@ from colour import Color
 from math import ceil
 # import time #For performance testing
 
-font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
-
 class GUI():	
 	def __init__(self, parent, model, headless=False):
 		self.parent = parent
@@ -47,66 +45,20 @@ class GUI():
 			return lambda: self.model.shocks[name].do(self.model)
 		
 		#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
-		def switchPbar(val):
+		def switchPbar(model, name, val):
+			if not hasattr(self, 'progress'): return
 			if not val:
 				self.progress.config(mode='indeterminate')
-				if self.model.running: self.progress.start()
+				if model.running: self.progress.start()
 			else:
 				self.progress.config(mode='determinate')
-				if self.model.running: self.progress.stop()
-			self.model.root.update()
+				if model.running: self.progress.stop()
+			model.root.update()
+		self.model.params['stopafter'].callback = switchPbar
 		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
-		
-		gtop = self.model.doHooks('GUITop', [self, bgcolors[fnum%2]])
-		if gtop:
-			gtop.pack(fill="x", side=TOP)
-			fnum += 1
-		
-		#Put this up here so the variable name is accessible when headless
-		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
-		self.stopafter = checkEntry(frame1, title='Stop on period', bg=bgcolors[fnum%2], default=10000, width=10, type='int', callback=switchPbar)
-		
-		if headless: return
-		
-		self.stopafter.grid(row=0,column=0, columnspan=3)
-		
-		#CSV export
-		self.expCSV = checkEntry(frame1, title='CSV?', bg=bgcolors[fnum%2], default='Filename')
-		self.expCSV.grid(row=1, column=0, columnspan=3)
-		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], bg=bgcolors[fnum%2], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
-		self.refresh.slide.set(4) #Default refresh of 20
-		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.runButton = Button(frame1, text='Run', command=self.run, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
-		self.runButton.grid(row=2, column=2, pady=(15,0))
-		
-		#Buttons
-		b=0
-		for f in self.model.buttons:
-			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
-			button.grid(row=3+int(ceil((b+1)/2)), column=b%2, pady=(15,0))
-			if self.balloon and f[2] is not None: self.balloon.bind(button, f[2])
-			b+=1
-		
-		frame1.columnconfigure(0,weight=1)
-		frame1.columnconfigure(1,weight=1)
-		frame1.pack(fill="x", side=TOP)
-		fnum += 1
-		
-		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
-		frame0 = Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
-		self.progress = Progressbar(frame0, length=250, style="whitebg.Horizontal.TProgressbar")
-		self.progress.grid(row=0, column=0)
-		frame0.columnconfigure(0,weight=1)
-		frame0.pack(fill="x", side=TOP)
-		
-		gaip = self.model.doHooks('GUIAboveItemParams', [self, bgcolors[fnum%2]])
-		if gaip:
-			gaip.pack(fill="x", side=TOP)
-			fnum += 1
 		
 		def drawCircle(frame, color, bg):
 			circle = Canvas(frame, width=17, height=12, bg=bg, highlightthickness=0)
@@ -140,7 +92,7 @@ class GUI():
 				return expFrame
 			else:
 				title = param.title if item is None else item.title()
-				wrap = Frame(frame, bg=bg, padx=10 if item is None else 0, pady=8 if item is None else 0)
+				wrap = Frame(frame, bg=bg, padx=10 if item is None and not getattr(param,'config',False) else 0, pady=8 if item is None and not getattr(param,'config',False) else 0)
 				
 				#Get .value directly rather than .get because we need the Var() items
 				#Except for checkentry since it doesn't store its values in .value
@@ -153,7 +105,7 @@ class GUI():
 						el = Checkbutton(wrap, text=title, var=val, onvalue=True, offvalue=False, command=setVar(param, item), bg=bg)
 					elif param.type=='checkentry':
 						dflt = param.get(item)
-						el = checkEntry(wrap, title, bg=bg, width=15, padx=10, pady=8 if item is None else 5)
+						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=setVar(param, item))
 						el.set(dflt)
 					el.grid(row=0, column=1)
 					if item is not None: drawCircle(wrap, param.keys[item].color.hex_l, bg).grid(row=0, column=0)
@@ -185,6 +137,52 @@ class GUI():
 				else: param.element[item] = el
 				return wrap
 		
+		gtop = self.model.doHooks('GUITop', [self, bgcolors[fnum%2]])
+		if gtop:
+			gtop.pack(fill="x", side=TOP)
+			fnum += 1
+		
+		#Put this up here so the variable name is accessible when headless
+		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
+		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
+		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
+		self.model.params['stopafter'].set(False)
+		self.model.params['csv'].set(False)
+		
+		if headless: return
+		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
+		
+		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], bg=bgcolors[fnum%2], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
+		self.refresh.slide.set(4) #Default refresh of 20
+		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
+		self.runButton = Button(frame1, text='Run', command=self.run, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
+		self.runButton.grid(row=2, column=2, pady=(15,0))
+		
+		#Buttons
+		b=0
+		for f in self.model.buttons:
+			button = Button(frame1, text=f[0], command=f[1], padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
+			button.grid(row=3+int(ceil((b+1)/2)), column=b%2, pady=(15,0))
+			if self.balloon and f[2] is not None: self.balloon.bind(button, f[2])
+			b+=1
+		
+		frame1.columnconfigure(0,weight=1)
+		frame1.columnconfigure(1,weight=1)
+		frame1.pack(fill="x", side=TOP)
+		fnum += 1
+		
+		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
+		frame0 = Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
+		self.progress = Progressbar(frame0, length=250, style="whitebg.Horizontal.TProgressbar")
+		self.progress.grid(row=0, column=0)
+		frame0.columnconfigure(0,weight=1)
+		frame0.pack(fill="x", side=TOP)
+		
+		gaip = self.model.doHooks('GUIAboveItemParams', [self, bgcolors[fnum%2]])
+		if gaip:
+			gaip.pack(fill="x", side=TOP)
+			fnum += 1
+		
 		for k, param in model.goodParams.items():
 			e = renderParam(None, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill="x")
@@ -203,7 +201,8 @@ class GUI():
 		
 		#Parameter sliders
 		for k, param in self.model.params.items():
-			e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
+			if not getattr(param, 'config', False):
+				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill=None if param.type=='check' else X)
 		fnum += 1
 		
@@ -272,7 +271,7 @@ class GUI():
 			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
 			# self.start = newtime
 	
-			st = model.gui.stopafter.get()
+			st = model.param('stopafter')
 			if st:
 				model.gui.progress['value'] = model.t/st*100
 				if model.graph is None: model.root.update() #Make sure we don't hang the interface if plotless
@@ -289,7 +288,7 @@ class GUI():
 			self.runButton['command'] = self.pause
 		
 		#Adjust progress bar
-		if not self.stopafter.get():
+		if not self.model.params['stopafter'].get():
 			self.progress.config(mode='indeterminate')
 			self.progress.start()
 		else:
@@ -317,8 +316,8 @@ class GUI():
 		self.model.doHooks('pause', [self])
 	
 	def terminate(self, evt=False):
-		if self.model.running and (self.headless or self.expCSV.get()):
-			self.model.data.saveCSV(self.expCSV.get() if not self.headless else 'data')
+		if self.model.running and (self.headless or self.model.param('csv')):
+			self.model.data.saveCSV(self.model.param('csv') if not self.headless else 'data')
 		
 		self.model.stop()
 		self.model.hasModel = False
@@ -331,8 +330,6 @@ class GUI():
 			if isinstance(param.element, dict):
 				for e in param.element.values(): e.configure(state='normal')
 			else: param.element.configure(state='normal')
-		self.stopafter.enable()
-		self.expCSV.enable()
 		
 		#Passes GUI object and model data to the callback
 		self.model.doHooks('terminate', [self, self.model.data.dataframe])
@@ -469,7 +466,7 @@ class textCheck(Label):
 
 # A checkbox that enables/disables a text box
 class checkEntry(Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), padx=0, pady=0, default='', type='string', callback=None):
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), padx=0, pady=0, default='', type='string', command=None):
 		Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
 		
 		#If we're enforcing int, don't allow nonnumerical input
@@ -493,7 +490,7 @@ class checkEntry(Frame):
 		self.entryValue.set(default)
 		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate=validate, validatecommand=valf, highlightbackground=bg)
 		self.textbox.grid(row=0, column=1)
-		self.callback = callback
+		self.callback = command
 		
 		self.checkVar = BooleanVar()
 		self.checkbox = Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
@@ -528,6 +525,9 @@ class checkEntry(Frame):
 		self.textbox.config(state='disabled' if disable else 'normal')
 		self.checkbox.config(state='disabled' if disable else 'normal')
 		self.enabled = not disable
+	
+	#Here for compatibility with other Tkinter widgets
+	def configure(self, state): self.disabled(state=='disabled')
 
 #An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):

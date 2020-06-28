@@ -25,8 +25,10 @@ class JupyterInterface:
 			elif param.type=='menu':
 				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
 			elif param.type=='checkentry':
-				i = interactive(func, b=isinstance(val, str) or val, s=val if isinstance(val, str) else '')
-				# i = HBox(i.children)
+				i = interactive(func, b=isinstance(val, param.entryType) or val, s=str(val) if isinstance(val, param.entryType) else '')
+				if param.obj is None:
+					i = HBox(i.children)
+					i.children[0].layout = Layout(width='150px')
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
 	
@@ -53,6 +55,13 @@ class JupyterInterface:
 			accordion.set_title(0, param.title)
 			return accordion
 	
+		#Global config
+		for param in model.params.values():
+			if not getattr(param, 'config', False): continue
+			param.element = constructElement(param, param.setf(), param.title, param.get())
+			if param.element is not None: display(param.element)
+			param.set(False)
+		
 		#Per-good parameters
 		for param in model.goodParams.values():
 			display(constructAccordion(param, model.nonMoneyGoods))
@@ -64,5 +73,6 @@ class JupyterInterface:
 	
 		#Global parameters
 		for param in model.params.values():
+			if getattr(param, 'config', False): continue
 			param.element = constructElement(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)

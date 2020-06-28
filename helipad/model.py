@@ -62,6 +62,10 @@ class Helipad():
 			'utility': 'Utility'
 		}
 		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
+				
+		#Privileged parameters
+		self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
+		self.addParameter('csv', 'CSV?', 'checkentry', 'filename', runtime=True, config=True)
 		
 		#Check for updates
 		from helipad.__init__ import __version__
@@ -233,7 +237,7 @@ class Helipad():
 		self.doHooks('modelPostSetup', [self])
 			
 	#Registers an adjustable parameter exposed in the config GUI.	
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None):
+	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, **args):
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim].breedParams
 		elif paramType=='good': params=self.goodParams
@@ -241,7 +245,7 @@ class Helipad():
 		
 		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
 		
-		args = {
+		args.update({
 			'name': name,
 			'title': title,
 			'default': dflt,
@@ -250,7 +254,7 @@ class Helipad():
 			'callback': callback,
 			'desc': desc,
 			'obj': paramType
-		}
+		})
 		if paramType is not None:
 			args['keys'] = self.primitives[prim].breeds if paramType=='breed' else self.goods
 		
@@ -642,7 +646,7 @@ class Helipad():
 		plotsToDraw = {k:plot for k,plot in self.plots.items() if plot.selected}
 		
 		#If there are any graphs to plot
-		if not len(plotsToDraw.items()) and (not self.gui.stopafter.get() or not self.gui.expCSV.get()):
+		if not len(plotsToDraw.items()) and (not self.param('stopafter') or not self.param('csv')):
 			print('Plotless mode requires stop period and CSV export to be enabled.')
 			return
 		
@@ -680,8 +684,8 @@ class Helipad():
 		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
 		else:
 			self.graph = None
-			self.stopafter.disable()
-			self.expCSV.disable()
+			self.params['stopafter'].element.disable()
+			self.params['csv'].element.disable()
 		
 		self.start()
 
