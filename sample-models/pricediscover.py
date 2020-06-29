@@ -62,7 +62,7 @@ heli.addHook('match', match)
 #Stop the model when we're basically equilibrated
 def modelStep(model, stage):
 	if model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20:
-		model.gui.terminate()
+		model.terminate()
 heli.addHook('modelStep', modelStep)
 
 #===============

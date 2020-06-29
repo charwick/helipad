@@ -147,6 +147,7 @@ class GUI():
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
 		self.model.params['stopafter'].set(False)
+		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 		
 		if headless: return
@@ -255,28 +256,21 @@ class GUI():
 						info['CFBundleName'] = 'Helipad'
 			except: print('Use pip to install pyobjc for nice Mac features')
 		
-		def updateGraph(model):
-			if model.t%model.gui.updateEvery != 0: return
-			if model.graph is not None:
-				data = model.gui.model.data.getLast(model.t - model.graph.lastUpdate)
-	
-				if (model.graph.resolution > 1):
-					data = {k: keepEvery(v, model.graph.resolution) for k,v in data.items()}
-				model.graph.update(data)
-				model.graph.lastUpdate = model.t
-				if model.graph.resolution > model.gui.updateEvery: model.gui.updateEvery = model.graph.resolution
-			
-			## Performance indicator
-			# newtime = time.time()
-			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
-			# self.start = newtime
-	
-			st = model.param('stopafter')
-			if st:
-				model.gui.progress['value'] = model.t/st*100
-				if model.graph is None: model.root.update() #Make sure we don't hang the interface if plotless
-				if model.t>=st: model.gui.terminate()
-		self.model.addHook('modelPostStep', updateGraph)
+		def terminate(model, data):
+			model.gui.progress.stop()
+		
+			#Re-enable checkmarks and options
+			model.gui.checks.enable()
+			for param in model.allParams:
+				if not hasattr(param, 'element'): continue
+				if isinstance(param.element, dict):
+					for e in param.element.values(): e.configure(state='normal')
+				else: param.element.configure(state='normal')
+		
+			if hasattr(self, 'runButton'):
+				model.gui.runButton['text'] = 'New Model'
+				model.gui.runButton['command'] = model.gui.run
+		self.model.addHook('terminate', terminate)
 		
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
@@ -285,7 +279,7 @@ class GUI():
 	def run(self):
 		if hasattr(self, 'runButton'):
 			self.runButton['text'] = 'Pause'
-			self.runButton['command'] = self.pause
+			self.runButton['command'] = self.model.stop
 		
 		#Adjust progress bar
 		if not self.model.params['stopafter'].get():
@@ -295,11 +289,25 @@ class GUI():
 			self.progress.config(mode='determinate')
 		
 		#self.start = time.time()
-		if not self.model.hasModel: self.model.launchPlots()
+		if not self.model.hasModel:
+			#Disable graph checkboxes and any parameters that can't be changed during runtime
+			self.checks.disable()
+			for param in self.model.allParams:
+				if not param.runtime and hasattr(param, 'element'):
+					if isinstance(param.element, dict):
+						for e in param.element.values(): e.configure(state='disabled')
+					else: param.element.configure(state='disabled')
+			self.model.launchPlots()
 		else: self.model.start()
 		
 		remainder = self.model.t % self.updateEvery
 		if remainder > 0: self.model.graph.update(self.model.data.getLast(remainder)) #Last update at the end
+		
+		#Pause if it hasn't terminated
+		if self.model.hasModel:
+			self.progress.stop()
+			self.runButton['text'] = 'Run'
+			self.runButton['command'] = self.run
 	
 	#Step one period at a time and update the graph
 	#For use in debugging
@@ -307,36 +315,6 @@ class GUI():
 		t = self.model.step()
 		self.model.graph.update(self.model.data.getLast(1))
 		return t
-	
-	def pause(self):
-		self.model.stop()
-		self.progress.stop()
-		self.runButton['text'] = 'Run'
-		self.runButton['command'] = self.run
-		self.model.doHooks('pause', [self])
-	
-	def terminate(self, evt=False):
-		if self.model.running and (self.headless or self.model.param('csv')):
-			self.model.data.saveCSV(self.model.param('csv') if not self.headless else 'data')
-		
-		self.model.stop()
-		self.model.hasModel = False
-		self.progress.stop()
-		
-		#Re-enable checkmarks and options
-		self.checks.enable()
-		for param in self.model.allParams:
-			if not hasattr(param, 'element'): continue
-			if isinstance(param.element, dict):
-				for e in param.element.values(): e.configure(state='normal')
-			else: param.element.configure(state='normal')
-		
-		#Passes GUI object and model data to the callback
-		self.model.doHooks('terminate', [self, self.model.data.dataframe])
-		
-		if hasattr(self, 'runButton'):
-			self.runButton['text'] = 'New Model'
-			self.runButton['command'] = self.run
 
 #
 # MISCELLANEOUS INTERFACE ELEMENTS
@@ -522,8 +500,8 @@ class checkEntry(Frame):
 	def enable(self): self.disabled(False)
 	def disable(self): self.disabled(True)
 	def disabled(self, disable):
-		self.textbox.config(state='disabled' if disable else 'normal')
 		self.checkbox.config(state='disabled' if disable else 'normal')
+		self.textbox.config(state='disabled' if disable or not self.checkVar.get() else 'normal')
 		self.enabled = not disable
 	
 	#Here for compatibility with other Tkinter widgets

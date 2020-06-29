@@ -65,7 +65,7 @@ class Helipad():
 				
 		#Privileged parameters
 		self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
-		self.addParameter('csv', 'CSV?', 'checkentry', 'filename', runtime=True, config=True)
+		self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 		
 		#Check for updates
 		from helipad.__init__ import __version__
@@ -432,11 +432,42 @@ class Helipad():
 		return self.t
 	
 	def start(self):
+		if not self.hasModel: warnings.warn('No model to start. Run model.setup() first.')
 		self.running = True
-		while self.running: self.step()
+		while self.running:
+			t = self.step()
+			
+			#Update graph
+			if self.graph is not None and t%self.gui.updateEvery==0:
+				data = self.data.getLast(t - self.graph.lastUpdate)
+	
+				if (self.graph.resolution > 1):
+					data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
+				self.graph.update(data)
+				self.graph.lastUpdate = t
+				if self.graph.resolution > self.gui.updateEvery: self.gui.updateEvery = self.graph.resolution
+			
+			## Performance indicator
+			# newtime = time.time()
+			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
+			# self.start = newtime
+	
+			st = self.param('stopafter')
+			if st:
+				self.gui.progress['value'] = t/st*100
+				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
+				if self.t>=st: self.terminate()
 	
 	def stop(self):
 		self.running = False
+		self.doHooks('modelStop', [self])
+	
+	def terminate(self, evt=False):
+		self.running = False
+		self.hasModel = False
+		
+		if self.param('csv'): self.data.saveCSV(self.param('csv'))
+		self.doHooks('terminate', [self, self.data.dataframe])
 			
 	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
 	#t can also be a function taking the model object with a finishing condition
@@ -650,14 +681,6 @@ class Helipad():
 			print('Plotless mode requires stop period and CSV export to be enabled.')
 			return
 		
-		#Disable graph checkboxes and any parameters that can't be changed during runtime
-		self.gui.checks.disable()
-		for param in self.allParams:
-			if not param.runtime and hasattr(param, 'element'):
-				if isinstance(param.element, dict):
-					for e in param.element.values(): e.configure(state='disabled')
-				else: param.element.configure(state='disabled')
-		
 		#If we've got plots, instantiate the Graph object
 		if len(plotsToDraw.items()) > 0:
 			def catchKeypress(event):
@@ -670,7 +693,7 @@ class Helipad():
 			
 				#Pause on spacebar
 				elif event.key == ' ':
-					if self.running: self.gui.pause()
+					if self.running: self.stop()
 					else: self.gui.run()
 			
 				#User functions
@@ -678,7 +701,7 @@ class Helipad():
 		
 			self.graph = Graph(plotsToDraw)
 			self.graph.fig.canvas.set_window_title(self.name+(' ' if self.name!='' else '')+'Data Plots')
-			self.graph.fig.canvas.mpl_connect('close_event', self.gui.terminate)
+			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		
 		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
