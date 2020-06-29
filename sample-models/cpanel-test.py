@@ -38,5 +38,6 @@ heli.addBreedParam('imenu', 'Item Menu', 'menu', dflt={'hobbit': 'three', 'dwarf
 	'three': 'Option three'
 }, desc='A menu that takes a value for each breed')
 heli.addGoodParam('icheckentry', 'Item Checkentry', 'checkentry', dflt={'jam': False, 'axe': 'wood'})
+# heli.addGoodParam('ilogslider', 'Item Logslider', 'slider', dflt={'axe': 5, 'lembas': 21}, opts=[1,2,3,5,8,13,21,34])
 
 heli.launchGUI()

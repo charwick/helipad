@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
 	name="helipad",
-	version="0.7",
+	version="1.0",
 	author="C Harwick",
 	author_email="cameron@cameronharwick.com",
 	description="An agent-based modeling framework for Python focused on time-series output.",

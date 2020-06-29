@@ -33,6 +33,7 @@ The following libraries are required:
 
 The following libraries are optional but recommended:
 
+* Jupyter and Ipywidgets (to run Helipad in Jupyter notebooks)
 * PMW (for tooltips)
 * NetworkX (for network analysis)
 * Readline and Code (for the debug console)
@@ -40,6 +41,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* 1.0: Jupyter integration, separated control panel from plotting
 * 0.7: Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern
 * 0.6: Support for multi-level models
 * 0.5: Support for matching models, and the checkGrid class

@@ -115,7 +115,7 @@ class GUI():
 						el.config(bg=bg)
 					elif param.type == 'slider':
 						if isinstance(param.opts, dict): el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, item), bg=bg)
-						else: el = logSlider(wrap, title=title if item is not None or getattr(param, 'config', False) else None, orient=HORIZONTAL, values=param.opts, length=150, command=setVar(param, item), bg=bg)
+						else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient=HORIZONTAL, values=param.opts, length=150, command=setVar(param, item), bg=bg)
 						el.set(param.get(item))
 						
 					if item is None and not getattr(param, 'config', False):

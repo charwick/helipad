@@ -201,7 +201,7 @@ class Helipad():
 					if p.type == 'hidden': continue		#Skip hidden parameters
 					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
 		for n,p in self.params.items():					#Cycle through parameters
-			if p.type == 'hidden': continue				#Skip hidden parameters
+			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
 			self.data.addReporter(n, pReporter(p))
 
 		if (self.moneyGood is not None):

@@ -135,11 +135,15 @@ class CheckParam(Param):
 class SliderParam(Param):
 	type='slider'
 	
-	#Because the slider tkinter widget doesn't use a Var() object like the others, we have
-	#to explicitly push the value to the slider if necessary
 	def set(self, val, item=None, updateGUI=True):
+		#If we're receiving a value from a Jupyter logslider, it's an index and not a value
+		if not updateGUI and isIpy() and isinstance(self.opts, list): val = self.opts[val]
+		
 		self.setParent(val, item, updateGUI)
 		super().set(val, item, updateGUI)
+		
+		#Because the slider tkinter widget doesn't use a Var() object like the others, we have
+		#to explicitly push the value to the slider if necessary
 		if updateGUI and hasattr(self, 'element') and not isIpy():
 			if self.obj is None: self.element.set(val)
 			else: self.element[item].set(val)
@@ -163,8 +167,24 @@ class SliderParam(Param):
 		self.value[key] = 0
 	
 	@property
-	def defaultVal(self): return self.opts['low']
-
+	def defaultVal(self): return self.opts['low'] if isinstance(self.opts, dict) else self.opts[0]
+	
+	#Override in order to update log slider
+	def setParent(self, val, item=None, updateGUI=True):
+		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		
+		if isIpy() and hasattr(self, 'element') and (self.obj is None or item in self.element):
+			el = self.element if self.obj is None else self.element[item]
+			
+			#Regular slider update
+			if updateGUI and isinstance(self.opts, dict): el.children[0].value = val
+		
+			#If it's a log slider in Jupyter, update the label, even if we're receiving from the GUI
+			#And then push to the slider if we're not receiving from the GUI
+			elif isinstance(self.opts, list):
+				el.children[1].value = str(val)
+				if updateGUI and val in self.opts: el.children[0].value = self.opts.index(val)
+	
 class CheckentryParam(Param):
 	defaultVal = ''
 	type='checkentry'

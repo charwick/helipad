@@ -1,4 +1,4 @@
-from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML
+from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label
 from IPython.display import display
 
 class JupyterInterface:
@@ -19,7 +19,13 @@ class JupyterInterface:
 		def constructElement(param, func, title, val, circle=None):
 			i=None
 			if param.type=='slider':
-				i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
+				if isinstance(param.opts, dict): i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
+				else:
+					s = interactive(func, val=(0, len(param.opts)-1,  1))
+					s.children[0].readout = False
+					l = Label(value=str(param.opts[0]), layout=Layout(margin='0 0 0 15px'))
+					i = HBox([s.children[0],l])
+					
 			elif param.type=='check':
 				i = interactive(func, val=val)
 			elif param.type=='menu':
@@ -37,6 +43,9 @@ class JupyterInterface:
 				i.children[0].description = circle+title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
 				i.children[0].description_tooltip = param.desc if param.desc is not None else ''
+				if param.type=='slider' and isinstance(param.opts, list):
+					i.children[1].value = str(val)
+					if val in param.opts: val=param.opts.index(val)
 				if param.type!='checkentry': i.children[0].value = val
 	
 			return i
@@ -57,10 +66,11 @@ class JupyterInterface:
 	
 		#Global config
 		for param in model.params.values():
-			if not getattr(param, 'config', False) or param.name=='updateEvery': continue
+			if not getattr(param, 'config', False): continue
 			param.element = constructElement(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
-			param.set(False)
+			if param.name=='csv': param.set('filename')
+			if param.type=='checkentry': param.set(False)
 		
 		#Per-good parameters
 		for param in model.goodParams.values():
