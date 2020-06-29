@@ -10,12 +10,14 @@ mlpstyle.use('fast')
 
 class Graph():
 	#listOfPlots is the trimmed model.plots list
-	def __init__(self, listOfPlots):
+	def __init__(self, listOfPlots, **kwargs):
 		#fig is the figure, plots is a list of AxesSubplot objects
 		# plt.clf()
 		self.lastUpdate = 0
 		self.resolution = 1
-		self.fig, plots = plt.subplots(len(listOfPlots), sharex=True)
+		if isIpy(): plt.rcParams['figure.figsize'] = [12, 8]
+		
+		self.fig, plots = plt.subplots(len(listOfPlots), sharex=True, num=kwargs['title'])
 		if not isinstance(plots, ndarray):
 			plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		for plot, axes in zip(listOfPlots.values(), plots):

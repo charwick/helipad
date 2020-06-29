@@ -18,6 +18,7 @@ import matplotlib
 if not isIpy():
 	from tkinter import *
 	matplotlib.use('TkAgg')
+else: matplotlib.use('nbagg')
 
 from helipad.data import Data
 import helipad.agent as agent
@@ -703,8 +704,7 @@ class Helipad():
 				#User functions
 				self.doHooks('graphKeypress', [event.key, self])
 		
-			self.graph = Graph(plotsToDraw)
-			self.graph.fig.canvas.set_window_title(self.name+(' ' if self.name!='' else '')+'Data Plots')
+			self.graph = Graph(plotsToDraw, title=self.name+(' ' if self.name!='' else '')+'Data Plots')
 			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		
