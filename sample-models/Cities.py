@@ -150,7 +150,8 @@ def urbanPop(model): return len(model.agent('urban'))
 def ruralPop(model): return len(model.agent('rural'))
 
 # returns ln(∑H²) for urban population
-def HSum(model):
+@heli.reporter
+def hsum(model):
 	upop = model.agent('urban')
 	return sum([a.H for a in model.agent('urban')]) if len(upop) > 0 else 1
 
@@ -161,13 +162,11 @@ def perCapGdp(model, loc):
 		else: return model.land[loc].product/pop
 	return tmp
 
-
 heli.addPlot('pop', 'Population', 1, logscale=True)
 heli.addPlot('hcap', 'Human Capital', 2, logscale=True)
 heli.addPlot('wage', 'Wage', 3)
 heli.addPlot('wealth', 'Wealth', 4, logscale=True)
 heli.addPlot('rates', 'Rates', 5, logscale=True)
-heli.data.addReporter('hsum', HSum)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
 heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
 

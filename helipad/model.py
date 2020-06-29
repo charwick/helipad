@@ -435,7 +435,8 @@ class Helipad():
 		return self.t
 	
 	def start(self):
-		if not self.hasModel: warnings.warn('No model to start. Run model.setup() first.')
+		self.doHooks('modelStart', [self, self.hasModel])
+		if not self.hasModel: self.setup()
 		self.running = True
 		while self.running:
 			t = self.step()
@@ -645,7 +646,7 @@ class Helipad():
 		
 		if self.moneyGood is None:
 			for i in ['prices', 'money']:
-				del self.plots[i]
+				if i in self.plots: del self.plots[i]
 		
 		if not isIpy():
 			from helipad.cpanel import Cpanel
@@ -714,8 +715,27 @@ class Helipad():
 			self.params['stopafter'].element.disable()
 			self.params['csv'].element.disable()
 		
+		self.doHooks('plotsLaunch', [self, self.graph])
 		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window
 		self.start()
+	
+	#
+	# DECORATORS
+	#
+	
+	#Returns a decorator if it has arguments; otherwise it's a decorator itself
+	def reporter(self, name=None, **kwargs):
+		if callable(name): func, name, isDec = (name, None, True)
+		else: isDec = False
+		
+		#Is a decorator
+		def rep1(fn):
+			namn = name #If I do anything with name here, Python throws UnboundLocalError. Possibly a bug?
+			if namn is None: namn=fn.__name__
+			self.data.addReporter(namn, fn, **kwargs)
+			return fn
+			
+		return rep1(func) if isDec else rep1
 
 class MultiLevel(agent.baseAgent, Helipad):	
 	def __init__(self, breed, id, parentModel):
