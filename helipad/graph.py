@@ -23,11 +23,12 @@ class Graph():
 		self.plots = listOfPlots
 		
 		#Position graph window
-		window = plt.get_current_fig_manager().window
-		x_px = window.winfo_screenwidth()*2/3
-		if x_px + 400 > window.winfo_screenwidth(): x_px = window.winfo_screenwidth()-400
-		self.fig.set_size_inches(x_px/self.fig.dpi, window.winfo_screenheight()/self.fig.dpi)
-		window.wm_geometry("+400+0")
+		fm = plt.get_current_fig_manager()
+		if hasattr(fm, 'window'):
+			x_px = fm.window.winfo_screenwidth()*2/3
+			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
+			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
+			fm.window.wm_geometry("+400+0")
 		
 		#Cycle over plots
 		for pname, plot in self.plots.items():
