@@ -75,4 +75,4 @@ heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '119900')
 
 for p in ['demand', 'utility']: heli.plots[p].active(True)
 
-heli.launchGUI()
+heli.launchCpanel()

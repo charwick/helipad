@@ -314,4 +314,4 @@ def mshock(model):
 	model.cb.M0 = m
 heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
 
-heli.launchGUI()
+heli.launchCpanel()

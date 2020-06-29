@@ -111,4 +111,4 @@ heli.addSeries('fitness', 'fitness', 'Average Fitness', '000099')
 # LAUNCH THE GUI
 #===============
 
-heli.launchGUI(headless=False)
+heli.launchCpanel()

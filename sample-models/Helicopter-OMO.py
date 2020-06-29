@@ -296,18 +296,18 @@ heli.order = 'random'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
 #Callback for the dist parameter
-def bankChecks(gui, val=None):
-	nobank = gui.model.param('dist')!='omo'
-	gui.model.param('agents_bank', 0 if nobank else 1)
+def bankChecks(model, val=None):
+	nobank = model.param('dist')!='omo'
+	model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
-		gui.checks.disabled(i, nobank)
-	for e in gui.model.primitives['agent'].breedParams['liqPref'].element.values():
+		model.cpanel.checks.disabled(i, nobank)
+	for e in model.primitives['agent'].breedParams['liqPref'].element.values():
 		e.config(state='disabled' if nobank else 'normal')
 
 #Since the param callback takes different parameters than the GUI callback
-def bankCheckWrapper(model, var, val): bankChecks(model.gui, val)
-heli.addHook('terminate', bankChecks)		#Reset the disabled checkmarks when terminating a model
-heli.addHook('GUIPostInit', bankChecks)		#Set the disabled checkmarks on initialization
+def bankCheckWrapper(model, var, val): bankChecks(model, val)
+heli.addHook('terminate', bankChecks)									#Reset the disabled checkmarks when terminating a model
+heli.addHook('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
 
@@ -642,4 +642,4 @@ def mshock(model):
 	model.cb.M0 = m
 heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
 
-heli.launchGUI()
+heli.launchCpanel()

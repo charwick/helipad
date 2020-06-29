@@ -50,12 +50,12 @@ strategies = {
 }
 
 #Build the strategies toggle
-def GUIAbovePlotList(gui, bg):
+def CpanelAbovePlotList(gui, bg):
 	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
 	for s,v in strategies.items():
 		gui.model.strategies.addCheck(s, s, v[0], v[2] if len(v)>=3 else None)
 	return gui.model.strategies
-heli.addHook('GUIAbovePlotList', GUIAbovePlotList)
+heli.addHook('CpanelAbovePlotList', CpanelAbovePlotList)
 
 #===============
 # STRATEGIES
@@ -166,8 +166,8 @@ def modelPreSetup(model):
 		model.addSeries('payoffs', b+'-proportion', b, d.color)
 heli.addHook('modelPreSetup', modelPreSetup)
 
-def terminate(gui, data):
-	gui.model.strategies.enable()
+def terminate(model, data):
+	model.strategies.enable()
 heli.addHook('terminate', terminate)
 
 #===============
@@ -190,4 +190,4 @@ heli.addPlot('payoffs', 'Payoffs')
 # LAUNCH THE GUI
 #===============
 
-heli.launchGUI()
+heli.launchCpanel()

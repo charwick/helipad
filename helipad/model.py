@@ -130,7 +130,7 @@ class Helipad():
 		return plot
 	
 	def removePlot(self, name, reassign=None):
-		if hasattr(self, 'GUI'): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if hasattr(self, 'cpanel'): raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
 			return
@@ -339,9 +339,10 @@ class Helipad():
 	def nonMoneyGoods(self):
 		return {k:v for k,v in self.goods.items() if not v.money}
 			
-	def addHook(self, place, func):
+	def addHook(self, place, func, prioritize=False):
 		if not place in self.hooks: self.hooks[place] = []
-		self.hooks[place].append(func)
+		if prioritize: self.hooks[place].insert(0, func)
+		else: self.hooks[place].append(func)
 	
 	#Returns the value of the last function in the list
 	def doHooks(self, place, args):
@@ -453,7 +454,7 @@ class Helipad():
 			
 			## Performance indicator
 			# newtime = time.time()
-			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
+			# print('Period', t, 'at', model.param('updateEvery')/(newtime-self.start), 'periods/second')
 			# self.start = newtime
 	
 			if st:
@@ -467,6 +468,9 @@ class Helipad():
 	def terminate(self, evt=False):
 		self.running = False
 		self.hasModel = False
+		
+		remainder = int(self.t % self.param('updateEvery')) #For some reason this returns a float sometimes?
+		if remainder > 0: self.graph.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
 		self.doHooks('terminate', [self, self.data.dataframe])
@@ -621,10 +625,10 @@ class Helipad():
 		for k, v in stats.items():
 			print(k+': ', v)
 
-	def launchGUI(self):
+	def launchCpanel(self):
 		if not isIpy() and not hasattr(self, 'root'): return
 		
-		self.doHooks('GUIPreLaunch', [self])
+		self.doHooks('CpanelPreLaunch', [self])
 		
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
@@ -643,8 +647,9 @@ class Helipad():
 				del self.plots[i]
 		
 		if not isIpy():
-			from helipad.cpanel import GUI
-			self.gui = GUI(self.root, self)
+			from helipad.cpanel import Cpanel
+			self.cpanel = Cpanel(self.root, self)
+			self.doHooks('CpanelPostInit', [self.cpanel])
 			
 			# Debug console
 			# Requires to be run from Terminal (⌘-⇧-R in TextMate)
@@ -664,8 +669,8 @@ class Helipad():
 			self.root.resizable(0,0)
 			self.root.mainloop()		#Launch the control panel
 		else:
-			from helipad.jupyter import JupyterInterface
-			self.gui = JupyterInterface(self)
+			from helipad.jupyter import JupyterCpanel
+			self.cpanel = JupyterCpanel(self)
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	
@@ -693,7 +698,7 @@ class Helipad():
 				#Pause on spacebar
 				elif event.key == ' ':
 					if self.running: self.stop()
-					else: self.gui.run()
+					else: self.cpanel.run()
 			
 				#User functions
 				self.doHooks('graphKeypress', [event.key, self])
@@ -709,7 +714,7 @@ class Helipad():
 			self.params['stopafter'].element.disable()
 			self.params['csv'].element.disable()
 		
-		if not hasattr(self, 'gui') and not isIpy(): self.root.destroy() #Close stray window
+		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window
 		self.start()
 
 class MultiLevel(agent.baseAgent, Helipad):	

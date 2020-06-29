@@ -1,7 +1,7 @@
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label
 from IPython.display import display
 
-class JupyterInterface:
+class JupyterCpanel:
 	def __init__(self, model):
 		self.model = model
 		

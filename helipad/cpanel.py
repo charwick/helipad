@@ -9,7 +9,7 @@ from colour import Color
 from math import ceil
 # import time #For performance testing
 
-class GUI():	
+class Cpanel():	
 	def __init__(self, parent, model):
 		self.parent = parent
 		self.model = model
@@ -136,7 +136,7 @@ class GUI():
 				else: param.element[item] = el
 				return wrap
 		
-		gtop = self.model.doHooks('GUITop', [self, bgcolors[fnum%2]])
+		gtop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
 		if gtop:
 			gtop.pack(fill="x", side=TOP)
 			fnum += 1
@@ -174,7 +174,7 @@ class GUI():
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill="x", side=TOP)
 		
-		gaip = self.model.doHooks('GUIAboveItemParams', [self, bgcolors[fnum%2]])
+		gaip = self.model.doHooks('CpanelAboveItemParams', [self, bgcolors[fnum%2]])
 		if gaip:
 			gaip.pack(fill="x", side=TOP)
 			fnum += 1
@@ -190,7 +190,7 @@ class GUI():
 					if e is not None: e.pack(fill="x")
 				fnum += 1
 		
-		gap = self.model.doHooks('GUIAboveParams', [self, bgcolors[fnum%2]])
+		gap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
 		if gap:
 			gap.pack(fill="x", side=TOP)
 			fnum += 1
@@ -199,10 +199,10 @@ class GUI():
 		for k, param in self.model.params.items():
 			if not getattr(param, 'config', False):
 				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
-			if e is not None: e.pack(fill=None if param.type=='check' else X)
+				if e is not None: e.pack(fill=None if param.type=='check' else X)
 		fnum += 1
 		
-		gapl = self.model.doHooks('GUIAbovePlotList', [self, bgcolors[fnum%2]])
+		gapl = self.model.doHooks('CpanelAbovePlotList', [self, bgcolors[fnum%2]])
 		if gapl:
 			gapl.pack(fill="x", side=TOP)
 			fnum += 1
@@ -215,7 +215,7 @@ class GUI():
 			plot.check = self.checks.addCheck(k, plot.label, plot.selected)
 		self.checks.pack(fill="x", side=TOP)
 		
-		gas = self.model.doHooks('GUIAboveShocks', [self, bgcolors[fnum%2]])
+		gas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
 		if gas:
 			gas.pack(fill="x", side=TOP)
 			fnum += 1
@@ -235,7 +235,7 @@ class GUI():
 				shock.guiElement.pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
 		
-		gbot = self.model.doHooks('GUIBottom', [self, bgcolors[fnum%2]])
+		gbot = self.model.doHooks('CpanelBottom', [self, bgcolors[fnum%2]])
 		if gbot:
 			gbot.pack(fill="x", side=TOP)
 			fnum += 1
@@ -254,28 +254,25 @@ class GUI():
 		#Insert GUI code into some of the model logic
 		
 		def terminate(model, data):
-			model.gui.progress.stop()
+			model.cpanel.progress.stop()
 		
 			#Re-enable checkmarks and options
-			model.gui.checks.enable()
+			model.cpanel.checks.enable()
 			for param in model.allParams:
 				if not hasattr(param, 'element'): continue
 				if isinstance(param.element, dict):
 					for e in param.element.values(): e.configure(state='normal')
 				else: param.element.configure(state='normal')
 		
-			if hasattr(model.gui, 'runButton'):
-				model.gui.runButton['text'] = 'New Model'
-				model.gui.runButton['command'] = model.gui.run
-		self.model.addHook('terminate', terminate)
+			if hasattr(model.cpanel, 'runButton'):
+				model.cpanel.runButton['text'] = 'New Model'
+				model.cpanel.runButton['command'] = model.cpanel.run
+		self.model.addHook('terminate', terminate, True) #Do this before any other terminate hooks
 		
 		def updateProgress(model, graph):
 			st = model.param('stopafter')
-			if st: model.gui.progress['value'] = model.t/st*100
-		self.model.addHook('graphUpdate', updateProgress)
-		
-		#Passes itself to the callback
-		self.model.doHooks('GUIPostInit', [self])
+			if st: model.cpanel.progress['value'] = model.t/st*100
+		self.model.addHook('graphUpdate', updateProgress, True)
 	
 	#Resume a model
 	def run(self):
@@ -301,9 +298,6 @@ class GUI():
 					else: param.element.configure(state='disabled')
 			self.model.launchPlots()
 		else: self.model.start()
-		
-		remainder = self.model.t % self.model.param('updateEvery')
-		if remainder > 0: self.model.graph.update(self.model.data.getLast(remainder)) #Last update at the end
 		
 		#Pause if it hasn't terminated
 		if self.model.hasModel:

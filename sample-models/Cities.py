@@ -185,4 +185,4 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.addSeries('rates', breed+'moveRate', breed.title()+' Move Rate', d.color2)
 	heli.addSeries('rates', breed+'birthrate', breed.title()+' Birthrate', d.color)
 
-heli.launchGUI()
+heli.launchCpanel()

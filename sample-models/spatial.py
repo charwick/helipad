@@ -1,5 +1,6 @@
 # Unlike other ABM frameworks like Mesa or Netlogo, Helipad is not specifically designed for spatial models.
 # However, it can be extended easily enough to do so using networks to create a grid.
+# This is not an actual model; rather, it's a skeleton for a model with spatial functions.
 
 #===============
 # SETUP
@@ -129,4 +130,4 @@ heli.addHook('agentStep', agentStep)
 # LAUNCH THE GUI
 #===============
 
-heli.launchGUI(headless=False)
+heli.launchCpanel()
