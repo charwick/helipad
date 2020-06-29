@@ -57,7 +57,7 @@ class JupyterInterface:
 	
 		#Global config
 		for param in model.params.values():
-			if not getattr(param, 'config', False): continue
+			if not getattr(param, 'config', False) or param.name=='updateEvery': continue
 			param.element = constructElement(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
 			param.set(False)

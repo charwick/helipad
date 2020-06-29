@@ -66,6 +66,7 @@ class Helipad():
 		#Privileged parameters
 		self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
 		self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
+		self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 		
 		#Check for updates
 		from helipad.__init__ import __version__
@@ -236,7 +237,7 @@ class Helipad():
 		
 		self.doHooks('modelPostSetup', [self])
 			
-	#Registers an adjustable parameter exposed in the config GUI.	
+	#Registers an adjustable parameter exposed in the control panel.	
 	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, **args):
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim].breedParams
@@ -436,25 +437,26 @@ class Helipad():
 		self.running = True
 		while self.running:
 			t = self.step()
+			st = self.param('stopafter')
 			
 			#Update graph
-			if self.graph is not None and t%self.gui.updateEvery==0:
+			if self.graph is not None and t%self.param('updateEvery')==0:
 				data = self.data.getLast(t - self.graph.lastUpdate)
 	
 				if (self.graph.resolution > 1):
 					data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
 				self.graph.update(data)
 				self.graph.lastUpdate = t
-				if self.graph.resolution > self.gui.updateEvery: self.gui.updateEvery = self.graph.resolution
+				if self.graph.resolution > self.param('updateEvery'): self.param('updateEvery', self.graph.resolution)
+				
+				self.doHooks('graphUpdate', [self, self.graph])
 			
 			## Performance indicator
 			# newtime = time.time()
 			# print('Period', t, 'at', model.gui.updateEvery/(newtime-self.start), 'periods/second')
 			# self.start = newtime
 	
-			st = self.param('stopafter')
 			if st:
-				self.gui.progress['value'] = t/st*100
 				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
 				if self.t>=st: self.terminate()
 	
@@ -619,7 +621,7 @@ class Helipad():
 		for k, v in stats.items():
 			print(k+': ', v)
 
-	def launchGUI(self, headless=False):
+	def launchGUI(self):
 		if not isIpy() and not hasattr(self, 'root'): return
 		
 		self.doHooks('GUIPreLaunch', [self])
@@ -642,7 +644,7 @@ class Helipad():
 		
 		if not isIpy():
 			from helipad.cpanel import GUI
-			self.gui = GUI(self.root, self, headless)
+			self.gui = GUI(self.root, self)
 			
 			# Debug console
 			# Requires to be run from Terminal (⌘-⇧-R in TextMate)
@@ -660,10 +662,7 @@ class Helipad():
 		
 			self.root.title(self.name+(' ' if self.name!='' else '')+'Control Panel')
 			self.root.resizable(0,0)
-			if headless:
-				self.root.destroy()
-				self.gui.preparePlots()		#Jump straight to the graph
-			else: self.root.mainloop()		#Launch the control panel
+			self.root.mainloop()		#Launch the control panel
 		else:
 			from helipad.jupyter import JupyterInterface
 			self.gui = JupyterInterface(self)
@@ -710,6 +709,7 @@ class Helipad():
 			self.params['stopafter'].element.disable()
 			self.params['csv'].element.disable()
 		
+		if not hasattr(self, 'gui') and not isIpy(): self.root.destroy() #Close stray window
 		self.start()
 
 class MultiLevel(agent.baseAgent, Helipad):	

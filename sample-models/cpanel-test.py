@@ -28,7 +28,7 @@ heli.addParameter('gmenu', 'Global menu', 'menu', dflt='two', opts={
 	'three': 'Option three'
 })
 heli.addParameter('gcheckentry', 'Global Checkentry', 'checkentry', dflt='They\'re taking the hobbits to Isengard')
-
+heli.addParameter('glogslider', 'Global Logslider', 'slider', dflt=8, opts=[1,2,3,5,8,13,21,34])
 
 heli.addBreedParam('islider', 'Item Slider', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, desc='A slider that takes a value for each breed')
 heli.addGoodParam('icheck', 'Item Check', 'check', dflt={'jam': False, 'axe': True})

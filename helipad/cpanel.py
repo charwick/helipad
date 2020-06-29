@@ -10,7 +10,7 @@ from math import ceil
 # import time #For performance testing
 
 class GUI():	
-	def __init__(self, parent, model, headless=False):
+	def __init__(self, parent, model):
 		self.parent = parent
 		self.model = model
 		try:
@@ -20,8 +20,6 @@ class GUI():
 		except:
 			self.balloon = None
 			print('Use pip to install Pmw in order to use tooltips')
-		self.updateEvery = 20
-		self.headless = headless
 		
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 1
@@ -116,13 +114,14 @@ class GUI():
 						el = OptionMenu(wrap, val, *param.opts.values(), command=setVar(param, item))
 						el.config(bg=bg)
 					elif param.type == 'slider':
-						el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, item), bg=bg)
+						if isinstance(param.opts, dict): el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, item), bg=bg)
+						else: el = logSlider(wrap, title=title if item is not None or getattr(param, 'config', False) else None, orient=HORIZONTAL, values=param.opts, length=150, command=setVar(param, item), bg=bg)
 						el.set(param.get(item))
-					
 						
-					if item is None:
+					if item is None and not getattr(param, 'config', False):
 						label = Label(wrap, text=title, fg="#333", bg=bg).pack(side=LEFT, padx=8, pady=3)
 						el.pack(side=RIGHT)
+					elif getattr(param, 'config', False): el.pack()
 					else:
 						lframe = Frame(wrap, bg=bg, padx=0, pady=0)
 						label = Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
@@ -142,7 +141,6 @@ class GUI():
 			gtop.pack(fill="x", side=TOP)
 			fnum += 1
 		
-		#Put this up here so the variable name is accessible when headless
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
@@ -150,12 +148,9 @@ class GUI():
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 		
-		if headless: return
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
 		
-		self.refresh = logSlider(frame1, title="Refresh every __ periods", orient=HORIZONTAL, values=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], bg=bgcolors[fnum%2], length=150, command=lambda val: setattr(self, 'updateEvery', int(val)))
-		self.refresh.slide.set(4) #Default refresh of 20
-		self.refresh.grid(row=2, column=0, columnspan=2, pady=(10,0))
+		renderParam(frame1, self.model.params['updateEvery'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = Button(frame1, text='Run', command=self.run, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
@@ -256,6 +251,8 @@ class GUI():
 						info['CFBundleName'] = 'Helipad'
 			except: print('Use pip to install pyobjc for nice Mac features')
 		
+		#Insert GUI code into some of the model logic
+		
 		def terminate(model, data):
 			model.gui.progress.stop()
 		
@@ -267,10 +264,15 @@ class GUI():
 					for e in param.element.values(): e.configure(state='normal')
 				else: param.element.configure(state='normal')
 		
-			if hasattr(self, 'runButton'):
+			if hasattr(model.gui, 'runButton'):
 				model.gui.runButton['text'] = 'New Model'
 				model.gui.runButton['command'] = model.gui.run
 		self.model.addHook('terminate', terminate)
+		
+		def updateProgress(model, graph):
+			st = model.param('stopafter')
+			if st: model.gui.progress['value'] = model.t/st*100
+		self.model.addHook('graphUpdate', updateProgress)
 		
 		#Passes itself to the callback
 		self.model.doHooks('GUIPostInit', [self])
@@ -300,7 +302,7 @@ class GUI():
 			self.model.launchPlots()
 		else: self.model.start()
 		
-		remainder = self.model.t % self.updateEvery
+		remainder = self.model.t % self.model.param('updateEvery')
 		if remainder > 0: self.model.graph.update(self.model.data.getLast(remainder)) #Last update at the end
 		
 		#Pause if it hasn't terminated
@@ -322,29 +324,48 @@ class GUI():
 
 # A slider with defined non-linear intervals
 class logSlider(Frame):	
-	def __init__(self, parent=None, title=None, command=None,
-		bg='#FFFFFF', font=('Lucida Grande',12),
-		values=(), **kwargs
-	):
+	def __init__(self, parent=None, title=None, command=None, bg='#FFFFFF', font=('Lucida Grande',12), values=(), **kwargs):
 		Frame.__init__(self, parent, bg=bg)
-		if title: Label(self, font=font, text=title, bg=bg).pack(side=TOP)
+		self.label = Label(self, font=font, text=title, bg=bg).pack(side=TOP) if title else None
 		self.values = values
-		
 		self.extCommand = command
-		self.number = 0
+		self.number = values[0]
 		
-		#Callback function
-		def setValue(val):
-			self.number = self.values[int(val)]
-			self.text.configure(text=self.number)
-			if self.extCommand != None: self.extCommand(self.values[int(val)])
+		#Receives an index from the slider and sets the value
+		def setText(idx):
+			self.number = self.values[int(idx)]
+			self.text.configure(text=self.values[int(idx)])
+			if self.extCommand != None: self.extCommand(self.values[int(idx)])
 		
-		self.slide = Scale(self, command=setValue,
+		self.slide = Scale(self, command=setText,
 			bg=bg, showvalue=0, from_=0, to=len(self.values)-1, font=font, **kwargs
 		)
 		self.text = Label(self, font=font, width=4, bg=bg)
 		self.slide.pack(side=RIGHT, expand=1, fill=X)
 		self.text.pack(side=TOP, fill=BOTH, padx=5)
+		
+	def get(self): return self.number
+	
+	#Receives a value externally and sets the slider to an index
+	def set(self, val):
+		self.number = val
+		if val in self.values: self.slide.set(self.values.index(val))
+		self.text.configure(text=val)
+	
+	def enable(self): self.disabled(False)
+	def disable(self): self.disabled(True)
+	def disabled(self, val):
+		if val:
+			self.text.configure(fg='#999')
+			if self.label is not None: self.label.configure(fg='#999')
+			self.slide.configure(state='disabled')
+		else:
+			self.text.configure(fg='#333')
+			if self.label is not None: self.label.configure(fg='#333')
+			self.slide.configure(state='normal')
+	
+	#Here for compatibility with other Tkinter widgets
+	def configure(self, state): self.disabled(state=='disabled')
 
 #A frame that can be expanded and collapsed by clicking on the title
 class expandableFrame(Frame):

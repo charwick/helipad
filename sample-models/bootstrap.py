@@ -72,4 +72,4 @@ heli.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 # LAUNCH THE GUI
 #===============
 
-heli.launchGUI(headless=False)
+heli.launchGUI()
