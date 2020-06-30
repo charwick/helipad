@@ -50,12 +50,12 @@ strategies = {
 }
 
 #Build the strategies toggle
+@heli.hook
 def CpanelAbovePlotList(gui, bg):
 	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
 	for s,v in strategies.items():
 		gui.model.strategies.addCheck(s, s, v[0], v[2] if len(v)>=3 else None)
 	return gui.model.strategies
-heli.addHook('CpanelAbovePlotList', CpanelAbovePlotList)
 
 #===============
 # STRATEGIES
@@ -132,6 +132,7 @@ def Joss(rnd, history, own):
 # MODEL LOGIC
 #===============
 
+@heli.hook
 def match(agents, primitive, model, stage):
 	h1, h2 = ([], [])
 	for rnd in range(int(model.param('rounds'))):
@@ -144,10 +145,9 @@ def match(agents, primitive, model, stage):
 		#Payoffs
 		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
 		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
-			
-heli.addHook('match', match)
 
 #Add breeds last-minute so we can toggle them in the control panel
+@heli.hook
 def modelPreSetup(model):
 	
 	#Clear breeds from the previous run
@@ -164,20 +164,19 @@ def modelPreSetup(model):
 	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		model.addSeries('payoffs', b+'-proportion', b, d.color)
-heli.addHook('modelPreSetup', modelPreSetup)
 
+@heli.hook
 def terminate(model, data):
 	model.strategies.enable()
-heli.addHook('terminate', terminate)
 
 #===============
 # CONFIGURATION
 #===============
 
 #Tally up the total payoff once each period, so we don't have to do it on every agent
+@heli.hook
 def dataCollect(data, t):
 	data.model.totalP = data.agentReporter('stocks', good='payoff', stat='sum')(data.model)
-heli.addHook('dataCollect', dataCollect)
 
 def proportionReporter(breed):
 	def func(model):

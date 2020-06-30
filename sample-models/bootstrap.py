@@ -25,29 +25,29 @@ heli.stages = 1 #Change to create a multi-stage model
 #===============
 
 #Any variables or properties the agent should keep track of should have default values set here.
+@heli.hook
 def agentInit(agent, model):
 	#agent.myAgentProperty = 0
 	#agent.utility = CobbDouglas(['good1'])
 	pass
-heli.addHook('agentInit', agentInit)
 
 #Any global variables that should be kept track of should have default values set here.
+@heli.hook
 def modelPostSetup(model):
 	#model.myModelProperty = 0
 	pass
-heli.addHook('modelPostSetup', modelPostSetup)
 
 #Agent logic should be written here.
+@heli.hook
 def agentStep(agent, model, stage):
 	pass	
-heli.addHook('agentStep', agentStep)
 
 #Any global code to be run each period should be hooked to modelStep, modelPreStep, or modelPostStep.
 #modelStep will run as many times per period as there are stages. modelPreStep and modelPostStep
 #will run at the beginning and end of each period, respectively, and do not take a stage argument.
+@heli.hook
 def modelStep(model, stage):
 	pass
-heli.addHook('modelStep', modelStep)
 
 #===============
 # CONFIGURATION

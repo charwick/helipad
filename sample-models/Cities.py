@@ -45,6 +45,7 @@ heli.land = {k: Land(k) for k in ['urban', 'rural']}
 
 #This is here to make sure that the agents param gets reset at the beginning of each run
 #Otherwise the parameter persists between runs
+@heli.hook
 def modelPreSetup(model):
 	model.movers = {b:0 for b in heli.primitives['agent'].breeds}
 	model.births = {b:0 for b in heli.primitives['agent'].breeds}
@@ -52,19 +53,19 @@ def modelPreSetup(model):
 	for b in heli.primitives['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
-heli.addHook('modelPreSetup', modelPreSetup)
 
 # from helipad.utility import CobbDouglas
+@heli.hook
 def agentInit(agent, model):
 	# agent.utility = CobbDouglas({'consumption': 0.5}) #Single good
 	agent.H = 1 #Human capital
 	agent.prod = {'urban': 0, 'rural': 0}
 	agent.wealth = 0
 	agent.lastWage = 0
-heli.addHook('agentInit', agentInit)
 
 #Distribute product in proportion to input
 #modelStep executes each stage **before** any agent step functions
+@heli.hook
 def modelStep(model, stage):
 	if stage==2:
 		for l in model.land.values():
@@ -73,8 +74,8 @@ def modelStep(model, stage):
 			for a in model.agent(l.loc):
 				a.lastWage = a.prod[a.breed]/inp * Y	# = P/∑P * Y (eq. 3)
 				a.wealth += a.lastWage
-heli.addHook('modelStep', modelStep)
 
+@heli.hook
 def agentStep(agent, model, stage):
 	if stage==1:
 		upop = model.data.getLast('urbanPop')
@@ -122,10 +123,9 @@ def agentStep(agent, model, stage):
 		# agent.utils = agent.utility.calculate({'consumption': agent.wealth})
 		if agent.wealth <= 0: agent.die()
 		return
-	
-heli.addHook('agentStep', agentStep)
 
 #Organize some data and pause if all agents are dead
+@heli.hook
 def modelPostStep(model):
 	if len(model.agents['agent']) == 0: model.gui.pause()
 	else:
@@ -136,11 +136,10 @@ def modelPostStep(model):
 				setattr(model,'birthrate'+b, model.births[b]/pop)
 				model.movers[b] = 0
 				model.births[b] = 0
-heli.addHook('modelPostStep', modelPostStep)
 
+@heli.hook
 def decideBreed(id, choices, model):
 	return 'rural';
-heli.addHook('decideBreed', decideBreed)
 
 #================
 # REPORTERS AND PLOTS

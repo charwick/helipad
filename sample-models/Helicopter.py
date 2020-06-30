@@ -206,6 +206,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 
 from helipad.utility import CES
 
+@heli.hook
 def agentInit(agent, model):
 	agent.store = model.agents['store'][0]
 	agent.item = AgentGoods[agent.breed]
@@ -216,9 +217,8 @@ def agentInit(agent, model):
 	
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 	agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
-	
-heli.addHook('agentInit', agentInit)
 
+@heli.hook
 def agentStep(agent, model, stage):
 	itemPrice = agent.store.price[agent.item]
 	
@@ -234,8 +234,6 @@ def agentStep(agent, model, stage):
 	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
 	if negadjust > basicq: negadjust = basicq
 	agent.expCons = (19 * agent.expCons + basicq-negadjust)/20		#Set expected consumption as a decaying average of consumption history
-	
-heli.addHook('agentStep', agentStep)
 
 def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0
@@ -289,11 +287,11 @@ class CentralBank(baseAgent):
 	@M0.setter
 	def M0(self, value): self.expand(value - self.M0)
 
+@heli.hook
 def modelPostSetup(model): model.cb = CentralBank(0, model)
-heli.addHook('modelPostSetup', modelPostSetup)
 
+@heli.hook
 def modelPostStep(model): model.cb.step()	#Step the central bank last
-heli.addHook('modelPostStep', modelPostStep)
 
 #========
 # SHOCKS

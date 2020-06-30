@@ -296,6 +296,7 @@ heli.order = 'random'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
 #Callback for the dist parameter
+@heli.hook('terminate') #Reset the disabled checkmarks when terminating a model
 def bankChecks(model, val=None):
 	nobank = model.param('dist')!='omo'
 	model.param('agents_bank', 0 if nobank else 1)
@@ -306,7 +307,6 @@ def bankChecks(model, val=None):
 
 #Since the param callback takes different parameters than the GUI callback
 def bankCheckWrapper(model, var, val): bankChecks(model, val)
-heli.addHook('terminate', bankChecks)									#Reset the disabled checkmarks when terminating a model
 heli.addHook('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
@@ -427,6 +427,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 
 #Don't bother keeping track of the bank-specific variables unless the banking system is there
 #Do this here rather than at the beginning so we can decide at runtime
+@heli.hook
 def modelPreSetup(model):
 	if model.param('agents_bank') > 0:
 		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
@@ -447,7 +448,6 @@ def modelPreSetup(model):
 		model.addSeries('i', 'i', 'Nominal interest', '000000')
 		model.addSeries('i', 'r', 'Real interest', '0000CC')
 		model.addSeries('i', 'inflation', 'Inflation', 'CC0000')
-heli.addHook('modelPreSetup', modelPreSetup)
 
 #
 # Agents
@@ -456,12 +456,13 @@ heli.addHook('modelPreSetup', modelPreSetup)
 from helipad.utility import CES
 
 #Choose a bank if necessary
+@heli.hook
 def baseAgentInit(agent, model):
 	if model.param('agents_bank') > 0 and agent.primitive != 'bank':
 		agent.bank = model.agents['bank'][0]
 		agent.bank.setupAccount(agent)
-heli.addHook('baseAgentInit', baseAgentInit)
 
+@heli.hook
 def agentInit(agent, model):
 	agent.store = model.agents['store'][0]
 	agent.item = AgentGoods[agent.breed]
@@ -475,9 +476,8 @@ def agentInit(agent, model):
 	
 	if model.param('agents_bank') > 0:
 		agent.liqPref = model.param(('liqPref', 'breed', agent.breed, 'agent'))
-	
-heli.addHook('agentInit', agentInit)
 
+@heli.hook
 def agentStep(agent, model, stage):
 	itemPrice = agent.store.price[agent.item]
 	
@@ -498,7 +498,6 @@ def agentStep(agent, model, stage):
 	if hasattr(agent, 'bank'):
 		tCash = agent.liqPref*agent.balance
 		agent.bank.deposit(agent, agent.stocks[agent.model.moneyGood]-tCash)
-heli.addHook('agentStep', agentStep)
 
 def realBalances(agent):
 	if not hasattr(agent, 'store'): return 0
@@ -507,6 +506,7 @@ def realBalances(agent):
 Agent.realBalances = property(realBalances)
 
 #Use the bank if the bank exists
+@heli.hook
 def buy(agent, partner, good, q, p):
 	if hasattr(agent, 'bank'):
 		bal = agent.bank.account(agent)
@@ -518,9 +518,9 @@ def buy(agent, partner, good, q, p):
 			leftover = 0
 		agent.bank.transfer(agent, partner, amount)	
 		return (q, leftover)
-heli.addHook('buy', buy)
 
 #Use the bank if the bank exists
+@heli.hook
 def pay(agent, recipient, amount, model):
 	if hasattr(agent, 'bank') and recipient.primitive != 'bank' and agent.primitive != 'bank':
 		bal = agent.bank.account(agent)
@@ -532,13 +532,12 @@ def pay(agent, recipient, amount, model):
 			amount = 0
 		agent.bank.transfer(agent, recipient, trans)
 		return amount #Should be zero. Anything leftover gets paid in cash
-heli.addHook('pay', pay)
 
+@heli.hook
 def checkBalance(agent, balance, model):
 	if hasattr(agent, 'bank') and agent.primitive != 'bank':
 		balance += agent.bank.account(agent)
 		return balance
-heli.addHook('checkBalance', checkBalance)
 			
 #
 # Central Bank
@@ -617,11 +616,11 @@ class CentralBank(baseAgent):
 		# if denom==0: return 1
 		# else: return numer/denom
 
+@heli.hook
 def modelPostSetup(model): model.cb = CentralBank(0, model)
-heli.addHook('modelPostSetup', modelPostSetup)
 
+@heli.hook
 def modelPostStep(model): model.cb.step()	#Step the central bank last
-heli.addHook('modelPostStep', modelPostStep)
 
 #========
 # SHOCKS

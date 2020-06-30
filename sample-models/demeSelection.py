@@ -42,15 +42,16 @@ def agentStep(agent, deme, stage):
 		beneficiary.stocks['payoff'] += deme.model.param('b')
 
 #deme is the MultiLevel object, which inherits from both baseAgent and Helipad.
+@heli.hook
 def demeInit(deme, model):
 	deme.param('agents_agent', 20)
 	deme.addBreed('altruist', '009900')
 	deme.addBreed('selfish', '990000')
 	deme.addGood('payoff', '000099', 1)
 	deme.addHook('agentStep', agentStep)
-heli.addHook('demeInit', demeInit)
 
 #Odds of winning follow a sigmoid distribution in the difference in strength
+@heli.hook('demeMatch')
 def war(demes, primitive, model, stage):
 	k = model.param('k')
 	if not nprand.choice(2, 1, p=[1-k, k])[0]: return
@@ -65,8 +66,8 @@ def war(demes, primitive, model, stage):
 	for a in demes[not result].agents['agent']: a.die()
 	for i in range(pop):
 		choice(demes[result].agents['agent']).reproduce().migrate(demes[not result])
-heli.addHook('demeMatch', war)
 
+@heli.hook
 def demeStep(deme, model, stage):
 	if stage > 1: deme.dontStepAgents = True
 	
@@ -75,16 +76,15 @@ def demeStep(deme, model, stage):
 		for a in deme.agents['agent']:
 			for i in range(a.stocks['payoff']): a.reproduce()
 			a.die()
-heli.addHook('demeStep', demeStep)
 
 #Normalize population at the beginning of stage 3
+@heli.hook
 def modelStep(model, stage):
 	if stage==3:
 		for d in model.agents['deme']:
 			targetDpop = 20
 			while len(d.agents['agent']) > 20: choice(d.agents['agent']).die()
 			while len(d.agents['agent']) < 20: choice(d.agents['agent']).reproduce()
-heli.addHook('modelStep', modelStep)
 
 #===============
 # CONFIGURATION

@@ -23,11 +23,12 @@ heli.params['agents_agent'].opts['step'] = 2 #Make sure we don't get stray agent
 # BEHAVIOR
 #===============
 
+@heli.hook
 def agentInit(agent, model):
 	agent.lastPeriod = 0	
 	agent.utility = CobbDouglas(['shmoo', 'soma'])
-heli.addHook('agentInit', agentInit)
 
+@heli.hook
 def match(agents, primitive, model, stage):
 	myEndowU = agents[0].utility.calculate(agents[0].stocks)
 	theirEndowU = agents[1].utility.calculate(agents[1].stocks)
@@ -56,14 +57,12 @@ def match(agents, primitive, model, stage):
 	#Record data
 	agents[0].utils = agents[0].utility.consume({'soma': agents[0].stocks['soma'], 'shmoo': agents[0].stocks['shmoo']})
 	agents[1].utils = agents[1].utility.consume({'soma': agents[1].stocks['soma'], 'shmoo': agents[1].stocks['shmoo']})
-	
-heli.addHook('match', match)
 
 #Stop the model when we're basically equilibrated
+@heli.hook
 def modelStep(model, stage):
 	if model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20:
 		model.terminate()
-heli.addHook('modelStep', modelStep)
 
 #===============
 # CONFIGURATION

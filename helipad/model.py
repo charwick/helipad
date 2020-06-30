@@ -69,6 +69,12 @@ class Helipad():
 		self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 		self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 		
+		#Decorators
+		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
+		def hookdec(name, fn, kwargs): self.addHook(name, fn, **kwargs)
+		self.reporter = self.genDecorator(repdec)
+		self.hook = self.genDecorator(hookdec)
+		
 		#Check for updates
 		from helipad.__init__ import __version__
 		import xmlrpc.client, ssl
@@ -719,23 +725,21 @@ class Helipad():
 		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window
 		self.start()
 	
-	#
-	# DECORATORS
-	#
-	
-	#Returns a decorator if it has arguments; otherwise it's a decorator itself
-	def reporter(self, name=None, **kwargs):
-		if callable(name): func, name, isDec = (name, None, True)
-		else: isDec = False
+	# Generates function decorators for hooks, reporters, etc.
+	def genDecorator(self, todo):
+		def dec(name=None, **kwargs):
+			if callable(name): func, name, isDec = (name, None, True)
+			else: isDec = False
 		
-		#Is a decorator
-		def rep1(fn):
-			namn = name #If I do anything with name here, Python throws UnboundLocalError. Possibly a bug?
-			if namn is None: namn=fn.__name__
-			self.data.addReporter(namn, fn, **kwargs)
-			return fn
+			#Is a decorator
+			def rep1(fn):
+				namn = name #If I do anything with name here, Python throws UnboundLocalError. Possibly a Python bug?
+				if namn is None: namn=fn.__name__
+				todo(namn, fn, kwargs)
+				return fn
 			
-		return rep1(func) if isDec else rep1
+			return rep1(func) if isDec else rep1
+		return dec
 
 class MultiLevel(agent.baseAgent, Helipad):	
 	def __init__(self, breed, id, parentModel):

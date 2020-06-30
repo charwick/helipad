@@ -56,10 +56,10 @@ def distance(agent1, agent2):
 	return sqrt((agent1.x-agent2.x)**2 + (agent1.y-agent2.y)**2)
 
 #Randomly position our agents
+@heli.hook
 def baseAgentInit(agent, model):
 	dim = model.param('dimension')
 	agent.position = [randint(0, dim-1), randint(0, dim-1)]
-heli.addHook('baseAgentInit', baseAgentInit)
 
 #Both agents and patches to have x and y properties
 baseAgent.x = property(lambda self: self.position[0])
@@ -87,19 +87,20 @@ def moveTo(self, x, y):
 Agent.moveTo = moveTo
 
 #Position our patches so we can get them with heli.patches[x][y]
+@heli.hook
 def patchInit(agent, model):
 	x=0
 	while len(model.patches[x]) >= model.param('dimension'): x+=1
 	agent.position = (x, len(model.patches[x]))
 	model.patches[x].append(agent)
-heli.addHook('patchInit', patchInit)
 
+@heli.hook
 def modelPreSetup(model):
 	model.patches = [[] for i in range(model.param('dimension'))]
 	model.param('agents_patch', model.param('dimension')**2)
-heli.addHook('modelPreSetup', modelPreSetup)
 
 #Establish grid links
+@heli.hook
 def modelPostSetup(model):
 	for patch in model.agents['patch']:
 		neighbors = [ patch.up, patch.right, patch.down, patch.left ]
@@ -114,12 +115,11 @@ def modelPostSetup(model):
 		# for d in diagonals:
 		# 	if not d in connections:
 		# 		patch.newEdge(d, 'space', weight=0.5)
-heli.addHook('modelPostSetup', modelPostSetup)
 
 #Agent logic
+@heli.hook
 def agentStep(agent, model, stage):
 	pass	
-heli.addHook('agentStep', agentStep)
 
 #===============
 # CONFIGURATION

@@ -252,7 +252,7 @@ class Cpanel():
 			except: print('Use pip to install pyobjc for nice Mac features')
 		
 		#Insert GUI code into some of the model logic
-		
+		@self.model.hook(prioritize=True)
 		def terminate(model, data):
 			model.cpanel.progress.stop()
 		
@@ -267,12 +267,11 @@ class Cpanel():
 			if hasattr(model.cpanel, 'runButton'):
 				model.cpanel.runButton['text'] = 'New Model'
 				model.cpanel.runButton['command'] = model.cpanel.run
-		self.model.addHook('terminate', terminate, True) #Do this before any other terminate hooks
-		
+
+		@self.model.hook('graphUpdate', prioritize=True)
 		def updateProgress(model, graph):
 			st = model.param('stopafter')
 			if st: model.cpanel.progress['value'] = model.t/st*100
-		self.model.addHook('graphUpdate', updateProgress, True)
 	
 	#Resume a model
 	def run(self):
