@@ -1,0 +1,35 @@
+/* The color indicator on per-item parameters */
+
+.helipad_circle{
+	height: 10px; width: 10px;
+	border-radius: 10px;
+	border: 1px solid rgba(0,0,0,0.2);
+	display: inline-block;
+	margin-right:5px;
+}
+
+/* Turn an HBox of checkboxes into a wrapping Checkgrid */
+
+.helipad_checkgrid .widget-label-basic input { display: none; }
+.helipad_checkgrid .widget-label-basic span {
+	display: block;
+	padding: 3px 15px;
+	cursor: pointer;
+	width: 120px;
+}
+.helipad_checkgrid .widget-label-basic input:checked + span {
+	background: #419BF9;
+	color: #FFF;
+}
+.helipad_checkgrid .widget-label-basic span:hover { background: #DBDBDB; }
+.helipad_checkgrid .widget-label-basic input:checked + span:hover { background: #1c87f8 }
+.helipad_checkgrid .widget-label { display: none; }
+.helipad_checkgrid .widget-checkbox {
+	width: auto; height: auto;
+	margin: 0 2px 2px 0;
+}
+.helipad_checkgrid .widget-box {
+	overflow: visible;
+	display: block;
+	float: left;
+}

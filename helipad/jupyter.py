@@ -1,22 +1,18 @@
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label
 from IPython.display import display
+from helipad.graph import Plot
+import os
 
 class JupyterCpanel:
 	def __init__(self, model):
 		self.model = model
 		
 		#CSS niceties
-		display(HTML(value="""<style type="text/css">
-			.helipad_circle{
-				height: 10px; width: 10px;
-				border-radius: 10px;
-				border: 1px solid rgba(0,0,0,0.2);
-				display: inline-block;
-				margin-right:5px;
-			}
-		</style>"""))
+		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+		with open(__location__+'/ipy-styles.css') as c: css = c.read() 
+		display(HTML(value='<style type="text/css">'+css+'</style>'))
 		
-		def constructElement(param, func, title, val, circle=None):
+		def renderParam(param, func, title, val, circle=None):
 			i=None
 			if param.type=='slider':
 				if isinstance(param.opts, dict): i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
@@ -53,7 +49,7 @@ class JupyterCpanel:
 		def constructAccordion(param, itemList):
 			param.element = {}
 			for item, good in itemList.items():
-				param.element[item] = constructElement(param, param.setf(item), item.title(), param.get(item), circle=good.color)
+				param.element[item] = renderParam(param, param.setf(item), item.title(), param.get(item), circle=good.color)
 		
 			i,hboxes,elements=(0,[],list(param.element.values()))
 			while 2*i<len(elements):
@@ -67,7 +63,7 @@ class JupyterCpanel:
 		#Global config
 		for param in model.params.values():
 			if not getattr(param, 'config', False): continue
-			param.element = constructElement(param, param.setf(), param.title, param.get())
+			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
 			if param.name=='csv': param.set('filename')
 			if param.type=='checkentry': param.set(False)
@@ -84,5 +80,19 @@ class JupyterCpanel:
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False): continue
-			param.element = constructElement(param, param.setf(), param.title, param.get())
+			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
+		
+		#Plots
+		def func(self, val): self.selected = val
+		Plot.set = func
+		children, hboxes = ([],[])
+		for name, plot in model.plots.items():
+			i = interactive(plot.set, val=plot.selected)
+			i.children[0].description = plot.label
+			children.append(i)
+		acc = Accordion(children=[HBox(children)])
+		acc.set_title(0, 'Plots')
+		acc.add_class('helipad_checkgrid')
+		display(acc)
+			
