@@ -59,6 +59,8 @@ class JupyterCpanel:
 			accordion = Accordion(children=[VBox(hboxes)])
 			accordion.set_title(0, param.title)
 			return accordion
+		
+		self.model.doHooks('CpanelTop', [self, None])
 	
 		#Global config
 		for param in model.params.values():
@@ -68,6 +70,8 @@ class JupyterCpanel:
 			if param.name=='csv': param.set('filename')
 			if param.type=='checkentry': param.set(False)
 		
+		self.model.doHooks('CpanelAboveItemParams', [self, None])
+		
 		#Per-good parameters
 		for param in model.goodParams.values():
 			display(constructAccordion(param, model.nonMoneyGoods))
@@ -76,6 +80,8 @@ class JupyterCpanel:
 		for prim in model.primitives.values():
 			for param in prim.breedParams.values():
 				display(constructAccordion(param, prim.breeds))
+		
+		self.model.doHooks('CpanelAboveParams', [self, None])
 	
 		#Global parameters
 		for param in model.params.values():
@@ -83,16 +89,34 @@ class JupyterCpanel:
 			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
 		
+		self.model.doHooks('CpanelAbovePlotList', [self, None])
+		
 		#Plots
 		def func(self, val): self.selected = val
 		Plot.set = func
-		children, hboxes = ([],[])
-		for name, plot in model.plots.items():
+		children = []
+		for plot in model.plots.values():
 			i = interactive(plot.set, val=plot.selected)
 			i.children[0].description = plot.label
 			children.append(i)
-		acc = Accordion(children=[HBox(children)])
-		acc.set_title(0, 'Plots')
-		acc.add_class('helipad_checkgrid')
-		display(acc)
-			
+		pacc = Accordion(children=[HBox(children)])
+		pacc.set_title(0, 'Plots')
+		pacc.add_class('helipad_checkgrid')
+		display(pacc)
+		
+		self.model.doHooks('CpanelAboveShocks', [self, None])
+		
+		if len(model.shocks.shocks):
+			def sfunc(self, val): self.active = val
+			model.shocks.Shock.set = sfunc
+			children = []
+			for shock in model.shocks.shocks.values():
+				i = interactive(shock.set, val=shock.active)
+				i.children[0].description = shock.name
+				i.children[0].description_tooltip = shock.desc if shock.desc is not None else ''
+				children.append(i)
+			sacc = Accordion(children=[VBox(children)])
+			sacc.set_title(0, 'Shocks')
+			display(sacc)
+		
+		self.model.doHooks('CpanelBottom', [self, None])

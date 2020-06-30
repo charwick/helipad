@@ -8,7 +8,7 @@ from helipad.helpers import *
 #In the absence of Tkinter, minimal replacements
 if isIpy():
 	class StringVar:
-		def __init__(self): self.val=None
+		def __init__(self, value=None): self.val=value
 		def get(self): return self.val
 		def set(self, val): self.val = val
 	BooleanVar = StringVar
