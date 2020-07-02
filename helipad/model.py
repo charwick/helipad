@@ -440,7 +440,8 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
-	def start(self):
+	#The *args allows it to be used as an Ipywidgets callback
+	def start(self, *args):
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
@@ -469,7 +470,7 @@ class Helipad():
 				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
 				if self.t>=st: self.terminate()
 	
-	def stop(self):
+	def stop(self, *args):
 		self.running = False
 		self.doHooks('modelStop', [self])
 	
@@ -692,6 +693,8 @@ class Helipad():
 		if not len(plotsToDraw.items()) and (not self.param('stopafter') or not self.param('csv')):
 			print('Plotless mode requires stop period and CSV export to be enabled.')
 			return
+		
+		self.doHooks('plotsPreLaunch', [self])
 		
 		#If we've got plots, instantiate the Graph object
 		if len(plotsToDraw.items()) > 0:

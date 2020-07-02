@@ -1,4 +1,4 @@
-from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label
+from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button
 from IPython.display import display
 from helipad.graph import Plot
 import os
@@ -120,3 +120,24 @@ class JupyterCpanel:
 			display(sacc)
 		
 		self.model.doHooks('CpanelBottom', [self, None])
+		
+		#Model flow control: pause/run button
+		@model.hook
+		def plotsPreLaunch(model):
+			self.startstop = Button(description='Pause', icon='pause')
+			self.startstop.on_click(self.model.stop)
+			display(self.startstop)
+		
+		@model.hook
+		def modelStop(model):
+			print('Pause function running')
+			self.startstop.on_click(self.model.start)
+			self.startstop.description = 'Run'
+			self.startstop.icon = 'play'
+		
+		@model.hook
+		def modelStart(model, hasModel):
+			print('Run function running')
+			self.startstop.on_click(self.model.stop)
+			self.startstop.description = 'Pause'
+			self.startstop.icon = 'pause'

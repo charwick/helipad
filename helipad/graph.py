@@ -112,7 +112,8 @@ class Graph():
 			
 			#Prevent decaying averages on logscale graphs from compressing the entire view
 			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
-
+		
+		if isIpy(): self.fig.canvas.draw()
 		plt.pause(0.0001)
 	
 	def toggleLine(self, event):
