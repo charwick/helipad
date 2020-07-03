@@ -43,7 +43,6 @@ class Helipad():
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
-		self.buttons = []
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
@@ -176,7 +175,7 @@ class Helipad():
 		return series
 	
 	def addButton(self, text, func, desc=None):
-		self.buttons.append((text, func, desc))
+		self.shocks.register(text, None, func, 'button', True, desc)
 	
 	#Get ready to actually run the model
 	def setup(self):
@@ -826,6 +825,12 @@ class Shocks():
 	
 	@property
 	def number(self): return len(self.shocks)
+	
+	@property
+	def buttons(self): return {k:s for k,s in self.shocks.items() if s.timerFunc=='button'}
+	
+	@property
+	def shocksExceptButtons(self): return {k:s for k,s in self.shocks.items() if callable(s.timerFunc)}
 	
 	# ===============
 	# TIMER FUNCTIONS
