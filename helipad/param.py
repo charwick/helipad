@@ -236,7 +236,7 @@ class CheckentryParam(Param):
 	#Override because it's a complex type
 	def setf(self, item=None):
 		def sets(b, s):
-			self.set(s if b else False, item, updateGUI=False)
+			self.set(self.entryType(s) if b else False, item, updateGUI=False)
 			els = self.element if item is None else self.element[item]
 			els.children[1].disabled = not b
 		return sets

@@ -465,7 +465,10 @@ class Helipad():
 			# self.start = newtime
 	
 			if st:
-				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
+				if self.graph is None:
+					if t%self.param('updateEvery')==0:
+						if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
+						else: self.root.update() #Make sure we don't hang the interface if plotless
 				if self.t>=st: self.terminate()
 	
 	#The *args allows it to be used as an Ipywidgets callback
@@ -694,9 +697,7 @@ class Helipad():
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	
-	def launchPlots(self):
-		self.setup()
-		
+	def launchPlots(self):		
 		#Trim the plot list to the checked items and sent it to Graph
 		plotsToDraw = {k:plot for k,plot in self.plots.items() if plot.selected}
 		
@@ -706,9 +707,10 @@ class Helipad():
 			return
 		
 		self.doHooks('plotsPreLaunch', [self])
+		self.setup()
 		
 		#If we've got plots, instantiate the Graph object
-		if len(plotsToDraw.items()) > 0:
+		if len(plotsToDraw) > 0:
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
@@ -730,10 +732,7 @@ class Helipad():
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		
 		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
-		else:
-			self.graph = None
-			self.params['stopafter'].element.disable()
-			self.params['csv'].element.disable()
+		else: self.graph = None
 		
 		self.doHooks('plotsLaunch', [self, self.graph])
 		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window

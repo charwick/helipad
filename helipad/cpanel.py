@@ -272,31 +272,39 @@ class Cpanel():
 		def updateProgress(model, graph):
 			st = model.param('stopafter')
 			if st: model.cpanel.progress['value'] = model.t/st*100
-	
-	#Resume a model
-	def run(self):
-		if hasattr(self, 'runButton'):
-			self.runButton['text'] = 'Pause'
-			self.runButton['command'] = self.model.stop
 		
-		#Adjust progress bar
-		if not self.model.params['stopafter'].get():
-			self.progress.config(mode='indeterminate')
-			self.progress.start()
-		else:
-			self.progress.config(mode='determinate')
-		
-		#self.start = time.time()
-		if not self.model.hasModel:
+		@self.model.hook(prioritize=True)
+		def plotsLaunch(model, graph):
+			if graph is None:
+				model.params['stopafter'].element.disable()
+				model.params['csv'].element.disable()
 			#Disable graph checkboxes and any parameters that can't be changed during runtime
-			self.checks.disable()
-			for param in self.model.allParams:
-				if not param.runtime and hasattr(param, 'element'):
-					if isinstance(param.element, dict):
-						for e in param.element.values(): e.configure(state='disabled')
-					else: param.element.configure(state='disabled')
-			self.model.launchPlots()
-		else: self.model.start()
+			else:
+				self.checks.disable()
+				for param in model.allParams:
+					if not param.runtime and hasattr(param, 'element'):
+						if isinstance(param.element, dict):
+							for e in param.element.values(): e.configure(state='disabled')
+						else: param.element.configure(state='disabled')
+		
+		@self.model.hook(prioritize=True)
+		def modelStart(model, hasModel):
+			if hasattr(self, 'runButton'):
+				self.runButton['text'] = 'Pause'
+				self.runButton['command'] = model.stop
+		
+			#Adjust progress bar
+			if not model.params['stopafter'].get():
+				self.progress.config(mode='indeterminate')
+				self.progress.start()
+			else:
+				self.progress.config(mode='determinate')
+	
+	#Start or resume a model
+	def run(self):		
+		#self.start = time.time()
+		if self.model.hasModel: self.model.start()
+		else: self.model.launchPlots()
 		
 		#Pause if it hasn't terminated
 		if self.model.hasModel:

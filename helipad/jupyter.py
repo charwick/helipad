@@ -127,6 +127,13 @@ class JupyterCpanel:
 			self.startstop = Button(description='Pause', icon='pause')
 			self.startstop.click = self.model.stop
 			display(self.startstop)
+			
+		#Disable stopafter and csv if it's plotless; otherwise we'll have no way to stop the model
+		@model.hook(prioritize=True)
+		def plotsLaunch(model, graph):
+			if graph is None:
+				for e in model.params['stopafter'].element.children + model.params['csv'].element.children:
+					e.disabled = True
 		
 		@model.hook(prioritize=True)
 		def modelStop(model):
@@ -152,12 +159,12 @@ class JupyterCpanel:
 		def terminate(model, data):
 			self.startstop.layout.visibility = 'hidden'
 			
-			#Re-enable non-runtime elements
+			#Re-enable control panel elements
 			for p in self.model.allParams:
-				if not p.runtime:
-					for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
-						e.children[0].disabled = False
-						if p.type=='checkentry' and p.get():
-							e.children[1].disabled = False
+				if p.type == 'hidden': continue
+				for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
+					e.children[0].disabled = False
+					if p.type=='checkentry' and p.get():
+						e.children[1].disabled = False
 			for p in self.model.plots.values():
 				p.element.children[0].disabled = False
