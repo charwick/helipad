@@ -269,7 +269,7 @@ class CentralBank(baseAgent):
 		expand = 0
 		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
 		if expand != 0: self.expand(expand)
-			
+	
 	def expand(self, amount):				
 		if self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('agents_agent')

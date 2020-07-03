@@ -12,7 +12,7 @@ from numpy import random, arange
 from helipad.graph import *
 from helipad.helpers import *
 from helipad.param import *
-import matplotlib
+import matplotlib, asyncio
 # import multiprocessing
 
 if not isIpy():
@@ -431,7 +431,7 @@ class Helipad():
 					#Step any remainder agents
 					for agent in pool: agent.step(self.stage)
 				
-				#Activation model	
+				#Activation model
 				else:
 					for a in self.agents[prim]:
 						a.step(self.stage)
@@ -440,11 +440,8 @@ class Helipad():
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
-	#The *args allows it to be used as an Ipywidgets callback
-	def start(self, *args):
-		self.doHooks('modelStart', [self, self.hasModel])
-		if not self.hasModel: self.setup()
-		self.running = True
+	#This is split out as an async function to allow user input while running the loop in Jupyter
+	async def run(self):
 		while self.running:
 			t = self.step()
 			st = self.param('stopafter')
@@ -469,6 +466,18 @@ class Helipad():
 			if st:
 				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
 				if self.t>=st: self.terminate()
+	
+	def start(self, *args):
+		self.doHooks('modelStart', [self, self.hasModel])
+		if not self.hasModel: self.setup()
+		self.running = True
+		#Suppress the 'coroutine never awaited' warning, because the interpreter doesn't like the fact
+		#that the statement in the try block doesn't get executed…?
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore")
+			try: asyncio.run(self.run())	#If Tkinter, it needs an event loop
+			except:							#If Jupyter, it already has an event loop
+				asyncio.ensure_future(self.run())
 	
 	def stop(self, *args):
 		self.running = False

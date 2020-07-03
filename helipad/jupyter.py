@@ -122,22 +122,24 @@ class JupyterCpanel:
 		self.model.doHooks('CpanelBottom', [self, None])
 		
 		#Model flow control: pause/run button
-		@model.hook
+		@model.hook(prioritize=True)
 		def plotsPreLaunch(model):
 			self.startstop = Button(description='Pause', icon='pause')
-			self.startstop.on_click(self.model.stop)
+			self.startstop.click = self.model.stop
 			display(self.startstop)
 		
-		@model.hook
+		@model.hook(prioritize=True)
 		def modelStop(model):
-			print('Pause function running')
-			self.startstop.on_click(self.model.start)
+			self.startstop.click = self.model.start
 			self.startstop.description = 'Run'
 			self.startstop.icon = 'play'
 		
-		@model.hook
+		@model.hook(prioritize=True)
 		def modelStart(model, hasModel):
-			print('Run function running')
-			self.startstop.on_click(self.model.stop)
+			self.startstop.click = self.model.stop
 			self.startstop.description = 'Pause'
 			self.startstop.icon = 'pause'
+		
+		@model.hook(prioritize=True)
+		def terminate(model, data):
+			self.startstop.layout.visibility = 'hidden'
