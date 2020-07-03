@@ -21,8 +21,8 @@
 	background: #419BF9;
 	color: #FFF;
 }
-.helipad_checkgrid .widget-label-basic span:hover { background: #DBDBDB; }
-.helipad_checkgrid .widget-label-basic input:checked + span:hover { background: #1c87f8 }
+.helipad_checkgrid .widget-label-basic input:enabled + span:hover { background: #DBDBDB; }
+.helipad_checkgrid .widget-label-basic input:checked:enabled + span:hover { background: #1c87f8 }
 .helipad_checkgrid .widget-label { display: none; }
 .helipad_checkgrid .widget-checkbox {
 	width: auto; height: auto;
@@ -33,3 +33,4 @@
 	display: block;
 	float: left;
 }
+.helipad_checkgrid .widget-label-basic input:disabled + span { opacity: 0.5; }

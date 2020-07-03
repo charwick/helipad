@@ -96,9 +96,9 @@ class JupyterCpanel:
 		Plot.set = func
 		children = []
 		for plot in model.plots.values():
-			i = interactive(plot.set, val=plot.selected)
-			i.children[0].description = plot.label
-			children.append(i)
+			plot.element = interactive(plot.set, val=plot.selected)
+			plot.element.children[0].description = plot.label
+			children.append(plot.element)
 		pacc = Accordion(children=[HBox(children)])
 		pacc.set_title(0, 'Plots')
 		pacc.add_class('helipad_checkgrid')
@@ -133,13 +133,31 @@ class JupyterCpanel:
 			self.startstop.click = self.model.start
 			self.startstop.description = 'Run'
 			self.startstop.icon = 'play'
-		
+					
 		@model.hook(prioritize=True)
 		def modelStart(model, hasModel):
 			self.startstop.click = self.model.stop
 			self.startstop.description = 'Pause'
 			self.startstop.icon = 'pause'
+			
+			#Disable non-runtime elements
+			for p in self.model.allParams:
+				if not p.runtime:
+					for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
+						for c in e.children: c.disabled = True
+			for p in self.model.plots.values():
+				p.element.children[0].disabled = True
 		
 		@model.hook(prioritize=True)
 		def terminate(model, data):
 			self.startstop.layout.visibility = 'hidden'
+			
+			#Re-enable non-runtime elements
+			for p in self.model.allParams:
+				if not p.runtime:
+					for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
+						e.children[0].disabled = False
+						if p.type=='checkentry' and p.get():
+							e.children[1].disabled = False
+			for p in self.model.plots.values():
+				p.element.children[0].disabled = False

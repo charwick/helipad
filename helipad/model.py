@@ -448,6 +448,7 @@ class Helipad():
 			
 			#Update graph
 			if self.graph is not None and t%self.param('updateEvery')==0:
+				await asyncio.sleep(0.001) #Listen for keyboard input
 				data = self.data.getLast(t - self.graph.lastUpdate)
 	
 				if (self.graph.resolution > 1):
@@ -467,6 +468,7 @@ class Helipad():
 				if self.graph is None: self.root.update() #Make sure we don't hang the interface if plotless
 				if self.t>=st: self.terminate()
 	
+	#The *args allows it to be used as an Ipywidgets callback
 	def start(self, *args):
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
