@@ -71,8 +71,10 @@ class Helipad():
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
 		def hookdec(name, fn, kwargs): self.addHook(name, fn, **kwargs)
+		def buttondec(name, fn, kwargs): self.addButton(name, fn, **kwargs)
 		self.reporter = self.genDecorator(repdec)
 		self.hook = self.genDecorator(hookdec)
+		self.button = self.genDecorator(buttondec)
 		
 		#Check for updates
 		from helipad.__init__ import __version__

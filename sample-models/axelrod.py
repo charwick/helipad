@@ -27,9 +27,9 @@ heli.addParameter('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 
 heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
 heli.addParameter('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
 
+@heli.button(name='Reset Wealth')
 def reset(model):
 	for a in model.agents['agent']: a.stocks['payoff'] = 0
-heli.addButton('Reset Wealth', reset)
 
 heli.addGood('payoff','009900')
 
