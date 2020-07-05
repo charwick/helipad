@@ -240,3 +240,32 @@ class CheckentryParam(Param):
 			els = self.element if item is None else self.element[item]
 			els.children[1].disabled = not b
 		return sets
+
+class CheckgridParam(Param):
+	defaultVal = []
+	type='checkgrid'
+	
+	def __init__(self, **kwargs):
+		if kwargs['obj'] is not None: raise ValueError('Cannot instantiate per-item checkgrid parameter')
+		if not 'dflt' in kwargs or not isinstance(kwargs['dflt'], list): kwargs['dflt'] = []
+		if isinstance(kwargs['opts'], list): kwargs['opts'] = {k:k for k in kwargs['opts']}
+		for k,v in kwargs['opts'].items():
+			if isinstance(v, str): kwargs['opts'][k] = (v, None) #Standardized key:(name, tooltip) format
+		self.vars = {k: k in kwargs['dflt'] for k in kwargs['opts']}
+		super().__init__(**kwargs)
+	
+	@property
+	def keys(self): return list(self.vars.keys())
+	
+	def get(self, item=None):
+		vals = self.element if hasattr(self, 'element') and not isIpy() else self.vars
+		if item is not None: return vals[item]
+		else: return [k for k,v in vals.items() if v.get()]
+	
+	#Takes a list of strings, or a key-bool pair
+	def set(self, item, val=True, updateGUI=True):
+		if isinstance(item, list):
+			for i in self.keys: self.set(i, i in item)
+		else:
+			if hasattr(self, 'element') and not isIpy(): self.element.checks[item].set(val)
+			else: self.vars[item] = val

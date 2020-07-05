@@ -50,12 +50,11 @@ strategies = {
 }
 
 #Build the strategies toggle
-@heli.hook
-def CpanelAbovePlotList(gui, bg):
-	gui.model.strategies = checkGrid(parent=gui.parent, text='Strategies', columns=2, bg=bg)
-	for s,v in strategies.items():
-		gui.model.strategies.addCheck(s, s, v[0], v[2] if len(v)>=3 else None)
-	return gui.model.strategies
+heli.addParameter('strategies', 'Strategies', 'checkgrid',
+	opts = {k: (k, v[2] if len(v)>2 else None) for k,v in strategies.items()},
+	dflt = [k for k,v in strategies.items() if v[0]],
+	runtime=False, columns=2
+)
 
 #===============
 # STRATEGIES
@@ -155,19 +154,14 @@ def modelPreSetup(model):
 		model.data.removeReporter(b+'-proportion')
 	model.primitives['agent'].breeds = {}
 	
-	model.strategies.disable()
-	for k,v in model.strategies.items():
-		if v.get(): model.addBreed(k, strategies[k][1])
+	for k in model.param('strategies'):
+		model.addBreed(k, strategies[k][1])
 	
 	model.param('agents_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
 	
 	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		model.addSeries('payoffs', b+'-proportion', b, d.color)
-
-@heli.hook
-def terminate(model, data):
-	model.strategies.enable()
 
 #===============
 # CONFIGURATION

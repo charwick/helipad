@@ -64,7 +64,7 @@ class Cpanel():
 			return circle
 		
 		def renderParam(frame, param, item=None, bg='#EEEEEE'):
-			if param.type == 'hidden': return
+			if param.type in ['hidden', 'checkgrid']: return
 	
 			if param.obj is not None and item is None:
 				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
@@ -191,6 +191,16 @@ class Cpanel():
 				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
 				if e is not None: e.pack(fill=None if param.type=='check' else X)
 		fnum += 1
+		
+		#Checkgrid parameters
+		for p in self.model.params.values():
+			if p.type!='checkgrid': continue
+			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2])
+			for k,v in p.opts.items():
+				cg.addCheck(k, v[0], p.vars[k], v[1])
+			p.element = cg
+			p.element.pack(fill=BOTH)
+			fnum += 1
 		
 		gapl = self.model.doHooks('CpanelAbovePlotList', [self, bgcolors[fnum%2]])
 		if gapl:
@@ -552,8 +562,11 @@ class checkGrid(expandableFrame):
 	def items(self): return self.checks.items()
 	def values(self): return self.checks.values()
 	def keys(self): return self.checks.keys()
-	def disabled(self, key, val):
-		self.checks[key].disabled(val)
+	def disabled(self, key, val=None):
+		if isinstance(key, bool):
+			if key: self.disable()
+			else: self.enable()
+		else: self.checks[key].disabled(val)
 	def enable(self, key=None):
 		if key: self.checks[key].enable()
 		else:
@@ -562,3 +575,4 @@ class checkGrid(expandableFrame):
 		if key: self.checks[key].disable()
 		else:
 			for c in self.values(): c.disable()
+	def configure(self, state): self.disabled(state=='disabled')
