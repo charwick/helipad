@@ -55,8 +55,7 @@ class Param(Item):
 	
 	#Returns a one-parameter setter since Jupyter needs it
 	def setf(self, item=None):
-		def set(val):
-			self.set(val, item, updateGUI=False)
+		def set(val): self.set(val, item, updateGUI=False)
 		return set
 	
 	@property
@@ -173,7 +172,7 @@ class SliderParam(Param):
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
 		
-		if isIpy() and hasattr(self, 'element') and (self.obj is None or item in self.element):
+		if isIpy() and hasattr(self, 'element') and self.element is not None and (self.obj is None or item in self.element):
 			el = self.element if self.obj is None else self.element[item]
 			
 			#Regular slider update
@@ -247,20 +246,21 @@ class CheckgridParam(Param):
 	
 	def __init__(self, **kwargs):
 		if kwargs['obj'] is not None: raise ValueError('Cannot instantiate per-item checkgrid parameter')
-		if not 'dflt' in kwargs or not isinstance(kwargs['dflt'], list): kwargs['dflt'] = []
+		if not 'default' in kwargs or not isinstance(kwargs['default'], list): kwargs['default'] = []
 		if isinstance(kwargs['opts'], list): kwargs['opts'] = {k:k for k in kwargs['opts']}
 		for k,v in kwargs['opts'].items():
 			if isinstance(v, str): kwargs['opts'][k] = (v, None) #Standardized key:(name, tooltip) format
-		self.vars = {k: k in kwargs['dflt'] for k in kwargs['opts']}
+		self.vars = {k: k in kwargs['default'] for k in kwargs['opts']}
 		super().__init__(**kwargs)
 	
 	@property
 	def keys(self): return list(self.vars.keys())
 	
 	def get(self, item=None):
-		vals = self.element if hasattr(self, 'element') and not isIpy() else self.vars
+		useElement = hasattr(self, 'element') and not isIpy()
+		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
-		else: return [k for k,v in vals.items() if v.get()]
+		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 	
 	#Takes a list of strings, or a key-bool pair
 	def set(self, item, val=True, updateGUI=True):
@@ -269,3 +269,9 @@ class CheckgridParam(Param):
 		else:
 			if hasattr(self, 'element') and not isIpy(): self.element.checks[item].set(val)
 			else: self.vars[item] = val
+			
+			if updateGUI and isIpy() and hasattr(self, 'element'): self.element[item].children[0].value = val
+	
+	def setf(self, item):
+		def set(val): self.set(item, val, updateGUI=False)
+		return set

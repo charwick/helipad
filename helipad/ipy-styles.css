@@ -33,4 +33,7 @@
 	display: block;
 	float: left;
 }
-.helipad_checkgrid .widget-label-basic input:disabled + span { opacity: 0.5; }
+.helipad_checkgrid .widget-label-basic input:disabled + span {
+	opacity: 0.5;
+	cursor: default;
+}

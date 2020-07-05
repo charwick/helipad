@@ -33,8 +33,17 @@ class JupyterCpanel:
 					i.children[0].layout = Layout(width='150px')
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
+			elif param.type=='checkgrid':
+				param.element = {}
+				for k,v in param.opts.items():
+					param.element[k] = interactive(param.setf(k), val=param.vars[k])
+					param.element[k].children[0].description = v[0]
+					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else ''
+				i = Accordion(children=[HBox(list(param.element.values()))])
+				i.set_title(0, title)
+				i.add_class('helipad_checkgrid')
 	
-			if i is not None:
+			if i is not None and param.type!='checkgrid':
 				circle='<span class="helipad_circle" style="background:'+circle.hex_l+'"></span>' if circle is not None else ''
 				i.children[0].description = circle+title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
@@ -85,9 +94,15 @@ class JupyterCpanel:
 	
 		#Global parameters
 		for param in model.params.values():
-			if getattr(param, 'config', False): continue
+			if getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
+		
+		#Checkgrids
+		for param in model.params.values():
+			if param.type!='checkgrid': continue
+			acc = renderParam(param, None, param.title, None)
+			if acc is not None: display(acc)
 		
 		self.model.doHooks('CpanelAbovePlotList', [self, None])
 		
