@@ -27,11 +27,6 @@ class Helipad():
 	runInit = True #for multiple inheritance
 	
 	def __init__(self):
-		
-		#Got to initialize Tkinter first in order for StringVar() and such to work
-		#But only do so if it's the top-most model
-		if not hasattr(self, 'breed') and not isIpy(): self.root = Tk()
-		
 		self.data = Data(self)
 		self.shocks = Shocks(self)
 		self.running = False
@@ -52,22 +47,6 @@ class Helipad():
 		#Default parameters
 		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
 		
-		#Plot categories
-		self.plots = {}
-		plotList = {
-			'prices': 'Prices',
-			'demand': 'Demand',
-			'shortage': 'Shortages',
-			'money': 'Money',
-			'utility': 'Utility'
-		}
-		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
-				
-		#Privileged parameters
-		self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
-		self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
-		self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
-		
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
 		def hookdec(name, fn, kwargs): self.addHook(name, fn, **kwargs)
@@ -76,31 +55,51 @@ class Helipad():
 		self.hook = self.genDecorator(hookdec)
 		self.button = self.genDecorator(buttondec)
 		
-		#Check for updates
-		from helipad.__init__ import __version__
-		import xmlrpc.client, ssl
-		
-		#Is v1 bigger than v2?
-		#There's a `packaging` function to do this, but let's not bloat our dependencies.
-		def vcompare(v1, v2):
-			(v1, v2) = (v1.split('.'), (v2.split('.')))
+		#A few things that only make sense to do if it's the topmost model
+		if not hasattr(self, 'breed'):
+			if not isIpy(): self.root = Tk() #Got to initialize Tkinter first in order for StringVar() and such to work
 			
-			#Pad major releases with zeroes to make comparable
-			maxl = max([len(v1), len(v2)])
-			for v in [v1,v2]:
-				if len(v)<maxl: v += [0 for i in range(maxl-len(v))]
+			#Privileged parameters
+			self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
+			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
+			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 			
-			for k,i in enumerate(v1):
-				if i > v2[k]: return True
-				elif i < v2[k]: return False
-			return False
+			#Plot categories
+			self.plots = {}
+			plotList = {
+				'prices': 'Prices',
+				'demand': 'Demand',
+				'shortage': 'Shortages',
+				'money': 'Money',
+				'utility': 'Utility'
+			}
+			for name, label in plotList.items(): self.addPlot(name, label, selected=False)
 		
-		try:
-			pypi = xmlrpc.client.ServerProxy('https://pypi.org/pypi', context=ssl._create_unverified_context())
-			available = pypi.package_releases('helipad')
-			if vcompare(available[0], __version__):
-				print('A Helipad update is available! Use `pip install -U helipad` to upgrade to version',available[0])
-		except: pass #Fail silently if we're not online
+			#Check for updates
+			from helipad.__init__ import __version__
+			import xmlrpc.client, ssl
+		
+			#Is v1 bigger than v2?
+			#There's a `packaging` function to do this, but let's not bloat our dependencies.
+			def vcompare(v1, v2):
+				(v1, v2) = (v1.split('.'), (v2.split('.')))
+			
+				#Pad major releases with zeroes to make comparable
+				maxl = max([len(v1), len(v2)])
+				for v in [v1,v2]:
+					if len(v)<maxl: v += [0 for i in range(maxl-len(v))]
+			
+				for k,i in enumerate(v1):
+					if i > v2[k]: return True
+					elif i < v2[k]: return False
+				return False
+		
+			try:
+				pypi = xmlrpc.client.ServerProxy('https://pypi.org/pypi', context=ssl._create_unverified_context())
+				available = pypi.package_releases('helipad')
+				if vcompare(available[0], __version__):
+					print('A Helipad update is available! Use `pip install -U helipad` to upgrade to version',available[0])
+			except: pass #Fail silently if we're not online
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
 		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
@@ -152,6 +151,7 @@ class Helipad():
 	#Third arg is the series name. Use '' to not show in the legend.
 	#Fourth arg is the plot's hex color, or a Color object
 	def addSeries(self, plot, reporter, label, color, style='-'):
+		if hasattr(self, 'breed'): return #Doesn't matter if it's not the top-level model
 		if isinstance(color, Color): color = color.hex_l.replace('#','')
 		if not plot in self.plots:
 			raise KeyError('Plot \''+plot+'\' does not exist. Be sure to register plots before adding series.')
