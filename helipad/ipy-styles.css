@@ -28,11 +28,12 @@
 	width: auto; height: auto;
 	margin: 0 2px 2px 0;
 }
-.helipad_checkgrid .widget-box {
+.helipad_checkgrid .widget-box, .helipad_param_peritem .widget-box {
 	overflow: visible;
 	display: block;
 	float: left;
 }
+.helipad_param_peritem .widget-inline-hbox { padding-right: 15px; }
 .helipad_checkgrid .widget-label-basic input:disabled + span {
 	opacity: 0.5;
 	cursor: default;

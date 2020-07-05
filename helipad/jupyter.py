@@ -38,7 +38,7 @@ class JupyterCpanel:
 				for k,v in param.opts.items():
 					param.element[k] = interactive(param.setf(k), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
-					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else ''
+					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
 				i = Accordion(children=[HBox(list(param.element.values()))])
 				i.set_title(0, title)
 				i.add_class('helipad_checkgrid')
@@ -60,13 +60,9 @@ class JupyterCpanel:
 			for item, good in itemList.items():
 				param.element[item] = renderParam(param, param.setf(item), item.title(), param.get(item), circle=good.color)
 		
-			i,hboxes,elements=(0,[],list(param.element.values()))
-			while 2*i<len(elements):
-				hboxes.append(HBox([elements[2*i], elements[2*i+1]] if len(elements)>2*i+1 else [elements[2*i]]))
-				i+=1
-		
-			accordion = Accordion(children=[VBox(hboxes)])
+			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
+			accordion.add_class('helipad_param_peritem')
 			return accordion
 		
 		self.model.doHooks('CpanelTop', [self, None])
