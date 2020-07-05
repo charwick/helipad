@@ -1,3 +1,4 @@
 include runner README.md
 include runner LICENSE
 recursive-include sample-models *
+recursive-include sample-notebooks *
