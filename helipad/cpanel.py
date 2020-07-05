@@ -215,18 +215,18 @@ class Cpanel():
 			fnum += 1
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			for shock in self.model.shocks.shocksExceptButtons.values():
-				shock.guiElement = Checkbutton(frame8.subframe, text=shock.name, var=shock.boolvar, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
-				if self.balloon and shock.desc is not None: self.balloon.bind(shock.guiElement, shock.desc)
-				shock.guiElement.pack(fill=BOTH)
+				shock.element = Checkbutton(frame8.subframe, text=shock.name, var=shock.boolvar, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+				if self.balloon and shock.desc is not None: self.balloon.bind(shock.element, shock.desc)
+				shock.element.pack(fill=BOTH)
 			
 			b=0
 			if len(self.model.shocks.buttons):
 				bframe = Frame(frame8.subframe, bg=bgcolors[fnum%2])
 				for c in range(2): bframe.columnconfigure(c ,weight=1)
 				for shock in self.model.shocks.buttons.values():
-					shock.guiElement = Button(bframe, text=shock.name, command=shockCallback(shock.name), padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
-					shock.guiElement.grid(row=3+int(ceil((b+1)/2)), column=b%2, sticky='W')
-					if self.balloon and shock.desc is not None: self.balloon.bind(shock.guiElement, shock.desc)
+					shock.element = Button(bframe, text=shock.name, command=shockCallback(shock.name), padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
+					shock.element.grid(row=3+int(ceil((b+1)/2)), column=b%2, sticky='W')
+					if self.balloon and shock.desc is not None: self.balloon.bind(shock.element, shock.desc)
 					b+=1
 				bframe.pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)

@@ -106,15 +106,25 @@ class JupyterCpanel:
 		
 		self.model.doHooks('CpanelAboveShocks', [self, None])
 		
+		#Shocks
 		if len(model.shocks.shocks):
 			def sfunc(self, val): self.active = val
+			def sfuncButton(slef, *args): slef.do(self.model)
 			model.shocks.Shock.set = sfunc
+			model.shocks.Shock.setButton = sfuncButton
 			children = []
-			for shock in model.shocks.shocks.values():
-				i = interactive(shock.set, val=shock.active)
-				i.children[0].description = shock.name
-				i.children[0].description_tooltip = shock.desc if shock.desc is not None else ''
-				children.append(i)
+			for shock in model.shocks.shocksExceptButtons.values():
+				shock.element = interactive(shock.set, val=shock.active)
+				shock.element.children[0].description = shock.name
+				shock.element.children[0].description_tooltip = shock.desc if shock.desc is not None else ''
+				children.append(shock.element)
+			buttons = []
+			for shock in model.shocks.buttons.values():
+				shock.element = Button(description=shock.name, icon='bolt')
+				shock.element.click = shock.setButton
+				shock.element.description_tooltip = shock.desc if shock.desc is not None else ''
+				buttons.append(shock.element)
+			children.append(HBox(buttons))
 			sacc = Accordion(children=[VBox(children)])
 			sacc.set_title(0, 'Shocks')
 			display(sacc)
