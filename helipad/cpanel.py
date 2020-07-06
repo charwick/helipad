@@ -282,7 +282,7 @@ class Cpanel():
 		@self.model.hook('graphUpdate', prioritize=True)
 		def updateProgress(model, graph):
 			st = model.param('stopafter')
-			if st: model.cpanel.progress['value'] = model.t/st*100
+			if st and not callable(st): model.cpanel.progress['value'] = model.t/st*100
 		
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
@@ -305,7 +305,8 @@ class Cpanel():
 				self.runButton['command'] = model.stop
 		
 			#Adjust progress bar
-			if not model.params['stopafter'].get():
+			st = model.param('stopafter')
+			if not st or callable(st):
 				self.progress.config(mode='indeterminate')
 				self.progress.start()
 			else:

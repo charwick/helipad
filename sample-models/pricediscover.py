@@ -25,7 +25,6 @@ heli.params['agents_agent'].opts['step'] = 2 #Make sure we don't get stray agent
 
 @heli.hook
 def agentInit(agent, model):
-	agent.lastPeriod = 0	
 	agent.utility = CobbDouglas(['shmoo', 'soma'])
 
 @heli.hook
@@ -72,5 +71,6 @@ heli.addPlot('price', 'Price', logscale=True, selected=True)
 heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '119900')
 
 for p in ['demand', 'utility']: heli.plots[p].active(True)
+heli.param('updateEvery', 1)
 
 heli.launchCpanel()
