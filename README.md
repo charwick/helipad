@@ -27,21 +27,21 @@ Helipad requires Python 3.6. Previous versions do not preserve dict order, so yo
 
 The following libraries are required:
 
-* Colour (for the user interface)
-* Matplotlib (for plotting the time series output)
-* Pandas (for data collection)
+* [Colour](https://pypi.org/project/colour/) (for the user interface)
+* [Matplotlib](https://matplotlib.org/) (for plotting the time series output)
+* [Pandas](https://pandas.pydata.org/) (for data collection)
 
 The following libraries are optional but recommended:
 
-* Jupyter and Ipywidgets (to run Helipad in Jupyter notebooks)
-* PMW (for tooltips)
-* NetworkX (for network analysis)
-* Readline and Code (for the debug console)
-* Pyobjc (for Mac interface niceties)
+* [Jupyter](https://jupyter.org/) and [Ipywidgets](https://pypi.org/project/ipywidgets/) (to run Helipad in Jupyter notebooks)
+* [PMW](https://pypi.org/project/Pmw/) (for tooltips)
+* [NetworkX](http://networkx.github.io/) (for network analysis)
+* [Readline](https://pypi.org/project/readline/) and Code (for the debug console)
+* [Pyobjc](https://pypi.org/project/pyobjc/) (for Mac interface niceties)
 
 ## Version History
 
-* 1.0: Jupyter integration, separated control panel from plotting
+* 1.0: Jupyter integration, hook decorators, and separated control panel from plotting
 * 0.7: Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern
 * 0.6: Support for multi-level models
 * 0.5: Support for matching models, and the checkGrid class
