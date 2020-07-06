@@ -140,9 +140,9 @@ class Cpanel():
 				else: param.element[item] = el
 				return wrap
 		
-		gtop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
-		if gtop:
-			gtop.pack(fill="x", side=TOP)
+		ctop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
+		if ctop:
+			ctop.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
@@ -169,9 +169,9 @@ class Cpanel():
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill="x", side=TOP)
 		
-		gaip = self.model.doHooks('CpanelAboveItemParams', [self, bgcolors[fnum%2]])
-		if gaip:
-			gaip.pack(fill="x", side=TOP)
+		caip = self.model.doHooks('CpanelAboveItemParams', [self, bgcolors[fnum%2]])
+		if caip:
+			caip.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		for k, param in model.goodParams.items():
@@ -185,9 +185,9 @@ class Cpanel():
 					if e is not None: e.pack(fill="x")
 				fnum += 1
 		
-		gap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
-		if gap:
-			gap.pack(fill="x", side=TOP)
+		cap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
+		if cap:
+			cap.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		#Parameter sliders
@@ -207,9 +207,9 @@ class Cpanel():
 			p.element.pack(fill=BOTH)
 			fnum += 1
 		
-		gapl = self.model.doHooks('CpanelAbovePlotList', [self, bgcolors[fnum%2]])
-		if gapl:
-			gapl.pack(fill="x", side=TOP)
+		capl = self.model.doHooks('CpanelAbovePlotList', [self, bgcolors[fnum%2]])
+		if capl:
+			capl.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		# Graph Checkboxes
@@ -220,9 +220,9 @@ class Cpanel():
 			plot.check = self.checks.addCheck(k, plot.label, plot.selected)
 		self.checks.pack(fill="x", side=TOP)
 		
-		gas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
-		if gas:
-			gas.pack(fill="x", side=TOP)
+		cas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
+		if cas:
+			cas.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		#Shock checkboxes and buttons
@@ -246,9 +246,9 @@ class Cpanel():
 				bframe.pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
 		
-		gbot = self.model.doHooks('CpanelBottom', [self, bgcolors[fnum%2]])
-		if gbot:
-			gbot.pack(fill="x", side=TOP)
+		cbot = self.model.doHooks('CpanelBottom', [self, bgcolors[fnum%2]])
+		if cbot:
+			cbot.pack(fill="x", side=TOP)
 			fnum += 1
 		
 		#Set application name

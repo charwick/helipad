@@ -74,7 +74,8 @@ class JupyterCpanel:
 			accordion.add_class('helipad_param_peritem')
 			return accordion
 		
-		self.model.doHooks('CpanelTop', [self, None])
+		ctop = self.model.doHooks('CpanelTop', [self, None])
+		if ctop: display(ctop)
 	
 		#Global config
 		for n,param in model.params.items():
@@ -85,7 +86,8 @@ class JupyterCpanel:
 			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and getattr(param, 'func', None) is None: param.set(False)
 		
-		self.model.doHooks('CpanelAboveItemParams', [self, None])
+		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
+		if caip: display(caip)
 		
 		#Per-good parameters
 		for param in model.goodParams.values():
@@ -96,7 +98,8 @@ class JupyterCpanel:
 			for param in prim.breedParams.values():
 				display(constructAccordion(param, prim.breeds))
 		
-		self.model.doHooks('CpanelAboveParams', [self, None])
+		cap = self.model.doHooks('CpanelAboveParams', [self, None])
+		if cap: display(cap)
 	
 		#Global parameters
 		for param in model.params.values():
@@ -110,7 +113,8 @@ class JupyterCpanel:
 			acc = renderParam(param, None, param.title, None)
 			if acc is not None: display(acc)
 		
-		self.model.doHooks('CpanelAbovePlotList', [self, None])
+		capl = self.model.doHooks('CpanelAbovePlotList', [self, None])
+		if capl: display(capl)
 		
 		#Plots
 		def func(self, val): self.selected = val
@@ -125,7 +129,8 @@ class JupyterCpanel:
 		pacc.add_class('helipad_checkgrid')
 		display(pacc)
 		
-		self.model.doHooks('CpanelAboveShocks', [self, None])
+		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
+		if cas: display(cas)
 		
 		#Shocks
 		if len(model.shocks.shocks):
@@ -150,7 +155,8 @@ class JupyterCpanel:
 			sacc.set_title(0, 'Shocks')
 			display(sacc)
 		
-		self.model.doHooks('CpanelBottom', [self, None])
+		cbot = self.model.doHooks('CpanelBottom', [self, None])
+		if cbot: display(cbot)
 		
 		#Model flow control: pause/run button
 		@model.hook(prioritize=True)
