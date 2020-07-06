@@ -77,12 +77,13 @@ class JupyterCpanel:
 		self.model.doHooks('CpanelTop', [self, None])
 	
 		#Global config
-		for param in model.params.values():
+		for n,param in model.params.items():
 			if not getattr(param, 'config', False): continue
 			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
 			if param.name=='csv': param.set('filename')
-			if param.type=='checkentry' and getattr(param, 'func', None) is None: param.set(False)
+			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
+			if param.type=='checkentry' and getattr(param, 'config', False) and getattr(param, 'func', None) is None: param.set(False)
 		
 		self.model.doHooks('CpanelAboveItemParams', [self, None])
 		

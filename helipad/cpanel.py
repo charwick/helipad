@@ -148,7 +148,7 @@ class Cpanel():
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
-		if not callable(self.model.param('stopafter')): self.model.params['stopafter'].set(False)
+		if not callable(self.model.param('stopafter')): self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 		

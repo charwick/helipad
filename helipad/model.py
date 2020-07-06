@@ -8,7 +8,7 @@
 import sys, warnings, pandas
 from random import shuffle, choice
 from colour import Color
-from numpy import random, arange
+from numpy import random
 from helipad.graph import *
 from helipad.helpers import *
 from helipad.param import *
@@ -60,7 +60,7 @@ class Helipad():
 			if not isIpy(): self.root = Tk() #Got to initialize Tkinter first in order for StringVar() and such to work
 			
 			#Privileged parameters
-			self.addParameter('stopafter', 'Stop on period', 'checkentry', 10000, runtime=True, config=True, entryType='int')
+			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int')
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 			
@@ -448,7 +448,7 @@ class Helipad():
 			st = self.param('stopafter')
 			
 			#Update graph
-			if self.graph is not None and t%self.param('updateEvery')==0:
+			if getattr(self, 'graph', None) is not None and t%self.param('updateEvery')==0:
 				await asyncio.sleep(0.001) #Listen for keyboard input
 				data = self.data.getLast(t - self.graph.lastUpdate)
 	
@@ -467,7 +467,7 @@ class Helipad():
 	
 			if st:
 				stop = st(self) if callable(st) else t>=st
-				if self.graph is None:
+				if getattr(self, 'graph', None) is None and getattr(self, 'cpanel', None):
 					if t%self.param('updateEvery')==0:
 						if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
 						else: self.root.update() #Make sure we don't hang the interface if plotless
@@ -478,6 +478,7 @@ class Helipad():
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
+		
 		#Suppress the 'coroutine never awaited' warning, because the interpreter doesn't like the fact
 		#that the statement in the try block doesn't get executed…?
 		with warnings.catch_warnings():
@@ -495,16 +496,16 @@ class Helipad():
 		self.hasModel = False
 		
 		remainder = int(self.t % self.param('updateEvery')) #For some reason this returns a float sometimes?
-		if remainder > 0: self.graph.update(self.data.getLast(remainder)) #Last update at the end
+		if remainder > 0 and getattr(self, 'graph', None) is not None: self.graph.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
-	#type='breed' or 'good', item is the breed or good name, prim is the primitive if type=='breed'
-	#t can also be a function taking the model object with a finishing condition
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
-	def paramSweep(self, param, t, reporters=None):
+	def paramSweep(self, param, reporters=None):
 		import pandas
+		print(self.param('stopafter'))
+		if not self.param('stopafter'): raise RuntimeError('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set')
 		
 		#Standardize format and get the Param objects
 		if not isinstance(param, list): param = [param]
@@ -518,21 +519,12 @@ class Helipad():
 		from itertools import product
 		space = [{p[0]:run[k] for k,p in enumerate(params.items())} for run in product(*[p[1].range for p in params.values()])]
 		
-		#Stop when necessary
-		def stopt(cond):
-			def tfunc(model):
-				if model.t >= cond: model.stop()
-			def ffunc(model):
-				if cond(model): model.stop()
-			return ffunc if callable(cond) else tfunc
-		stopf = stopt(t)
-		self.addHook('modelPostStep', stopf)
-		
 		#Run the model
 		alldata = []
 		for i,run in enumerate(space):
 			print('Run',str(i+1)+'/'+str(len(space))+':',', '.join([k+'='+('\''+v+'\'' if isinstance(v, str) else str(v)) for k,v in run.items()])+'…')
-			for p in self.allParams: p.reset()
+			for p in self.allParams:
+				if not getattr(p, 'config', False): p.reset()
 			self.setup()
 			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
 			
@@ -542,8 +534,6 @@ class Helipad():
 			else: data = self.data.dataframe
 				
 			alldata.append((run, data))
-		
-		self.hooks['modelPostStep'].remove(stopf) #Clear the hook for future runs
 		return alldata
 	
 	#Creates an unweighted and undirected network of a certain density

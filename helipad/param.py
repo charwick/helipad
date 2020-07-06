@@ -4,6 +4,8 @@
 # ==========
 
 from helipad.helpers import *
+from numpy import arange
+from itertools import combinations
 
 #In the absence of Tkinter, minimal replacements
 if isIpy():
@@ -305,3 +307,9 @@ class CheckgridParam(Param):
 	def setf(self, item):
 		def set(val): self.set(item, val, updateGUI=False)
 		return set
+	
+	@property
+	def range(self):
+		combos = []
+		for i in range(len(self.vars)): combos += list(combinations(self.keys, i+1))
+		return combos
