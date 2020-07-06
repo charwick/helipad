@@ -198,7 +198,8 @@ class CheckentryParam(Param):
 	def get(self, item=None):
 		#Global parameter
 		if self.obj is None:
-			if hasattr(self, 'element') and not isIpy(): return self.element.get()
+			if getattr(self, 'func', None) is not None: return self.func
+			elif hasattr(self, 'element') and not isIpy(): return self.element.get()
 			else: return self.svar if self.bvar else False
 		#Per-item parameter, get all
 		elif item is None:
@@ -212,6 +213,34 @@ class CheckentryParam(Param):
 	def set(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
 		if self.obj is None:
+			
+			#Stuff to manage setting it to a function
+			if callable(val):
+				self.func = val
+				if hasattr(self, 'element'):
+					if isIpy():
+						self.element.children[1].value = 'func〈'+self.func.__name__+'〉'
+						self.element.children[0].value = True
+						self.element.add_class('helipad_checkentry_func')
+						for e in self.element.children: e.disabled = True
+					else:
+						self.element.entryValue.set('func〈'+self.func.__name__+'〉')
+						self.element.checkVar.set(True)
+						self.element.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
+						self.element.disable()
+				return
+			elif getattr(self, 'func', None) is not None:
+				self.func = None
+				if hasattr(self, 'element'):
+					if isIpy():
+						if isinstance(val, bool): self.element.children[1].value = ''
+						self.element.children[0].disabled = False
+						self.element.remove_class('helipad_checkentry_func')
+					else:
+						if isinstance(val, bool): self.element.entryValue.set('')
+						self.element.enable()
+						self.element.textbox.config(font=('Lucida Grande', 12))
+			
 			if hasattr(self, 'element') and not isIpy(): self.element.set(val)
 			elif isinstance(val, bool):
 				self.bvar = val
@@ -235,7 +264,8 @@ class CheckentryParam(Param):
 	#Override because it's a complex type
 	def setf(self, item=None):
 		def sets(b, s):
-			self.set(self.entryType(s) if b else False, item, updateGUI=False)
+			val = s if s=='' or 'func〈' in s else (self.entryType(s) if b else False)
+			self.set(val, item, updateGUI=False)
 			els = self.element if item is None else self.element[item]
 			els.children[1].disabled = not b
 		return sets

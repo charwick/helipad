@@ -27,12 +27,21 @@ class JupyterCpanel:
 			elif param.type=='menu':
 				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
 			elif param.type=='checkentry':
-				i = interactive(func, b=isinstance(val, param.entryType) or val, s=str(val) if isinstance(val, param.entryType) else '')
+				defaults = (
+					(isinstance(val, param.entryType) or val) if not callable(val) else True,				#Bool
+					(str(val) if isinstance(val, param.entryType) else '') if not callable(val) else 'func〈'+param.func.__name__+'〉'	#Str
+				)
+				i = interactive(func, b=defaults[0], s=defaults[1])
 				if param.obj is None:
 					i = HBox(i.children)
 					i.children[0].layout = Layout(width='150px')
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
+				
+				if getattr(param, 'func', None) is not None:
+					i.children[0].disabled = True
+					i.children[1].disabled = True
+					i.add_class('helipad_checkentry_func')
 			elif param.type=='checkgrid':
 				param.element = {}
 				for k,v in param.opts.items():
@@ -73,7 +82,7 @@ class JupyterCpanel:
 			param.element = renderParam(param, param.setf(), param.title, param.get())
 			if param.element is not None: display(param.element)
 			if param.name=='csv': param.set('filename')
-			if param.type=='checkentry': param.set(False)
+			if param.type=='checkentry' and getattr(param, 'func', None) is None: param.set(False)
 		
 		self.model.doHooks('CpanelAboveItemParams', [self, None])
 		
@@ -182,7 +191,7 @@ class JupyterCpanel:
 			
 			#Re-enable control panel elements
 			for p in self.model.allParams:
-				if p.type == 'hidden': continue
+				if p.type == 'hidden' or (p.type=='checkentry' and getattr(p, 'func', None) is not None): continue
 				for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
 					e.children[0].disabled = False
 					if p.type=='checkentry' and p.get():

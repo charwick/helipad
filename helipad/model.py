@@ -466,11 +466,12 @@ class Helipad():
 			# self.start = newtime
 	
 			if st:
+				stop = st(self) if callable(st) else t>=st
 				if self.graph is None:
 					if t%self.param('updateEvery')==0:
 						if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
 						else: self.root.update() #Make sure we don't hang the interface if plotless
-				if self.t>=st: self.terminate()
+				if stop: self.terminate()
 	
 	#The *args allows it to be used as an Ipywidgets callback
 	def start(self, *args):

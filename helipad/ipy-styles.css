@@ -38,3 +38,7 @@
 	opacity: 0.5;
 	cursor: default;
 }
+
+/* Misc */
+
+.helipad_checkentry_func input[type="text"] { font-style: italic; }

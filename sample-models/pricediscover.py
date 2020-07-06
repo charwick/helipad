@@ -59,10 +59,9 @@ def match(agents, primitive, model, stage):
 	agents[1].utils = agents[1].utility.consume({'soma': agents[1].stocks['soma'], 'shmoo': agents[1].stocks['shmoo']})
 
 #Stop the model when we're basically equilibrated
-@heli.hook
-def modelStep(model, stage):
-	if model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20:
-		model.terminate()
+def stopCondition(model):
+	return model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20
+heli.param('stopafter', stopCondition)
 
 #===============
 # CONFIGURATION

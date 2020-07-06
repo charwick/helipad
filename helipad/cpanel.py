@@ -103,7 +103,12 @@ class Cpanel():
 					elif param.type=='checkentry':
 						dflt = param.get(item)
 						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=setVar(param, item))
-						el.set(dflt)
+						if getattr(param, 'func', None) is not None:
+							el.entryValue.set('func〈'+param.func.__name__+'〉')
+							el.checkVar.set(True)
+							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
+							el.disable()
+						else: el.set(dflt)
 					el.grid(row=0, column=1)
 					if item is not None: drawCircle(wrap, param.keys[item].color.hex_l, bg).grid(row=0, column=0)
 		
@@ -143,7 +148,7 @@ class Cpanel():
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
-		self.model.params['stopafter'].set(False)
+		if not callable(self.model.param('stopafter')): self.model.params['stopafter'].set(False)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 		
@@ -265,7 +270,7 @@ class Cpanel():
 			#Re-enable checkmarks and options
 			model.cpanel.checks.enable()
 			for param in model.allParams:
-				if not hasattr(param, 'element'): continue
+				if not hasattr(param, 'element') or (param.type=='checkentry' and getattr(param, 'func', None) is not None): continue
 				if isinstance(param.element, dict):
 					for e in param.element.values(): e.configure(state='normal')
 				else: param.element.configure(state='normal')
