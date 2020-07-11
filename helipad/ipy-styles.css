@@ -39,6 +39,20 @@
 	cursor: default;
 }
 
+/* Progress bar */
+
+.widget-hprogress { width: 100%; }
+.indeterminate .progress-bar {
+    background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+    background-size: 40px 40px;
+}
+.helipad_running.indeterminate .progress-bar { animation: helipad-progress 2s linear infinite; }
+
+@keyframes helipad-progress {
+  from  { background-position: 40px 0; }
+  to    { background-position: 0 0; }
+}
+
 /* Misc */
 
 .helipad_checkentry_func input[type="text"] { font-style: italic; }

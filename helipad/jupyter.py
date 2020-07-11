@@ -1,4 +1,4 @@
-from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button
+from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
 from IPython.display import display
 from helipad.graph import Plot
 import os
@@ -45,7 +45,7 @@ class JupyterCpanel:
 			elif param.type=='checkgrid':
 				param.element = {}
 				for k,v in param.opts.items():
-					param.element[k] = interactive(param.setf(k), val=param.vars[k])
+					param.element[k] = interactive(param.setf(k, model=self.model), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
 					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
 				i = Accordion(children=[HBox(list(param.element.values()))])
@@ -67,7 +67,7 @@ class JupyterCpanel:
 		def constructAccordion(param, itemList):
 			param.element = {}
 			for item, good in itemList.items():
-				param.element[item] = renderParam(param, param.setf(item), item.title(), param.get(item), circle=good.color)
+				param.element[item] = renderParam(param, param.setf(item, model=self.model), item.title(), param.get(item), circle=good.color)
 		
 			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
@@ -80,7 +80,7 @@ class JupyterCpanel:
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False): continue
-			param.element = renderParam(param, param.setf(), param.title, param.get())
+			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
 			if param.element is not None: display(param.element)
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
@@ -104,7 +104,7 @@ class JupyterCpanel:
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, param.setf(), param.title, param.get())
+			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
 			if param.element is not None: display(param.element)
 		
 		#Checkgrids
@@ -158,14 +158,36 @@ class JupyterCpanel:
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: display(cbot)
 		
-		#Model flow control: pause/run button
+		#Progress bar logic
+		def switchPbar(model, name, val):
+			if not hasattr(self, 'progress'): return
+			if not val:
+				self.progress.add_class('indeterminate')
+				self.progress.value = 1
+			else:
+				self.progress.remove_class('indeterminate')
+				self.progress.value = model.t/val
+		self.model.params['stopafter'].callback = switchPbar
+		
+		@model.hook('graphUpdate', prioritize=True)
+		def updateProgress(model, graph):
+			st = model.param('stopafter')
+			if st and not callable(st): model.cpanel.progress.value = model.t/st
+		
+		#Model flow control: pause/run button and progress bar
 		@model.hook(prioritize=True)
 		def plotsPreLaunch(model):
-			self.startstop = Button(description='Pause', icon='pause')
-			self.startstop.click = self.model.stop
-			display(self.startstop)
+			self.runbutton = Button(description='Pause', icon='pause')
+			self.runbutton.click = self.model.stop
 			
-		#Disable stopafter and csv if it's plotless; otherwise we'll have no way to stop the model
+			self.progress = FloatProgress(min=0, max=1)
+			st = self.model.param('stopafter')
+			if not st or callable(st):
+				self.progress.value = 1
+				self.progress.add_class('indeterminate')
+			display(HBox([self.runbutton, self.progress]))
+			
+		#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 		@model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
 			if graph is None:
@@ -174,15 +196,17 @@ class JupyterCpanel:
 		
 		@model.hook(prioritize=True)
 		def modelStop(model):
-			self.startstop.click = self.model.start
-			self.startstop.description = 'Run'
-			self.startstop.icon = 'play'
+			self.runbutton.click = self.model.start
+			self.runbutton.description = 'Run'
+			self.runbutton.icon = 'play'
+			self.progress.remove_class('helipad_running')
 					
 		@model.hook(prioritize=True)
 		def modelStart(model, hasModel):
-			self.startstop.click = self.model.stop
-			self.startstop.description = 'Pause'
-			self.startstop.icon = 'pause'
+			self.runbutton.click = self.model.stop
+			self.runbutton.description = 'Pause'
+			self.runbutton.icon = 'pause'
+			self.progress.add_class('helipad_running')
 			
 			#Disable non-runtime elements
 			for p in self.model.allParams:
@@ -194,7 +218,8 @@ class JupyterCpanel:
 		
 		@model.hook(prioritize=True)
 		def terminate(model, data):
-			self.startstop.layout.visibility = 'hidden'
+			self.runbutton.layout.visibility = 'hidden'
+			self.progress.layout.visibility = 'hidden'
 			
 			#Re-enable control panel elements
 			for p in self.model.allParams:
