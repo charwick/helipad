@@ -13,7 +13,7 @@ from helipad.graph import *
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
-# import multiprocessing
+# import time	#For performance testing
 
 if not isIpy():
 	from tkinter import *
@@ -450,6 +450,7 @@ class Helipad():
 	
 	#This is split out as an async function to allow user input while running the loop in Jupyter
 	async def run(self):
+		# self.begin = time.time()
 		while self.running:
 			t = self.step()
 			st = self.param('stopafter')
@@ -474,10 +475,10 @@ class Helipad():
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
 					else: self.root.update() #Make sure we don't hang the interface if plotless
 			
-			## Performance indicator
-			# newtime = time.time()
-			# print('Period', t, 'at', model.param('updateEvery')/(newtime-self.start), 'periods/second')
-			# self.start = newtime
+				# # Performance indicator
+				# newtime = time.time()
+				# print('Period', t, 'at', self.param('updateEvery')/(newtime-self.begin), 'periods/second')
+				# self.begin = newtime
 	
 			if st:
 				stop = st(self) if callable(st) else t>=st
@@ -676,7 +677,6 @@ class Helipad():
 		if not isIpy():
 			from helipad.cpanel import Cpanel
 			self.cpanel = Cpanel(self.root, self)
-			self.doHooks('CpanelPostInit', [self.cpanel])
 			
 			# Debug console
 			# Requires to be run from Terminal (⌘-⇧-R in TextMate)
@@ -692,8 +692,6 @@ class Helipad():
 					shell.interact()
 				except: print('Use pip to install readline and code for a debug console')
 		
-			self.root.title(self.name+(' ' if self.name!='' else '')+'Control Panel')
-			self.root.resizable(0,0)
 			self.root.mainloop()		#Launch the control panel
 		else:
 			from helipad.jupyter import JupyterCpanel

@@ -7,7 +7,6 @@ from tkinter import *
 from tkinter.ttk import Progressbar
 from colour import Color
 from math import ceil
-# import time #For performance testing
 
 class Cpanel():	
 	def __init__(self, parent, model):
@@ -265,6 +264,8 @@ class Cpanel():
 			fnum += 1
 		
 		#Set application name
+		parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
+		parent.resizable(0,0)
 		if sys.platform=='darwin':
 			try:
 				from Foundation import NSBundle
@@ -309,10 +310,11 @@ class Cpanel():
 			if hasattr(self, 'runButton'):
 				self.runButton['text'] = 'Pause'
 				self.runButton['command'] = model.stop
+		
+		self.model.doHooks('CpanelPostInit', [self])
 	
 	#Start or resume a model
 	def run(self):		
-		#self.start = time.time()
 		if self.model.hasModel: self.model.start()
 		else:
 			st = self.model.param('stopafter')
