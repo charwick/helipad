@@ -42,17 +42,30 @@ class Cpanel():
 		def shockCallback(name):
 			return lambda: self.model.shocks[name].do(self.model)
 		
-		#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
-		def switchPbar(model, name, val):
-			if not hasattr(self, 'progress'): return
-			if not val:
-				self.progress.config(mode='indeterminate')
-				if model.running: self.progress.start()
-			else:
-				self.progress.config(mode='determinate')
-				if model.running: self.progress.stop()
-			model.root.update()
-		self.model.params['stopafter'].callback = switchPbar
+		class progressBar():
+			def __init__(self, determinate=True, root=None):
+				self.element = Progressbar(root, length=250, style="whitebg.Horizontal.TProgressbar")
+				self.determinate(determinate, False)
+				self.running = False
+			
+			@property
+			def mode(self): return self.element.cget('mode').string
+			
+			def determinate(self, det, refresh=True):
+				self.element.config(mode='determinate' if det else 'indeterminate')
+				if det: self.element.stop()
+				elif self.running: self.start()
+				if refresh: model.root.update()
+			def update(self, n): self.element['value'] = n*100
+			def start(self):
+				if self.mode =='indeterminate': self.element.start()
+			def stop(self):
+				if self.mode =='indeterminate':
+					self.element.stop()
+					self.update(1)
+			def done(self):
+				self.stop()
+				self.update(0)
 		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
@@ -164,8 +177,8 @@ class Cpanel():
 		
 		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
 		frame0 = Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
-		self.progress = Progressbar(frame0, length=250, style="whitebg.Horizontal.TProgressbar")
-		self.progress.grid(row=0, column=0)
+		self.progress = progressBar(root=frame0)
+		self.progress.element.grid(row=0, column=0)
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill="x", side=TOP)
 		
@@ -265,8 +278,6 @@ class Cpanel():
 		#Insert GUI code into some of the model logic
 		@self.model.hook(prioritize=True)
 		def terminate(model, data):
-			model.cpanel.progress.stop()
-		
 			#Re-enable checkmarks and options
 			model.cpanel.checks.enable()
 			for param in model.allParams:
@@ -278,11 +289,6 @@ class Cpanel():
 			if hasattr(model.cpanel, 'runButton'):
 				model.cpanel.runButton['text'] = 'New Model'
 				model.cpanel.runButton['command'] = model.cpanel.run
-
-		@self.model.hook('graphUpdate', prioritize=True)
-		def updateProgress(model, graph):
-			st = model.param('stopafter')
-			if st and not callable(st): model.cpanel.progress['value'] = model.t/st*100
 		
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
@@ -303,24 +309,19 @@ class Cpanel():
 			if hasattr(self, 'runButton'):
 				self.runButton['text'] = 'Pause'
 				self.runButton['command'] = model.stop
-		
-			#Adjust progress bar
-			st = model.param('stopafter')
-			if not st or callable(st):
-				self.progress.config(mode='indeterminate')
-				self.progress.start()
-			else:
-				self.progress.config(mode='determinate')
 	
 	#Start or resume a model
 	def run(self):		
 		#self.start = time.time()
 		if self.model.hasModel: self.model.start()
-		else: self.model.launchPlots()
+		else:
+			st = self.model.param('stopafter')
+			self.progress.determinate(st and not callable(st)) #Have to set at run time
+			self.model.launchPlots()
 		
 		#Pause if it hasn't terminated
 		if self.model.hasModel:
-			self.progress.stop()
+			st = self.model.param('stopafter')
 			self.runButton['text'] = 'Run'
 			self.runButton['command'] = self.run
 	

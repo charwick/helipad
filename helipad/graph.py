@@ -75,7 +75,6 @@ class Graph():
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
 		plt.draw()
-		# plt.ion()	# Makes plt.draw() unnecessary, but also closes the window after it's done
 	
 	#data is the *incremental* data
 	def update(self, data):

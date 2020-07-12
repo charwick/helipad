@@ -60,7 +60,14 @@ class Helipad():
 			if not isIpy(): self.root = Tk() #Got to initialize Tkinter first in order for StringVar() and such to work
 			
 			#Privileged parameters
-			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int')
+			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
+			def switchPbar(model, name, val):
+				if not model.hasModel or not getattr(model, 'cpanel', False) or not getattr(model.cpanel, 'progress', False): return
+				if not val: self.cpanel.progress.determinate(False)
+				else:
+					self.cpanel.progress.determinate(True)
+					self.cpanel.progress.update(model.t/val)
+			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 			
@@ -447,18 +454,25 @@ class Helipad():
 			t = self.step()
 			st = self.param('stopafter')
 			
-			#Update graph
-			if getattr(self, 'graph', None) is not None and t%self.param('updateEvery')==0:
-				await asyncio.sleep(0.001) #Listen for keyboard input
-				data = self.data.getLast(t - self.graph.lastUpdate)
-	
-				if (self.graph.resolution > 1):
-					data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
-				self.graph.update(data)
-				self.graph.lastUpdate = t
-				if self.graph.resolution > self.param('updateEvery'): self.param('updateEvery', self.graph.resolution)
+			if t%self.param('updateEvery')==0:
+				if getattr(self, 'cpanel', False) and st and not callable(st): self.cpanel.progress.update(t/st)
 				
-				self.doHooks('graphUpdate', [self, self.graph])
+				#Update graph
+				if getattr(self, 'graph', None) is not None:
+					await asyncio.sleep(0.001) #Listen for keyboard input
+					data = self.data.getLast(t - self.graph.lastUpdate)
+	
+					if (self.graph.resolution > 1):
+						data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
+					self.graph.update(data)
+					self.graph.lastUpdate = t
+					if self.graph.resolution > self.param('updateEvery'): self.param('updateEvery', self.graph.resolution)
+				
+					self.doHooks('graphUpdate', [self, self.graph])
+				
+				elif getattr(self, 'cpanel', None):
+					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
+					else: self.root.update() #Make sure we don't hang the interface if plotless
 			
 			## Performance indicator
 			# newtime = time.time()
@@ -467,14 +481,11 @@ class Helipad():
 	
 			if st:
 				stop = st(self) if callable(st) else t>=st
-				if getattr(self, 'graph', None) is None and getattr(self, 'cpanel', None):
-					if t%self.param('updateEvery')==0:
-						if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
-						else: self.root.update() #Make sure we don't hang the interface if plotless
 				if stop: self.terminate()
 	
 	#The *args allows it to be used as an Ipywidgets callback
 	def start(self, *args):
+		if getattr(self, 'cpanel', None): self.cpanel.progress.start()
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
@@ -489,6 +500,7 @@ class Helipad():
 	
 	def stop(self, *args):
 		self.running = False
+		if getattr(self, 'cpanel', None): self.cpanel.progress.stop()
 		self.doHooks('modelStop', [self])
 	
 	def terminate(self, evt=False):
@@ -499,12 +511,12 @@ class Helipad():
 		if remainder > 0 and getattr(self, 'graph', None) is not None: self.graph.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
+		if getattr(self, 'cpanel', False) and getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
 	def paramSweep(self, param, reporters=None):
 		import pandas
-		print(self.param('stopafter'))
 		if not self.param('stopafter'): raise RuntimeError('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set')
 		
 		#Standardize format and get the Param objects

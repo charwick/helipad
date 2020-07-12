@@ -158,21 +158,22 @@ class JupyterCpanel:
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: display(cbot)
 		
-		#Progress bar logic
-		def switchPbar(model, name, val):
-			if not hasattr(self, 'progress'): return
-			if not val:
-				self.progress.add_class('indeterminate')
-				self.progress.value = 1
-			else:
-				self.progress.remove_class('indeterminate')
-				self.progress.value = model.t/val
-		self.model.params['stopafter'].callback = switchPbar
-		
-		@model.hook('graphUpdate', prioritize=True)
-		def updateProgress(model, graph):
-			st = model.param('stopafter')
-			if st and not callable(st): model.cpanel.progress.value = model.t/st
+		class progressBar():
+			def __init__(self, determinate=True):
+				self.element = FloatProgress(min=0, max=1)
+				self.determinate(determinate)
+			
+			def determinate(self, det):
+				self.mode = 'determinate' if det else 'indeterminate'
+				if det: self.element.remove_class('indeterminate')
+				else:
+					self.element.add_class('indeterminate')
+					self.element.value = 1
+			
+			def update(self, n): self.element.value = n
+			def start(self): self.element.add_class('helipad_running')
+			def stop(self): self.element.remove_class('helipad_running')
+			def done(self): self.element.layout.visibility = 'hidden'
 		
 		#Model flow control: pause/run button and progress bar
 		@model.hook(prioritize=True)
@@ -180,12 +181,9 @@ class JupyterCpanel:
 			self.runbutton = Button(description='Pause', icon='pause')
 			self.runbutton.click = self.model.stop
 			
-			self.progress = FloatProgress(min=0, max=1)
 			st = self.model.param('stopafter')
-			if not st or callable(st):
-				self.progress.value = 1
-				self.progress.add_class('indeterminate')
-			display(HBox([self.runbutton, self.progress]))
+			self.progress = progressBar(st and not callable(st))
+			display(HBox([self.runbutton, self.progress.element]))
 			
 		#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 		@model.hook(prioritize=True)
@@ -199,14 +197,12 @@ class JupyterCpanel:
 			self.runbutton.click = self.model.start
 			self.runbutton.description = 'Run'
 			self.runbutton.icon = 'play'
-			self.progress.remove_class('helipad_running')
 					
 		@model.hook(prioritize=True)
 		def modelStart(model, hasModel):
 			self.runbutton.click = self.model.stop
 			self.runbutton.description = 'Pause'
 			self.runbutton.icon = 'pause'
-			self.progress.add_class('helipad_running')
 			
 			#Disable non-runtime elements
 			for p in self.model.allParams:
@@ -219,7 +215,6 @@ class JupyterCpanel:
 		@model.hook(prioritize=True)
 		def terminate(model, data):
 			self.runbutton.layout.visibility = 'hidden'
-			self.progress.layout.visibility = 'hidden'
 			
 			#Re-enable control panel elements
 			for p in self.model.allParams:
