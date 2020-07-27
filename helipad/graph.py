@@ -58,8 +58,9 @@ class Graph():
 			#Set up the legend for click events on both the line and the legend
 			leg = plot.axes.legend(loc='upper right')
 			for legline, label in zip(leg.get_lines(), leg.get_texts()):
-				legline.set_picker(5)
-				label.set_picker(5)
+				legline.set_picker(True)	#Listen for mouse events on the legend line
+				legline.set_pickradius(5)	#Set margin of valid events in pixels
+				label.set_picker(5)			#Do both on the legend text
 				for s in plot.series:
 					if s.label==label.get_text():
 						label.series = s.line
