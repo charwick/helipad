@@ -7,7 +7,7 @@ import pandas, os.path
 from numpy import *
 from helipad.model import Item
 
-class Data():
+class Data:
 	def __init__(self, model):
 		self.all = {}			#Data
 		self.reporters = {}

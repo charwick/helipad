@@ -8,7 +8,7 @@ from tkinter.ttk import Progressbar
 from colour import Color
 from math import ceil
 
-class Cpanel():	
+class Cpanel:	
 	def __init__(self, parent, model):
 		self.parent = parent
 		self.model = model

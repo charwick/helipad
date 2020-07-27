@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 
 #Basic utility functions
-class Utility():
+class Utility:
 	
 	#Receives an array of goods.
 	#Can, but doesn't necessarily have to correspond to the registered goods

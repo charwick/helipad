@@ -9,7 +9,7 @@ from numpy import *
 #Basic agent functions. This class should not be instantiated directly; instead it should be
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
-class baseAgent():
+class baseAgent:
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		self.id = int(id)
@@ -227,7 +227,7 @@ class Agent(baseAgent):
 #Direction can take an Agent object (corresponding to the endpoint),
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
 #or a boolean (False for undirected, True for agent1 to agent2)
-class Edge():
+class Edge:
 	def __init__(self, agent1, agent2, kind='edge', direction=None, weight=1):
 		self.active = True
 		self.kind = kind

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from helipad.helpers import *
 mlpstyle.use('fast')
 
-class Graph():
+class Graph:
 	#listOfPlots is the trimmed model.plots list
 	def __init__(self, listOfPlots, **kwargs):
 		#fig is the figure, plots is a list of AxesSubplot objects

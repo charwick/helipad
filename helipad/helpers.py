@@ -10,7 +10,7 @@ def isIpy():
 	except NameError: return False
 
 #Generic extensible item class to store structured data
-class Item():
+class Item:
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items():
 			setattr(self, k, v)

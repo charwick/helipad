@@ -23,7 +23,7 @@ else: matplotlib.use('nbagg')
 from helipad.data import Data
 import helipad.agent as agent
 
-class Helipad():
+class Helipad:
 	runInit = True #for multiple inheritance
 	
 	def __init__(self):
@@ -766,7 +766,7 @@ class MultiLevel(agent.baseAgent, Helipad):
 		self.dontStepAgents = False
 		super().step(stage)
 
-class Shocks():
+class Shocks:
 	def __init__(self, model):
 		self.shocks = {}
 		self.model = model
