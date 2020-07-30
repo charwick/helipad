@@ -282,10 +282,8 @@ class Cpanel:
 			#Re-enable checkmarks and options
 			model.cpanel.checks.enable()
 			for param in model.allParams:
-				if not hasattr(param, 'element') or (param.type=='checkentry' and getattr(param, 'func', None) is not None): continue
-				if isinstance(param.element, dict):
-					for e in param.element.values(): e.configure(state='normal')
-				else: param.element.configure(state='normal')
+				if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
+				if not param.runtime: param.enable()
 		
 			if hasattr(model.cpanel, 'runButton'):
 				model.cpanel.runButton['text'] = 'New Model'
@@ -293,25 +291,21 @@ class Cpanel:
 		
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
+			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 			if graph is None:
-				model.params['stopafter'].element.disable()
-				model.params['csv'].element.disable()
+				model.params['stopafter'].disable()
+				model.params['csv'].disable()
 			#Disable graph checkboxes and any parameters that can't be changed during runtime
 			else:
 				self.checks.disable()
 				for param in model.allParams:
-					if not param.runtime and hasattr(param, 'element'):
-						if isinstance(param.element, dict):
-							for e in param.element.values(): e.configure(state='disabled')
-						else: param.element.configure(state='disabled')
+					if not param.runtime: param.disable()
 		
 		@self.model.hook(prioritize=True)
 		def modelStart(model, hasModel):
 			if hasattr(self, 'runButton'):
 				self.runButton['text'] = 'Pause'
 				self.runButton['command'] = model.stop
-		
-		self.model.doHooks('CpanelPostInit', [self])
 	
 	#Start or resume a model
 	def run(self):		

@@ -184,17 +184,23 @@ class JupyterCpanel:
 			st = self.model.param('stopafter')
 			self.progress = progressBar(st and not callable(st))
 			display(HBox([self.runbutton, self.progress.element]))
-			
-		#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
+		
 		@model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
+			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 			if graph is None:
-				for e in model.params['stopafter'].element.children + model.params['csv'].element.children:
-					e.disabled = True
+				model.params['stopafter'].disable()
+				model.params['csv'].disable()
+			#Disable graph checkboxes and any parameters that can't be changed during runtime
+			else:
+				for p in model.plots.values():
+					p.element.children[0].disabled = True
+				for param in model.allParams:
+					if not param.runtime: param.disable()
 		
 		@model.hook(prioritize=True)
 		def modelStop(model):
-			self.runbutton.click = self.model.start
+			self.runbutton.click = model.start
 			self.runbutton.description = 'Run'
 			self.runbutton.icon = 'play'
 					
@@ -203,25 +209,14 @@ class JupyterCpanel:
 			self.runbutton.click = self.model.stop
 			self.runbutton.description = 'Pause'
 			self.runbutton.icon = 'pause'
-			
-			#Disable non-runtime elements
-			for p in self.model.allParams:
-				if not p.runtime:
-					for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
-						for c in e.children: c.disabled = True
-			for p in self.model.plots.values():
-				p.element.children[0].disabled = True
 		
 		@model.hook(prioritize=True)
 		def terminate(model, data):
 			self.runbutton.layout.visibility = 'hidden'
 			
 			#Re-enable control panel elements
-			for p in self.model.allParams:
-				if p.type == 'hidden' or (p.type=='checkentry' and getattr(p, 'func', None) is not None): continue
-				for e in (p.element.values() if isinstance(p.element, dict) else [p.element]):
-					e.children[0].disabled = False
-					if p.type=='checkentry' and p.get():
-						e.children[1].disabled = False
+			for param in self.model.allParams:
+				if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
+				if not param.runtime: param.enable()
 			for p in self.model.plots.values():
 				p.element.children[0].disabled = False

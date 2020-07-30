@@ -64,6 +64,18 @@ class Param(Item):
 				else: self.callback(model, self.name, item, self.get(item))
 		return set
 	
+	def disabled(self, disable):
+		if not hasattr(self, 'element'): return
+		for e in ([self.element] if self.obj is None else self.element.values()):
+			if isIpy():
+				for i in e.children: i.disabled = disable
+			else:
+				e.configure(state='disabled' if disable else 'normal')
+	
+	def disable(self): self.disabled(True)
+	def enable(self): self.disabled(False)
+			
+	
 	@property
 	def range(self): return None
 	
@@ -270,7 +282,7 @@ class CheckentryParam(Param):
 	#Override because it's a complex type
 	def setf(self, item=None, model=None):
 		def sets(b, s):
-			val = s if s=='' or 'func〈' in s else (self.entryType(s) if b else False)
+			val = s if (b and s=='') or 'func〈' in s else (self.entryType(s) if b else False)
 			self.set(val, item, updateGUI=False)
 			els = self.element if item is None else self.element[item]
 			els.children[1].disabled = not b
@@ -279,6 +291,14 @@ class CheckentryParam(Param):
 				if self.obj is None: self.callback(model, self.name, self.get(item))
 				else: self.callback(model, self.name, item, self.get(item))
 		return sets
+	
+	#Only re-enable the textbox if the checkbox is checked
+	def disabled(self, disable):
+		if hasattr(self, 'element') and isIpy() and not disable:
+			for e in ([self.element] if self.obj is None else self.element.values()):
+				e.children[0].disabled = False
+				if e.children[0].value: e.children[1].disabled = False
+		else: super().disabled(disable)
 
 class CheckgridParam(Param):
 	defaultVal = []
@@ -325,3 +345,8 @@ class CheckgridParam(Param):
 		combos = []
 		for i in range(len(self.vars)): combos += list(combinations(self.keys, i+1))
 		return combos
+	
+	def disabled(self, disable):
+		if hasattr(self, 'element') and isIpy():
+			for e in self.element.values(): e.children[0].disabled = disable
+		else: super().disabled(disable)
