@@ -74,7 +74,6 @@ class Param(Item):
 	
 	def disable(self): self.disabled(True)
 	def enable(self): self.disabled(False)
-			
 	
 	@property
 	def range(self): return None
@@ -140,7 +139,8 @@ class CheckParam(Param):
 		else: self.value[item].set(val)
 	
 	def get(self, item=None):
-		return self.value.get() if self.obj is None or item is None else self.value[item].get()
+		if item is None and self.obj is not None: return {k:v.get() for k,v in self.value.items()}
+		else: return self.value.get() if self.obj is None else self.value[item].get()
 	
 	@property
 	def range(self): return [False, True]
