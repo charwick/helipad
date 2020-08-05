@@ -486,7 +486,9 @@ class Helipad:
 	
 	#The *args allows it to be used as an Ipywidgets callback
 	def start(self, *args):
-		if getattr(self, 'cpanel', None): self.cpanel.progress.start()
+		if getattr(self, 'cpanel', None):
+			self.cpanel.progress.start()
+			self.cpanel.runButton.run()
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
@@ -501,7 +503,9 @@ class Helipad:
 	
 	def stop(self, *args):
 		self.running = False
-		if getattr(self, 'cpanel', None): self.cpanel.progress.stop()
+		if getattr(self, 'cpanel', None):
+			self.cpanel.progress.stop()
+			self.cpanel.runButton.pause()
 		self.doHooks('modelStop', [self])
 	
 	def terminate(self, evt=False):
@@ -512,7 +516,9 @@ class Helipad:
 		if remainder > 0 and getattr(self, 'graph', None) is not None: self.graph.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
-		if getattr(self, 'cpanel', False) and getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
+		if getattr(self, 'cpanel', False):
+			if getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
+			if getattr(self.cpanel, 'runButton', False): self.cpanel.runButton.terminate()
 		
 		#Re-enable parameters
 		for param in self.allParams:
@@ -722,6 +728,7 @@ class Helipad:
 		if getattr(self, 'cpanel', None):
 			st = self.param('stopafter')
 			self.cpanel.progress.determinate(st and not callable(st))
+			self.cpanel.runButton.run()
 		
 		self.setup()
 		
@@ -739,7 +746,7 @@ class Helipad:
 				#Pause on spacebar
 				elif event.key == ' ':
 					if self.running: self.stop()
-					else: self.cpanel.run()
+					else: self.start()
 			
 				#User functions
 				self.doHooks('graphKeypress', [event.key, self])

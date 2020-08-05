@@ -41,7 +41,7 @@ class Cpanel:
 		def shockCallback(name):
 			return lambda: self.model.shocks[name].do(self.model)
 		
-		class progressBar():
+		class progressBar:
 			def __init__(self, determinate=True, root=None):
 				self.element = Progressbar(root, length=250, style="whitebg.Horizontal.TProgressbar")
 				self.determinate(determinate, False)
@@ -65,6 +65,22 @@ class Cpanel:
 			def done(self):
 				self.stop()
 				self.update(0)
+		
+		class runButton(Button):
+			def __init__(self2, root, bg='#EEEEEE'):
+				super().__init__(root, text='Run', command=self.model.launchPlots, padx=10, pady=10, highlightbackground=bg)
+			
+			def run(self2):
+				self2['text'] = 'Pause'
+				self2['command'] = self.model.stop
+			
+			def pause(self2):
+				self2['text'] = 'Run'
+				self2['command'] = self.model.start
+			
+			def terminate(self2):
+				self2['text'] = 'New Model'
+				self2['command'] = self.model.launchPlots
 		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
@@ -167,7 +183,7 @@ class Cpanel:
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
 		
 		renderParam(frame1, self.model.params['updateEvery'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.runButton = Button(frame1, text='Run', command=self.run, padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
+		self.runButton = runButton(frame1, bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
 		for c in range(2): frame1.columnconfigure(c, weight=1)
@@ -281,10 +297,6 @@ class Cpanel:
 		def terminate(model, data):
 			model.cpanel.checks.enable() #Re-enable checkmarks
 		
-			if hasattr(model.cpanel, 'runButton'):
-				model.cpanel.runButton['text'] = 'New Model'
-				model.cpanel.runButton['command'] = model.cpanel.run
-		
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
 			model.cpanel.checks.disable()
@@ -293,22 +305,6 @@ class Cpanel:
 			if graph is None:
 				model.params['stopafter'].disable()
 				model.params['csv'].disable()
-		
-		@self.model.hook(prioritize=True)
-		def modelStart(model, hasModel):
-			if hasattr(self, 'runButton'):
-				self.runButton['text'] = 'Pause'
-				self.runButton['command'] = model.stop
-	
-	#Start or resume a model
-	def run(self):		
-		if self.model.hasModel: self.model.start()
-		else: self.model.launchPlots()
-		
-		#Pause if it hasn't terminated
-		if self.model.hasModel:
-			self.runButton['text'] = 'Run'
-			self.runButton['command'] = self.run
 	
 	#Step one period at a time and update the graph
 	#For use in debugging

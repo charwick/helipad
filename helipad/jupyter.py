@@ -174,40 +174,43 @@ class JupyterCpanel:
 			def stop(self): self.element.remove_class('helipad_running')
 			def done(self): self.element.layout.visibility = 'hidden'
 		
+		class runButton(Button):
+			def __init__(self2, **kwargs):
+				super().__init__(**kwargs)
+				self2.click = self.model.stop
+						
+			def run(self2):
+				self2.click = self.model.stop
+				self2.description = 'Pause'
+				self2.icon = 'pause'
+			
+			def pause(self2):
+				self2.click = self.model.start
+				self2.description = 'Run'
+				self2.icon = 'play'
+			
+			def terminate(self):
+				self.layout.visibility = 'hidden'
+		
 		#Model flow control: pause/run button and progress bar
 		@model.hook(prioritize=True)
 		def plotsPreLaunch(model):
-			self.runbutton = Button(description='Pause', icon='pause')
-			self.runbutton.click = self.model.stop
+			self.runButton = runButton(description='Pause', icon='pause')
 			self.progress = progressBar()
 			
-			display(HBox([self.runbutton, self.progress.element]))
+			display(HBox([self.runButton, self.progress.element]))
 		
 		@model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
 			#Disable plot checks
 			for p in model.plots.values(): p.element.children[0].disabled = True
 			
-			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
+			#Disable stopafter and csv if it's plotless; otherwise we'll have no way to stop the model
 			if graph is None:
 				model.params['stopafter'].disable()
 				model.params['csv'].disable()
 		
 		@model.hook(prioritize=True)
-		def modelStop(model):
-			self.runbutton.click = model.start
-			self.runbutton.description = 'Run'
-			self.runbutton.icon = 'play'
-					
-		@model.hook(prioritize=True)
-		def modelStart(model, hasModel):
-			self.runbutton.click = self.model.stop
-			self.runbutton.description = 'Pause'
-			self.runbutton.icon = 'pause'
-		
-		@model.hook(prioritize=True)
 		def terminate(model, data):
-			self.runbutton.layout.visibility = 'hidden'
-			
 			#Re-enable plot checks
 			for p in self.model.plots.values(): p.element.children[0].disabled = False
