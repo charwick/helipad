@@ -524,7 +524,7 @@ class Helipad:
 		#Re-enable parameters
 		for param in self.allParams:
 			if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
-			if not param.runtime: param.enable()
+			if not param.runtime or (self.graph is None and param.name in ['stopafter', 'csv']): param.enable()
 		
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
@@ -757,7 +757,10 @@ class Helipad:
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		
 		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
-		else: self.graph = None
+		else:
+			self.graph = None
+			self.params['stopafter'].disable()
+			self.params['csv'].disable()
 		
 		for param in self.allParams:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime

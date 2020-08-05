@@ -41,26 +41,26 @@ class Cpanel:
 		def shockCallback(name):
 			return lambda: self.model.shocks[name].do(self.model)
 		
-		class progressBar:
+		class progressBar(Progressbar):
 			def __init__(self, determinate=True, root=None):
-				self.element = Progressbar(root, length=250, style="whitebg.Horizontal.TProgressbar")
+				super().__init__(root, length=250, style="whitebg.Horizontal.TProgressbar")
 				self.determinate(determinate, False)
 				self.running = False
 			
 			@property
-			def mode(self): return self.element.cget('mode').string
+			def mode(self): return self.cget('mode').string
 			
 			def determinate(self, det, refresh=True):
-				self.element.config(mode='determinate' if det else 'indeterminate')
-				if det: self.element.stop()
+				self.config(mode='determinate' if det else 'indeterminate')
+				if det: super().stop()
 				elif self.running: self.start()
 				if refresh: model.root.update()
-			def update(self, n): self.element['value'] = n*100
+			def update(self, n): self['value'] = n*100
 			def start(self):
-				if self.mode =='indeterminate': self.element.start()
+				if self.mode =='indeterminate': super().start()
 			def stop(self):
 				if self.mode =='indeterminate':
-					self.element.stop()
+					super().stop()
 					self.update(1)
 			def done(self):
 				self.stop()
@@ -193,7 +193,7 @@ class Cpanel:
 		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
 		frame0 = Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
 		self.progress = progressBar(root=frame0)
-		self.progress.element.grid(row=0, column=0)
+		self.progress.grid(row=0, column=0)
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill="x", side=TOP)
 		
@@ -300,11 +300,6 @@ class Cpanel:
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
 			model.cpanel.checks.disable()
-			
-			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
-			if graph is None:
-				model.params['stopafter'].disable()
-				model.params['csv'].disable()
 	
 	#Step one period at a time and update the graph
 	#For use in debugging

@@ -158,21 +158,21 @@ class JupyterCpanel:
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: display(cbot)
 		
-		class progressBar():
+		class progressBar(FloatProgress):
 			def __init__(self):
-				self.element = FloatProgress(min=0, max=1)
+				super().__init__(min=0, max=1)
 			
 			def determinate(self, det):
 				self.mode = 'determinate' if det else 'indeterminate'
-				if det: self.element.remove_class('indeterminate')
+				if det: self.remove_class('indeterminate')
 				else:
-					self.element.add_class('indeterminate')
-					self.element.value = 1
+					self.add_class('indeterminate')
+					self.value = 1
 			
-			def update(self, n): self.element.value = n
-			def start(self): self.element.add_class('helipad_running')
-			def stop(self): self.element.remove_class('helipad_running')
-			def done(self): self.element.layout.visibility = 'hidden'
+			def update(self, n): self.value = n
+			def start(self): self.add_class('helipad_running')
+			def stop(self): self.remove_class('helipad_running')
+			def done(self): self.layout.visibility = 'hidden'
 		
 		class runButton(Button):
 			def __init__(self2, **kwargs):
@@ -198,17 +198,12 @@ class JupyterCpanel:
 			self.runButton = runButton(description='Pause', icon='pause')
 			self.progress = progressBar()
 			
-			display(HBox([self.runButton, self.progress.element]))
+			display(HBox([self.runButton, self.progress]))
 		
 		@model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
 			#Disable plot checks
 			for p in model.plots.values(): p.element.children[0].disabled = True
-			
-			#Disable stopafter and csv if it's plotless; otherwise we'll have no way to stop the model
-			if graph is None:
-				model.params['stopafter'].disable()
-				model.params['csv'].disable()
 		
 		@model.hook(prioritize=True)
 		def terminate(model, data):
