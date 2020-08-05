@@ -519,6 +519,7 @@ class Helipad:
 		if getattr(self, 'cpanel', False):
 			if getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
 			if getattr(self.cpanel, 'runButton', False): self.cpanel.runButton.terminate()
+		elif getattr(self, 'graph', False): self.root.destroy() #Quit if we're in cpanel-less mode
 		
 		#Re-enable parameters
 		for param in self.allParams:
@@ -638,6 +639,19 @@ class Helipad:
 	# Only call from the console, not in the code
 	#
 	
+	# Requires to be run from Terminal (⌘-⇧-R in TextMate). `self` will refer to the model object
+	# Readline doesn't look like it's doing anything here, but it enables certain console features
+	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
+	def debugConsole(self):
+		if sys.platform=='darwin':
+			try:
+				import code, readline
+				vars = globals().copy()
+				vars.update(locals())
+				shell = code.InteractiveConsole(vars)
+				shell.interact()
+			except: print('Use pip to install readline and code for a debug console')
+	
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive=None):
 		if primitive is None: primitive = next(iter(self.primitives))
@@ -689,21 +703,7 @@ class Helipad:
 		if not isIpy():
 			from helipad.cpanel import Cpanel
 			self.cpanel = Cpanel(self.root, self)
-			
-			# Debug console
-			# Requires to be run from Terminal (⌘-⇧-R in TextMate)
-			# Here so that 'self' will refer to the model object
-			# Readline doesn't look like it's doing anything here, but it enables certain console features
-			# Only works on Mac. Also Gnureadline borks everything, so don't install that.
-			if sys.platform=='darwin':
-				try:
-					import code, readline
-					vars = globals().copy()
-					vars.update(locals())
-					shell = code.InteractiveConsole(vars)
-					shell.interact()
-				except: print('Use pip to install readline and code for a debug console')
-		
+			self.debugConsole()
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
 			self.root.mainloop()		#Launch the control panel
 		else:
@@ -762,8 +762,14 @@ class Helipad:
 		for param in self.allParams:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 		self.doHooks('plotsLaunch', [self, self.graph])
-		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window
-		self.start()
+		
+		#If we're running in cpanel-less mode, hook through mainloop so it doesn't exit on pause
+		if len(plotsToDraw) and not hasattr(self, 'cpanel') and not isIpy():
+			self.root.after(1, self.start)
+			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
+			self.debugConsole()
+			self.root.mainloop()
+		else: self.start() #As long as we haven't already started
 	
 	# Generates function decorators for hooks, reporters, etc.
 	def genDecorator(self, todo):
