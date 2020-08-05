@@ -226,27 +226,17 @@ class Cpanel:
 		fnum += 1
 		
 		#Checkgrid parameters
+		self.model.params['plots'] = self.model.params.pop('plots') #Move to end
 		for p in self.model.params.values():
 			if p.type!='checkgrid': continue
-			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2])
+			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=setVar(p))
 			for k,v in p.opts.items():
+				if not isinstance(v, (tuple, list)): v = (v, None)
+				elif len(v) < 2: v = (v[0], None)
 				cg.addCheck(k, v[0], p.vars[k], v[1])
 			p.element = cg
 			p.element.pack(fill=BOTH)
 			fnum += 1
-		
-		capl = self.model.doHooks('CpanelAbovePlotList', [self, bgcolors[fnum%2]])
-		if capl:
-			capl.pack(fill="x", side=TOP)
-			fnum += 1
-		
-		# Graph Checkboxes
-		def plotCallback(name, val):
-			self.model.plots[name].active(val, updateGUI=False)
-		self.checks = checkGrid(self.parent, text='Plots', padx=5, pady=8, font=font, bg=bgcolors[fnum%2], columns=3, callback=plotCallback)
-		for k, plot in self.model.plots.items():
-			plot.check = self.checks.addCheck(k, plot.label, plot.selected)
-		self.checks.pack(fill="x", side=TOP)
 		
 		cas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
 		if cas:
@@ -255,7 +245,6 @@ class Cpanel:
 		
 		#Shock checkboxes and buttons
 		if self.model.shocks.number > 0:
-			fnum += 1
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			for shock in self.model.shocks.shocksExceptButtons.values():
 				shock.element = Checkbutton(frame8.subframe, text=shock.name, var=shock.boolvar, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
@@ -291,15 +280,6 @@ class Cpanel:
 					if info and info['CFBundleName'] == 'Python':
 						info['CFBundleName'] = 'Helipad'
 			except: print('Use pip to install pyobjc for nice Mac features')
-		
-		#Insert GUI code into some of the model logic
-		@self.model.hook(prioritize=True)
-		def terminate(model, data):
-			model.cpanel.checks.enable() #Re-enable checkmarks
-		
-		@self.model.hook(prioritize=True)
-		def plotsLaunch(model, graph):
-			model.cpanel.checks.disable()
 	
 	#Step one period at a time and update the graph
 	#For use in debugging
@@ -532,7 +512,7 @@ class checkGrid(expandableFrame):
 	
 	def addCheck(self, var, text, defaultValue=True, desc=None):
 		if self.callback is not None:
-			def cbWrap(val): self.callback(var, val)
+			def cbWrap(val): self.callback(val)
 		else: cbWrap = None
 		
 		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc, callback=cbWrap)

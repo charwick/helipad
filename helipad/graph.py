@@ -141,8 +141,14 @@ class Plot(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 	
+	@property
+	def selected(self): return self.model.params['plots'].get(self.name)
+	
+	@selected.setter
+	def selected(self, val): self.active(val)
+	
 	def active(self, val, updateGUI=True):
-		self.selected = bool(val)
+		self.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isIpy() and hasattr(self, 'check'):
 			self.check.set(val)
 

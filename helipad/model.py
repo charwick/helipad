@@ -70,6 +70,7 @@ class Helipad:
 			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
+			self.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 			
 			#Plot categories
 			self.plots = {}
@@ -130,28 +131,43 @@ class Helipad:
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		plot = Plot(label=label, series=[], logscale=logscale, stack=stack, selected=selected)
+		if getattr(self, 'cpanel', False): raise RuntimeError('Cannot add plots after control panel is drawn')
+		plot = Plot(model=self, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
 		if position is None or position > len(self.plots):
+			self.params['plots'].opts[name] = label
 			self.plots[name] = plot
-		else:		#Reconstruct the dict because there's no insert method…
-			newplots, i = ({}, 1)
-			for k,v in self.plots.items():
-				if position==i: newplots[name] = plot
-				newplots[k] = v
+		else:		#Reconstruct the dicts because there's no insert method…
+			newopts, newplots, i = ({}, {}, 1)
+			for k,v in self.params['plots'].opts.items():
+				if position==i:
+					newopts[name] = label
+					newplots[name] = plot
+				newopts[k] = v
+				newplots[k] = self.plots[k]
 				i+=1
+			self.params['plots'].opts = newopts
 			self.plots = newplots
+		
+		self.params['plots'].vars[name] = selected
+		if selected: self.params['plots'].default.append(name)
 		
 		return plot
 	
 	def removePlot(self, name, reassign=None):
-		if hasattr(self, 'cpanel'): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if getattr(self, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
 			return
+		
+		if not name in self.plots:
+			warnings.warn('No plot \''+name+'\' to remove', None, 2)
+			return
 				
-		if reassign is not None:
-			self.plots[reassign].series += self.plots[name].series
+		if reassign is not None: self.plots[reassign].series += self.plots[name].series
 		del self.plots[name]
+		del self.params['plots'].opts[name]
+		del self.params['plots'].vars[name]
+		if name in self.params['plots'].default: self.params['plots'].default.remove(name)
 	
 	#First arg is the plot it's a part of
 	#Second arg is a reporter name registered in DataCollector, or a lambda function
@@ -697,8 +713,7 @@ class Helipad:
 				self.params['agents_'+k].default = makeDivisible(self.params['agents_'+k].default, l, 'max')
 		
 		if self.moneyGood is None:
-			for i in ['prices', 'money']:
-				if i in self.plots: del self.plots[i]
+			for i in ['prices', 'money']: self.removePlot(i)
 		
 		if not isIpy():
 			from helipad.cpanel import Cpanel

@@ -45,6 +45,8 @@ class JupyterCpanel:
 			elif param.type=='checkgrid':
 				param.element = {}
 				for k,v in param.opts.items():
+					if not isinstance(v, (tuple, list)): v = (v, None)
+					elif len(v) < 2: v = (v[0], None)
 					param.element[k] = interactive(param.setf(k, model=self.model), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
 					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
@@ -79,7 +81,7 @@ class JupyterCpanel:
 	
 		#Global config
 		for n,param in model.params.items():
-			if not getattr(param, 'config', False): continue
+			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
 			if param.element is not None: display(param.element)
 			if param.name=='csv': param.set('filename')
@@ -108,26 +110,11 @@ class JupyterCpanel:
 			if param.element is not None: display(param.element)
 		
 		#Checkgrids
+		self.model.params['plots'] = self.model.params.pop('plots') #Move plot list to end
 		for param in model.params.values():
 			if param.type!='checkgrid': continue
 			acc = renderParam(param, None, param.title, None)
 			if acc is not None: display(acc)
-		
-		capl = self.model.doHooks('CpanelAbovePlotList', [self, None])
-		if capl: display(capl)
-		
-		#Plots
-		def func(self, val): self.selected = val
-		Plot.set = func
-		children = []
-		for plot in model.plots.values():
-			plot.element = interactive(plot.set, val=plot.selected)
-			plot.element.children[0].description = plot.label
-			children.append(plot.element)
-		pacc = Accordion(children=[HBox(children)])
-		pacc.set_title(0, 'Plots')
-		pacc.add_class('helipad_checkgrid')
-		display(pacc)
 		
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
 		if cas: display(cas)
@@ -199,13 +186,3 @@ class JupyterCpanel:
 			self.progress = progressBar()
 			
 			display(HBox([self.runButton, self.progress]))
-		
-		@model.hook(prioritize=True)
-		def plotsLaunch(model, graph):
-			#Disable plot checks
-			for p in model.plots.values(): p.element.children[0].disabled = True
-		
-		@model.hook(prioritize=True)
-		def terminate(model, data):
-			#Re-enable plot checks
-			for p in self.model.plots.values(): p.element.children[0].disabled = False
