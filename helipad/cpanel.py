@@ -279,11 +279,7 @@ class Cpanel:
 		#Insert GUI code into some of the model logic
 		@self.model.hook(prioritize=True)
 		def terminate(model, data):
-			#Re-enable checkmarks and options
-			model.cpanel.checks.enable()
-			for param in model.allParams:
-				if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
-				if not param.runtime: param.enable()
+			model.cpanel.checks.enable() #Re-enable checkmarks
 		
 			if hasattr(model.cpanel, 'runButton'):
 				model.cpanel.runButton['text'] = 'New Model'
@@ -291,15 +287,12 @@ class Cpanel:
 		
 		@self.model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
+			model.cpanel.checks.disable()
+			
 			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 			if graph is None:
 				model.params['stopafter'].disable()
 				model.params['csv'].disable()
-			#Disable graph checkboxes and any parameters that can't be changed during runtime
-			else:
-				self.checks.disable()
-				for param in model.allParams:
-					if not param.runtime: param.disable()
 		
 		@self.model.hook(prioritize=True)
 		def modelStart(model, hasModel):
@@ -310,14 +303,10 @@ class Cpanel:
 	#Start or resume a model
 	def run(self):		
 		if self.model.hasModel: self.model.start()
-		else:
-			st = self.model.param('stopafter')
-			self.progress.determinate(st and not callable(st)) #Have to set at run time
-			self.model.launchPlots()
+		else: self.model.launchPlots()
 		
 		#Pause if it hasn't terminated
 		if self.model.hasModel:
-			st = self.model.param('stopafter')
 			self.runButton['text'] = 'Run'
 			self.runButton['command'] = self.run
 	

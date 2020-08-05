@@ -159,9 +159,8 @@ class JupyterCpanel:
 		if cbot: display(cbot)
 		
 		class progressBar():
-			def __init__(self, determinate=True):
+			def __init__(self):
 				self.element = FloatProgress(min=0, max=1)
-				self.determinate(determinate)
 			
 			def determinate(self, det):
 				self.mode = 'determinate' if det else 'indeterminate'
@@ -180,23 +179,19 @@ class JupyterCpanel:
 		def plotsPreLaunch(model):
 			self.runbutton = Button(description='Pause', icon='pause')
 			self.runbutton.click = self.model.stop
+			self.progress = progressBar()
 			
-			st = self.model.param('stopafter')
-			self.progress = progressBar(st and not callable(st))
 			display(HBox([self.runbutton, self.progress.element]))
 		
 		@model.hook(prioritize=True)
 		def plotsLaunch(model, graph):
+			#Disable plot checks
+			for p in model.plots.values(): p.element.children[0].disabled = True
+			
 			#Disable runbutton and csv if it's plotless; otherwise we'll have no way to stop the model
 			if graph is None:
 				model.params['stopafter'].disable()
 				model.params['csv'].disable()
-			#Disable graph checkboxes and any parameters that can't be changed during runtime
-			else:
-				for p in model.plots.values():
-					p.element.children[0].disabled = True
-				for param in model.allParams:
-					if not param.runtime: param.disable()
 		
 		@model.hook(prioritize=True)
 		def modelStop(model):
@@ -214,9 +209,5 @@ class JupyterCpanel:
 		def terminate(model, data):
 			self.runbutton.layout.visibility = 'hidden'
 			
-			#Re-enable control panel elements
-			for param in self.model.allParams:
-				if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
-				if not param.runtime: param.enable()
-			for p in self.model.plots.values():
-				p.element.children[0].disabled = False
+			#Re-enable plot checks
+			for p in self.model.plots.values(): p.element.children[0].disabled = False

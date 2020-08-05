@@ -513,6 +513,12 @@ class Helipad:
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
 		if getattr(self, 'cpanel', False) and getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
+		
+		#Re-enable parameters
+		for param in self.allParams:
+			if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
+			if not param.runtime: param.enable()
+		
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
@@ -711,10 +717,17 @@ class Helipad:
 			return
 		
 		self.doHooks('plotsPreLaunch', [self])
+		
+		#Start the progress bar
+		if getattr(self, 'cpanel', None):
+			st = self.param('stopafter')
+			self.cpanel.progress.determinate(st and not callable(st))
+		
 		self.setup()
 		
 		#If we've got plots, instantiate the Graph object
-		if len(plotsToDraw) > 0:
+		title = self.name+(' ' if self.name!='' else '')+'Data Plots'
+		if len(plotsToDraw):
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
@@ -731,13 +744,16 @@ class Helipad:
 				#User functions
 				self.doHooks('graphKeypress', [event.key, self])
 		
-			self.graph = Graph(plotsToDraw, title=self.name+(' ' if self.name!='' else '')+'Data Plots')
+			self.graph = Graph(plotsToDraw, title=title)				
+			
 			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
 			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		
 		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
 		else: self.graph = None
 		
+		for param in self.allParams:
+			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 		self.doHooks('plotsLaunch', [self, self.graph])
 		if not hasattr(self, 'cpanel') and not isIpy(): self.root.destroy() #Close stray window
 		self.start()
