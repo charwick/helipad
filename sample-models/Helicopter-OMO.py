@@ -301,7 +301,7 @@ def bankChecks(model, val=None):
 	nobank = model.param('dist')!='omo'
 	model.param('agents_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
-		model.cpanel.checks.disabled(i, nobank)
+		model.params['plots'].element.disabled(i, nobank)
 	for e in model.primitives['agent'].breedParams['liqPref'].element.values():
 		e.config(state='disabled' if nobank else 'normal')
 
