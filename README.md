@@ -41,8 +41,8 @@ The following libraries are optional but recommended:
 
 ## Version History
 
-* 1.0: Jupyter integration, hook decorators, and separated control panel from plotting
-* 0.7: Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern
-* 0.6: Support for multi-level models
-* 0.5: Support for matching models, and the checkGrid class
+* [1.0](https://helipad.dev/2020/08/helipad-1-0/): Jupyter integration, hook decorators, and separated control panel from plotting
+* [0.7](https://helipad.dev/2020/06/helipad-0-7/): Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern
+* [0.6](https://helipad.dev/2020/05/helipad-0-6/): Support for multi-level models
+* [0.5](https://helipad.dev/2020/03/helipad-0-5/): Support for matching models, and the checkGrid class
 * 0.4: Initial PyPI release

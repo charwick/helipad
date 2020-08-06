@@ -2,8 +2,6 @@
 # Basic model infrastructure
 # Do not run this file; import it and run your file.
 # ==========
-#
-#TODO: Use multiprocessing to run the graphing in a different process
 
 import sys, warnings, pandas
 from random import shuffle, choice
