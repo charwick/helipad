@@ -361,7 +361,7 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
-heli.plots['prices'].active(True)
+heli.addPlot('prices', 'Prices', 1, selected=True)
 heli.addPlot('inventory', 'Inventory', 3)
 heli.addPlot('rbal', 'Real Balances', 5)
 heli.addPlot('ngdp', 'NGDP', 7, selected=False)
@@ -392,6 +392,8 @@ for breed, d in heli.primitives['agent'].breeds.items():
 for good, g in heli.nonMoneyGoods.items():
 	heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
 	heli.addSeries('inventory', 'inv-'+good, good.title()+' Inventory', g.color)
+	heli.data.addReporter('price-'+good, heli.data.agentReporter('price', 'store', good=good))
+	heli.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 
 #Price ratio plots
 def ratioReporter(item1, item2):

@@ -75,7 +75,6 @@ class Helipad:
 			#Plot categories
 			self.plots = {}
 			plotList = {
-				'prices': 'Prices',
 				'demand': 'Demand',
 				'shortage': 'Shortages',
 				'money': 'Money',
@@ -254,9 +253,6 @@ class Helipad:
 				self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
 				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
-				if 'store' in self.primitives and self.moneyGood is not None:
-					self.data.addReporter('price-'+good, self.data.agentReporter('price', 'store', good=good))
-					self.addSeries('prices', 'price-'+good, good.title()+' Price', g.color)
 	
 		self.hasModel = True #Declare before instantiating agents
 		
@@ -619,7 +615,7 @@ class Helipad:
 	def nUpdater(self, model, prim, val):
 		if not self.hasModel: return
 		
-		if 'agents_' in prim: prim = prim.split('_')[1] #Because updateVar will pass agents_{prim}
+		if 'agents_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes agents_{prim}
 		array = self.agents[prim]
 		diff = val - len(array)
 
@@ -712,8 +708,7 @@ class Helipad:
 				self.params['agents_'+k].value = makeDivisible(self.params['agents_'+k].value, l, 'max')
 				self.params['agents_'+k].default = makeDivisible(self.params['agents_'+k].default, l, 'max')
 		
-		if self.moneyGood is None:
-			for i in ['prices', 'money']: self.removePlot(i)
+		if self.moneyGood is None: self.removePlot('money')
 		
 		if not isIpy():
 			from helipad.cpanel import Cpanel
