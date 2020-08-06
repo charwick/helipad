@@ -14,8 +14,8 @@ setuptools.setup(
 	url="https://helipad.dev",
 	project_urls = {
 		'Homepage': 'https://helipad.dev',
-		'Documentation': 'https://helipad.dev/functions/'
-		'Source Code': 'https://github.com/charwick/helipad',
+		'Documentation': 'https://helipad.dev/functions/',
+		'Source Code': 'https://github.com/charwick/helipad'
 	},
 	packages=setuptools.find_packages(),
 	license='MIT',
