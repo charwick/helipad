@@ -9,7 +9,7 @@ class JupyterCpanel:
 		
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-		with open(__location__+'/ipy-styles.css') as c: css = c.read() 
+		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
 		display(HTML(value='<style type="text/css">'+css+'</style>'))
 		
 		def renderParam(param, func, title, val, circle=None):
