@@ -28,7 +28,7 @@ class Cpanel:
 		#		
 		def setVar(param, item=None):
 			def sv(val=None):
-				if param.type=='slider': val = float(val)
+				val = float(val) if param.type=='slider' else param.get(item)
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
