@@ -159,9 +159,9 @@ class baseAgent:
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
 	
-	def die(self):
+	def die(self, updateGUI=True):
 		self.model.agents[self.primitive].remove(self)
-		self.model.param('agents_'+self.primitive, self.model.param('agents_'+self.primitive)-1)
+		self.model.params['agents_'+self.primitive].set(self.model.param('agents_'+self.primitive)-1, updateGUI=updateGUI)
 		for edge in self.alledges: edge.cut()
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 		self.dead = True

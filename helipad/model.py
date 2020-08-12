@@ -641,7 +641,7 @@ class Helipad:
 			for a in self.agents[prim]:
 				if n[a.breed] < -diff:
 					n[a.breed] += 1
-					a.die()
+					a.die(updateGUI=False)
 				else: continue
 		
 	#
