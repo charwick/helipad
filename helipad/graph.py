@@ -14,7 +14,9 @@ class Graph:
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.lastUpdate = 0
 		self.resolution = 1
-		if isIpy(): plt.rcParams['figure.figsize'] = [12, 8]
+		if isIpy():
+			plt.ioff() #Can't re-launch plots without manually closing otherwise
+			plt.rcParams['figure.figsize'] = [12, 8]
 		
 		#The Tkinter way of setting the title doesn't work in Jupyter
 		#The Jupyter way works in Tkinter, but also serves as the figure id, so new graphs draw on top of old ones
