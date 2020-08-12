@@ -17,7 +17,7 @@ class JupyterCpanel:
 			if param.type=='slider':
 				if isinstance(param.opts, dict): i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
 				else:
-					s = interactive(func, val=(0, len(param.opts)-1,  1))
+					s = interactive(func, val=(0, len(param.opts)-1, 1))
 					s.children[0].readout = False
 					l = Label(value=str(param.opts[0]), layout=Layout(margin='0 0 0 15px'))
 					i = HBox([s.children[0],l])
@@ -145,6 +145,10 @@ class JupyterCpanel:
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: display(cbot)
 		
+		self.postinstruct = Label(value='After setting parameter values, run launchPlots() or start() to start the model.')
+		self.postinstruct.add_class('helipad_info')
+		display(self.postinstruct)
+		
 		class progressBar(FloatProgress):
 			def __init__(self):
 				super().__init__(min=0, max=1)
@@ -184,5 +188,14 @@ class JupyterCpanel:
 		def plotsPreLaunch(model):
 			self.runButton = runButton(description='Pause', icon='pause')
 			self.progress = progressBar()
+			self.postinstruct.layout = Layout(display='none')
 			
 			display(HBox([self.runButton, self.progress]))
+		
+		@model.hook
+		def terminate(model, data):
+			self.postinstruct.layout = Layout(display='inline-block')
+
+#https://stackoverflow.com/questions/24005221/ipython-notebook-early-exit-from-cell
+class SilentExit(Exception):
+	def _render_traceback_(self): pass

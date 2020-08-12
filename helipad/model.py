@@ -715,9 +715,10 @@ class Helipad:
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
 			self.root.mainloop()		#Launch the control panel
 		else:
-			from helipad.jupyter import JupyterCpanel
+			from helipad.jupyter import JupyterCpanel, SilentExit
 			self.cpanel = JupyterCpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
+			raise SilentExit() #Don't blow past the cpanel if doing "run all"
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	

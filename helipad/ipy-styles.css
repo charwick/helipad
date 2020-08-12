@@ -56,3 +56,15 @@
 /* Misc */
 
 .helipad_checkentry_func input[type="text"] { font-style: italic; }
+.helipad_info {
+	font-style: italic;
+	border: 1px solid #CB2;
+	background: #FFC;
+	display: inline-block;
+	padding: 5px 15px;
+	border-radius: 4px;
+}
+.helipad_info::before {
+	content: '\26A0\FE0F ';
+	font-style: normal;
+}
