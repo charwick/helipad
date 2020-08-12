@@ -462,6 +462,13 @@ class checkEntry(Frame):
 		self.textbox.grid(row=0, column=1)
 		self.callback = command
 		
+		#Callback on entry change, since Entry widgets don't have a command argument
+		#Don't actually do this because it changes on *any* value update, not just GUI entry
+		#which is inconsistent with the rest of the parameter types
+		def entryCallback(name, index, mode, sv=self.entryValue):
+			if callable(self.callback): self.callback(self.get())
+		# self.entryValue.trace('w', entryCallback)
+		
 		self.checkVar = BooleanVar()
 		self.checkbox = Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
 		self.checkbox.grid(row=0, column=0)
