@@ -28,7 +28,10 @@ class Cpanel:
 		#		
 		def setVar(param, item=None):
 			def sv(val=None):
-				val = float(val) if param.type=='slider' else param.get(item)
+				#Different widgets send different things to the callback…
+				if param.type=='slider': val = float(val)
+				elif param.type!='checkentry': val = param.get(item)
+				
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
@@ -441,33 +444,22 @@ class checkEntry(Frame):
 		
 		#If we're enforcing int, don't allow nonnumerical input
 		self.type=type
-		if type=='int':
-			validate='key'
-			def validateInt(code, newval):		
-				if code != '1': return True
-				for c in newval:
+		def validate(code, insert, oldval, newval):
+			allow = True
+			if self.type=='int' and code == '1':
+				for c in insert:
 					if c not in '0123456789':
-						return False
-				return True
-			valint = self.register(validateInt)
-			valf = (valint, '%d', '%S')
-		else:
-			validate='none'
-			valf = None
+						allow = False
+			if allow: self.callback(newval)
+			return allow
+		valint = self.register(validate)
 			
 		self.enabled = True
 		self.entryValue = StringVar()
 		self.entryValue.set(default)
-		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate=validate, validatecommand=valf, highlightbackground=bg)
+		self.textbox = Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
 		self.textbox.grid(row=0, column=1)
 		self.callback = command
-		
-		#Callback on entry change, since Entry widgets don't have a command argument
-		#Don't actually do this because it changes on *any* value update, not just GUI entry
-		#which is inconsistent with the rest of the parameter types
-		def entryCallback(name, index, mode, sv=self.entryValue):
-			if callable(self.callback): self.callback(self.get())
-		# self.entryValue.trace('w', entryCallback)
 		
 		self.checkVar = BooleanVar()
 		self.checkbox = Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
