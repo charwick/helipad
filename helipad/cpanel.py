@@ -28,12 +28,13 @@ class Cpanel:
 		#		
 		def setVar(param, item=None):
 			def sv(val=None):
+				if param.type=='slider': val = float(val)
 				if callable(param.callback):
-					if param.obj is None: param.callback(self.model, param.name, param.get(item))
-					else: param.callback(self.model, param.name, item, param.get(item))
+					if param.obj is None: param.callback(self.model, param.name, val)
+					else: param.callback(self.model, param.name, item, val)
 				
 				#If it's a slider, the parameter doesn't update automatically
-				if param.type=='slider': param.set(float(val), item, updateGUI=False)
+				if param.type=='slider': param.set(val, item, updateGUI=False)
 			return sv
 		
 		#For shock buttons.

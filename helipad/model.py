@@ -620,16 +620,14 @@ class Helipad:
 		#Add agents
 		if diff > 0:
 			maxid = 1
-			for id, a in self.allagents.items():
+			for a in self.allagents.values():
 				if a.id > maxid: maxid = a.id #Figure out maximum existing ID
-			for i in range(0, int(diff)):
-				maxid += 1
-				
-				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [maxid, self.primitives[prim].breeds.keys(), self])
-				if breed is None: breed = list(self.primitives[prim].breeds.keys())[i%len(self.primitives[prim].breeds)]
+			for id in range(maxid+1, maxid+int(diff)+1):
+				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [id, self.primitives[prim].breeds.keys(), self])
+				if breed is None: breed = list(self.primitives[prim].breeds.keys())[id%len(self.primitives[prim].breeds)]
 				if not breed in self.primitives[prim].breeds:
 					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
-				new = self.primitives[prim].class_(breed, maxid, self)
+				new = self.primitives[prim].class_(breed, id, self)
 				array.append(new)
 		
 		#Remove agents
