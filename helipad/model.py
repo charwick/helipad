@@ -706,7 +706,9 @@ class Helipad:
 				self.params['agents_'+k].value = makeDivisible(self.params['agents_'+k].value, l, 'max')
 				self.params['agents_'+k].default = makeDivisible(self.params['agents_'+k].default, l, 'max')
 		
-		if self.moneyGood is None: self.removePlot('money')
+		try:
+			if self.moneyGood is None: self.removePlot('money')
+		except: pass #Can't remove plot if re-drawing the cpanel
 		
 		if not isIpy():
 			from helipad.cpanel import Cpanel
