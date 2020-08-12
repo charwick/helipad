@@ -34,6 +34,7 @@ The following libraries are required:
 The following libraries are optional but recommended:
 
 * [Jupyter](https://jupyter.org/) and [Ipywidgets](https://pypi.org/project/ipywidgets/) (to run Helipad in Jupyter notebooks)
+    * It is recommended to run models in Jupyter Notebook rather than Jupyterlab. If you use the latter, you will also need to install the [widgets](https://ipywidgets.readthedocs.io/en/latest/user_install.html#installing-the-jupyterlab-extension) and jupyter-matplotlib extensions.
 * [PMW](https://pypi.org/project/Pmw/) (for tooltips)
 * [NetworkX](http://networkx.github.io/) (for network analysis)
 * [Readline](https://pypi.org/project/readline/) and Code (for the debug console)
