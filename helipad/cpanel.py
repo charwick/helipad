@@ -52,12 +52,15 @@ class Cpanel:
 				self.running = False
 			
 			@property
-			def mode(self): return self.cget('mode').string
+			def mode(self):
+				#Windows returns a string here, and MacOS returns an object
+				mode = self.cget('mode')
+				return mode if isinstance(mode, str) else self.cget('mode').string
 			
 			def determinate(self, det, refresh=True):
 				self.config(mode='determinate' if det else 'indeterminate')
 				if det: super().stop()
-				elif self.running: self.start()
+				elif self.running: super().start()
 				if refresh: model.root.update()
 			def update(self, n): self['value'] = n*100
 			def start(self):
@@ -450,7 +453,7 @@ class checkEntry(Frame):
 				for c in insert:
 					if c not in '0123456789':
 						allow = False
-			if allow: self.callback(newval)
+			if allow: self.callback(int(newval) if self.type=='int' else newval)
 			return allow
 		valint = self.register(validate)
 			
