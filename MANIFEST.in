@@ -1,4 +1,4 @@
-include runner README.md
-include runner LICENSE
+include README.md LICENSE
+global-include *.css
 recursive-include sample-models *
 recursive-include sample-notebooks *
