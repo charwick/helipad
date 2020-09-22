@@ -292,7 +292,7 @@ class Helipad:
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
-			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
 		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim)
 	
@@ -309,9 +309,9 @@ class Helipad:
 	
 	@property
 	def allParams(self):
-		params = list(self.params.values())+list(self.goodParams.values())
-		for p in self.primitives.values(): params += list(p.breedParams.values())
-		return params
+		yield from self.params.values()
+		yield from self.goodParams.values()
+		for p in self.primitives.values(): yield from p.breedParams.values()
 	
 	#Parses a parameter identifier tuple and returns a Param object
 	#For internal use only
@@ -321,7 +321,7 @@ class Helipad:
 		elif p[1]=='good':	return self.goodParams[p[0]]
 		elif p[1]=='breed':
 			if len(p)<4 or p[3] is None:
-				if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+				if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
 			else: prim = p[3]
 			return self.primitives[prim].breedParams[p[0]]
@@ -350,7 +350,7 @@ class Helipad:
 	
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
-			if len(self.primitives) == 1: prim = list(self.primitives.keys())[0]
+			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 			else: raise KeyError('Breed must specify which primitive it belongs to')
 		return self.addItem('breed', name, color, prim=prim)
 		
