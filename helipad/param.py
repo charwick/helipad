@@ -242,10 +242,10 @@ class CheckentryParam(Param):
 						self.element.add_class('helipad_checkentry_func')
 						for e in self.element.children: e.disabled = True
 					else:
+						self.element.disable()
 						self.element.entryValue.set('func〈'+self.func.__name__+'〉')
 						self.element.checkVar.set(True)
 						self.element.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
-						self.element.disable()
 				return
 			elif getattr(self, 'func', None) is not None:
 				self.func = None

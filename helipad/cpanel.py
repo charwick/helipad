@@ -139,10 +139,10 @@ class Cpanel:
 						dflt = param.get(item)
 						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=setVar(param, item))
 						if getattr(param, 'func', None) is not None:
+							el.disable()
 							el.entryValue.set('func〈'+param.func.__name__+'〉')
 							el.checkVar.set(True)
 							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
-							el.disable()
 						else: el.set(dflt)
 					el.grid(row=0, column=1)
 					if item is not None: drawCircle(wrap, param.keys[item].color.hex_l, bg).grid(row=0, column=0)
@@ -448,6 +448,7 @@ class checkEntry(Frame):
 		#If we're enforcing int, don't allow nonnumerical input
 		self.type=type
 		def validate(code, insert, oldval, newval):
+			if not self.enabled: return
 			allow = True
 			if self.type=='int' and code == '1':
 				for c in insert:
