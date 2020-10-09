@@ -54,8 +54,8 @@ def match(agents, primitive, model, stage):
 		agents[1].lastPrice = None
 			
 	#Record data
-	agents[0].utils = agents[0].utility.consume({'soma': agents[0].stocks['soma'], 'shmoo': agents[0].stocks['shmoo']})
-	agents[1].utils = agents[1].utility.consume({'soma': agents[1].stocks['soma'], 'shmoo': agents[1].stocks['shmoo']})
+	agents[0].utils = agents[0].utility.calculate(agents[0].stocks)
+	agents[1].utils = agents[1].utility.calculate(agents[1].stocks)
 
 #Stop the model when we're basically equilibrated
 def stopCondition(model):
