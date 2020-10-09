@@ -3,7 +3,7 @@
 # Do not run this file; import model.py and run from your file.
 # ==========
 
-from random import choice
+from random import choice, randint
 from numpy import *
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
@@ -21,6 +21,7 @@ class baseAgent:
 		self.utils = 0
 		for good, params in model.goods.items():
 			if params.endowment is None: self.stocks[good] = 0
+			elif isinstance(params.endowment, tuple) or isinstance(params.endowment, list): self.stocks[good] = randint(*params.endowment)
 			elif callable(params.endowment): self.stocks[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
 			else: self.stocks[good] = params.endowment
 		
