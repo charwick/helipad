@@ -10,8 +10,7 @@ class JupyterCpanel(VBox):
 		if redraw:
 			self.children = ()
 			self.remove_class('invalid')
-		else:
-			self.add_class('helipad_cpanel')
+		else: self.add_class('helipad_cpanel')
 		self.valid = True
 		
 		#CSS niceties
@@ -189,18 +188,24 @@ class JupyterCpanel(VBox):
 			
 				def terminate(self):
 					self.layout.visibility = 'hidden'
+			
+			#Remove previous hooks so we don't double up when re-running launchCpanel()
+			for p in ['plotsPreLaunch', 'terminate']:
+				if p in model.hooks:
+					for i,h in enumerate(model.hooks[p]):
+						if 'cpanel_' in h.__name__: del(model.hooks[p][i])
 		
 			#Model flow control: pause/run button and progress bar
-			@model.hook(prioritize=True)
-			def plotsPreLaunch(model):
+			@model.hook('plotsPreLaunch', prioritize=True)
+			def cpanel_plotsPreLaunch(model):
 				self.runButton = runButton(description='Pause', icon='pause')
 				self.progress = progressBar()
 				self.postinstruct.layout = Layout(display='none')
 			
 				display(HBox([self.runButton, self.progress]))
 		
-			@model.hook
-			def terminate(model, data):
+			@model.hook('terminate')
+			def cpanel_terminate(model, data):
 				self.postinstruct.layout = Layout(display='inline-block')
 
 	def displayAlert(self, text, inCpanel=True):

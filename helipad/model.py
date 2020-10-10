@@ -720,6 +720,7 @@ class Helipad:
 			self.root.mainloop()		#Launch the control panel
 		else:
 			from helipad.jupyter import JupyterCpanel, SilentExit
+			if getattr(self, 'cpanel', False): self.cpanel.invalidate('Control panel was redrawn in another cell.')
 			self.cpanel = JupyterCpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
 			raise SilentExit() #Don't blow past the cpanel if doing "run all"

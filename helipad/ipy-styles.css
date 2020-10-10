@@ -70,7 +70,10 @@
 	font-style: normal;
 	margin-right: 8px;
 }
-.helipad_cpanel.invalid > * { opacity: 0.25; }
+.helipad_cpanel.invalid > * {
+	opacity: 0.25;
+	pointer-events: none;
+}
 .helipad_cpanel .helipad_modal {
 	opacity: 1;
 	position: absolute;
@@ -84,6 +87,7 @@
 	border-radius: 4px;
 	font-size: 18px;
 	color: #422;
+	pointer-events: all;
 }
 .helipad_modal::before {
 	content: '\1F6D1 ';
