@@ -3,16 +3,21 @@ from IPython.display import display
 from helipad.graph import Plot
 import os
 
-class JupyterCpanel:
-	def __init__(self, model):
+class JupyterCpanel(VBox):
+	def __init__(self, model, redraw=False):
+		super().__init__()
 		self.model = model
-		self.parent = VBox()
-		self.parent.add_class('helipad_cpanel')
+		if redraw:
+			self.children = ()
+			self.remove_class('invalid')
+		else:
+			self.add_class('helipad_cpanel')
+		self.valid = True
 		
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
-		self.parent.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
+		self.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
 		
 		def renderParam(param, func, title, val, circle=None):
 			i=None
@@ -79,47 +84,47 @@ class JupyterCpanel:
 			return accordion
 		
 		ctop = self.model.doHooks('CpanelTop', [self, None])
-		if ctop: self.parent.children += (ctop,)
+		if ctop: self.children += (ctop,)
 	
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
-			if param.element is not None: self.parent.children += (param.element,)
+			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and getattr(param, 'func', None) is None: param.set(False)
 		
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
-		if caip: self.parent.children += (caip,)
+		if caip: self.children += (caip,)
 		
 		#Per-good parameters
 		for param in model.goodParams.values():
-			self.parent.children += (constructAccordion(param, model.nonMoneyGoods),)
+			self.children += (constructAccordion(param, model.nonMoneyGoods),)
 	
 		#Per-breed parameters
 		for prim in model.primitives.values():
 			for param in prim.breedParams.values():
-				self.parent.children += (constructAccordion(param, prim.breeds),)
+				self.children += (constructAccordion(param, prim.breeds),)
 		
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
-		if cap: self.parent.children += (cap,)
+		if cap: self.children += (cap,)
 	
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
-			if param.element is not None: self.parent.children += (param.element,)
+			if param.element is not None: self.children += (param.element,)
 		
 		#Checkgrids
 		self.model.params['plots'] = self.model.params.pop('plots') #Move plot list to end
 		for param in model.params.values():
 			if param.type!='checkgrid': continue
 			acc = renderParam(param, None, param.title, None)
-			if acc is not None: self.parent.children += (acc,)
+			if acc is not None: self.children += (acc,)
 		
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
-		if cas: self.parent.children += (cas,)
+		if cas: self.children += (cas,)
 		
 		#Shocks
 		if len(model.shocks.shocks):
@@ -142,73 +147,75 @@ class JupyterCpanel:
 			children.append(HBox(buttons))
 			sacc = Accordion(children=[VBox(children)])
 			sacc.set_title(0, 'Shocks')
-			self.parent.children += (sacc,)
+			self.children += (sacc,)
 		
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
-		if cbot: self.parent.children += (cbot,)
+		if cbot: self.children += (cbot,)
 		
 		self.postinstruct = self.displayAlert('After setting parameter values, run launchPlots() or start() to start the model.')
-		display(self.parent)
+		if not redraw:
+			display(self)
 		
-		class progressBar(FloatProgress):
-			def __init__(self):
-				super().__init__(min=0, max=1)
+			class progressBar(FloatProgress):
+				def __init__(self):
+					super().__init__(min=0, max=1)
 			
-			def determinate(self, det):
-				self.mode = 'determinate' if det else 'indeterminate'
-				if det: self.remove_class('indeterminate')
-				else:
-					self.add_class('indeterminate')
-					self.value = 1
+				def determinate(self, det):
+					self.mode = 'determinate' if det else 'indeterminate'
+					if det: self.remove_class('indeterminate')
+					else:
+						self.add_class('indeterminate')
+						self.value = 1
 			
-			def update(self, n): self.value = n
-			def start(self): self.add_class('helipad_running')
-			def stop(self): self.remove_class('helipad_running')
-			def done(self): self.layout.visibility = 'hidden'
+				def update(self, n): self.value = n
+				def start(self): self.add_class('helipad_running')
+				def stop(self): self.remove_class('helipad_running')
+				def done(self): self.layout.visibility = 'hidden'
 		
-		class runButton(Button):
-			def __init__(self2, **kwargs):
-				super().__init__(**kwargs)
-				self2.click = self.model.stop
+			class runButton(Button):
+				def __init__(self2, **kwargs):
+					super().__init__(**kwargs)
+					self2.click = self.model.stop
 						
-			def run(self2):
-				self2.click = self.model.stop
-				self2.description = 'Pause'
-				self2.icon = 'pause'
+				def run(self2):
+					self2.click = self.model.stop
+					self2.description = 'Pause'
+					self2.icon = 'pause'
 			
-			def pause(self2):
-				self2.click = self.model.start
-				self2.description = 'Run'
-				self2.icon = 'play'
+				def pause(self2):
+					self2.click = self.model.start
+					self2.description = 'Run'
+					self2.icon = 'play'
 			
-			def terminate(self):
-				self.layout.visibility = 'hidden'
+				def terminate(self):
+					self.layout.visibility = 'hidden'
 		
-		#Model flow control: pause/run button and progress bar
-		@model.hook(prioritize=True)
-		def plotsPreLaunch(model):
-			self.runButton = runButton(description='Pause', icon='pause')
-			self.progress = progressBar()
-			self.postinstruct.layout = Layout(display='none')
+			#Model flow control: pause/run button and progress bar
+			@model.hook(prioritize=True)
+			def plotsPreLaunch(model):
+				self.runButton = runButton(description='Pause', icon='pause')
+				self.progress = progressBar()
+				self.postinstruct.layout = Layout(display='none')
 			
-			display(HBox([self.runButton, self.progress]))
+				display(HBox([self.runButton, self.progress]))
 		
-		@model.hook
-		def terminate(model, data):
-			self.postinstruct.layout = Layout(display='inline-block')
+			@model.hook
+			def terminate(model, data):
+				self.postinstruct.layout = Layout(display='inline-block')
 
 	def displayAlert(self, text, inCpanel=True):
 		element = Label(value=text)
 		element.add_class('helipad_info')
-		if inCpanel: self.parent.children += (element,)
+		if inCpanel: self.children += (element,)
 		else: display(element)
 		return element
 	
 	def invalidate(self, message='Model parameters changed, please re-launch the control panel with launchCpanel().'):
-		self.parent.add_class('invalid')
+		self.valid = False
+		self.add_class('invalid')
 		warning = Label(value=message)
 		warning.add_class('helipad_modal')
-		self.parent.children += (warning,)
+		self.children += (warning,)
 		for p in self.model.allParams: del p.element
 		return warning
 

@@ -129,9 +129,7 @@ class Helipad:
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
 		if getattr(self, 'cpanel', False):
-			if isIpy():
-				self.cpanel.displayAlert('Plot selector will appear after control panel is relaunched with launchCpanel().', False)
-				self.cpanel.invalidate()
+			if isIpy(): self.cpanel.invalidate()
 			else: raise RuntimeError('Cannot add plots after control panel is drawn')
 		plot = Plot(model=self, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
 		if position is None or position > len(self.plots):
@@ -151,6 +149,7 @@ class Helipad:
 		
 		self.params['plots'].vars[name] = selected
 		if selected: self.params['plots'].default.append(name)
+		if getattr(self, 'cpanel', False) and not self.cpanel.valid: self.cpanel.__init__(self, redraw=True) #Redraw if necessary
 		
 		return plot
 	
@@ -293,6 +292,7 @@ class Helipad:
 			pclass = Param
 			args['type'] = type
 		params[name] = pclass(**args)
+		if getattr(self, 'cpanel', False) and isIpy(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
 		if prim is None:
