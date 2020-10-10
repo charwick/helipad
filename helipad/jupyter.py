@@ -6,11 +6,13 @@ import os
 class JupyterCpanel:
 	def __init__(self, model):
 		self.model = model
+		self.parent = VBox()
+		self.parent.add_class('helipad_cpanel')
 		
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
-		display(HTML(value='<style type="text/css">'+css+'</style>'))
+		self.parent.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
 		
 		def renderParam(param, func, title, val, circle=None):
 			i=None
@@ -77,47 +79,47 @@ class JupyterCpanel:
 			return accordion
 		
 		ctop = self.model.doHooks('CpanelTop', [self, None])
-		if ctop: display(ctop)
+		if ctop: self.parent.children += (ctop,)
 	
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
-			if param.element is not None: display(param.element)
+			if param.element is not None: self.parent.children += (param.element,)
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and getattr(param, 'func', None) is None: param.set(False)
 		
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
-		if caip: display(caip)
+		if caip: self.parent.children += (caip,)
 		
 		#Per-good parameters
 		for param in model.goodParams.values():
-			display(constructAccordion(param, model.nonMoneyGoods))
+			self.parent.children += (constructAccordion(param, model.nonMoneyGoods),)
 	
 		#Per-breed parameters
 		for prim in model.primitives.values():
 			for param in prim.breedParams.values():
-				display(constructAccordion(param, prim.breeds))
+				self.parent.children += (constructAccordion(param, prim.breeds),)
 		
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
-		if cap: display(cap)
+		if cap: self.parent.children += (cap,)
 	
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
-			if param.element is not None: display(param.element)
+			if param.element is not None: self.parent.children += (param.element,)
 		
 		#Checkgrids
 		self.model.params['plots'] = self.model.params.pop('plots') #Move plot list to end
 		for param in model.params.values():
 			if param.type!='checkgrid': continue
 			acc = renderParam(param, None, param.title, None)
-			if acc is not None: display(acc)
+			if acc is not None: self.parent.children += (acc,)
 		
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
-		if cas: display(cas)
+		if cas: self.parent.children += (cas,)
 		
 		#Shocks
 		if len(model.shocks.shocks):
@@ -140,14 +142,13 @@ class JupyterCpanel:
 			children.append(HBox(buttons))
 			sacc = Accordion(children=[VBox(children)])
 			sacc.set_title(0, 'Shocks')
-			display(sacc)
+			self.parent.children += (sacc,)
 		
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
-		if cbot: display(cbot)
+		if cbot: self.parent.children += (cbot,)
 		
-		self.postinstruct = Label(value='After setting parameter values, run launchPlots() or start() to start the model.')
-		self.postinstruct.add_class('helipad_info')
-		display(self.postinstruct)
+		self.postinstruct = self.displayAlert('After setting parameter values, run launchPlots() or start() to start the model.')
+		display(self.parent)
 		
 		class progressBar(FloatProgress):
 			def __init__(self):
@@ -195,6 +196,21 @@ class JupyterCpanel:
 		@model.hook
 		def terminate(model, data):
 			self.postinstruct.layout = Layout(display='inline-block')
+
+	def displayAlert(self, text, inCpanel=True):
+		element = Label(value=text)
+		element.add_class('helipad_info')
+		if inCpanel: self.parent.children += (element,)
+		else: display(element)
+		return element
+	
+	def invalidate(self, message='Model parameters changed, please re-launch the control panel with launchCpanel().'):
+		self.parent.add_class('invalid')
+		warning = Label(value=message)
+		warning.add_class('helipad_modal')
+		self.parent.children += (warning,)
+		for p in self.model.allParams: del p.element
+		return warning
 
 #https://stackoverflow.com/questions/24005221/ipython-notebook-early-exit-from-cell
 class SilentExit(Exception):

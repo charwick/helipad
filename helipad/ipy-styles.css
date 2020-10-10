@@ -43,14 +43,14 @@
 
 .widget-hprogress { width: 100%; }
 .indeterminate .progress-bar {
-    background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
-    background-size: 40px 40px;
+	background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent);
+	background-size: 40px 40px;
 }
 .helipad_running.indeterminate .progress-bar { animation: helipad-progress 2s linear infinite; }
 
 @keyframes helipad-progress {
-  from  { background-position: 40px 0; }
-  to    { background-position: 0 0; }
+  from	{ background-position: 40px 0; }
+  to	{ background-position: 0 0; }
 }
 
 /* Misc */
@@ -63,8 +63,33 @@
 	display: inline-block;
 	padding: 5px 15px;
 	border-radius: 4px;
+	height: auto !important;
 }
 .helipad_info::before {
 	content: '\26A0\FE0F ';
 	font-style: normal;
+	margin-right: 8px;
 }
+.helipad_cpanel.invalid > * { opacity: 0.25; }
+.helipad_cpanel .helipad_modal {
+	opacity: 1;
+	position: absolute;
+	width: 80%;
+	text-align: center;
+	top: 50px; left: 50%;
+	margin: 0 0 0 -40%;
+	padding: 20px 0;
+	background: rgba(255,210,200,0.75);
+	border: 1px solid rgba(100,0,0,0.5);
+	border-radius: 4px;
+	height: auto;
+	font-size: 18px;
+	color: #422;
+}
+.helipad_modal::before {
+	content: '\1F6D1 ';
+	font-size: larger;
+	margin-right: 12px;
+}
+
+.helipad_cpanel > .p-Widget { margin-bottom: 0.5em; }

@@ -128,7 +128,11 @@ class Helipad:
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		if getattr(self, 'cpanel', False): raise RuntimeError('Cannot add plots after control panel is drawn')
+		if getattr(self, 'cpanel', False):
+			if isIpy():
+				self.cpanel.displayAlert('Plot selector will appear after control panel is relaunched with launchCpanel().', False)
+				self.cpanel.invalidate()
+			else: raise RuntimeError('Cannot add plots after control panel is drawn')
 		plot = Plot(model=self, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
 		if position is None or position > len(self.plots):
 			self.params['plots'].opts[name] = label
