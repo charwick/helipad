@@ -19,11 +19,11 @@ class baseAgent:
 		self.stocks = {}
 		self.edges = {}
 		self.utils = 0
-		for good, params in model.goods.items():
-			if params.endowment is None: self.stocks[good] = 0
-			elif isinstance(params.endowment, tuple) or isinstance(params.endowment, list): self.stocks[good] = randint(*params.endowment)
-			elif callable(params.endowment): self.stocks[good] = params.endowment(self.breed if hasattr(self, 'breed') else None)
-			else: self.stocks[good] = params.endowment
+		for good, ginfo in model.goods.items():
+			endow = ginfo.endowment(self.breed if hasattr(self, 'breed') else None) if callable(ginfo.endowment) else ginfo.endowment
+			if endow is None: self.stocks[good] = 0
+			elif isinstance(endow, tuple) or isinstance(endow, list): self.stocks[good] = randint(*endow)
+			else: self.stocks[good] = endow
 		
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
