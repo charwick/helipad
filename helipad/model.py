@@ -5,7 +5,6 @@
 
 import sys, warnings, pandas
 from random import shuffle, choice
-from colour import Color
 from numpy import random
 from helipad.graph import *
 from helipad.helpers import *
@@ -175,7 +174,7 @@ class Helipad:
 	#Fourth arg is the plot's hex color, or a Color object
 	def addSeries(self, plot, reporter, label, color, style='-'):
 		if hasattr(self, 'breed'): return #Doesn't matter if it's not the top-level model
-		if isinstance(color, Color): color = color.hex_l.replace('#','')
+		if not isinstance(color, Color): color = Color(color)
 		if not plot in self.plots:
 			raise KeyError('Plot \''+plot+'\' does not exist. Be sure to register plots before adding series.')
 		#Check against columns and not reporters so percentiles work
@@ -187,7 +186,7 @@ class Helipad:
 		if reporter in self.data.reporters and isinstance(self.data.reporters[reporter].func, tuple):
 			for p, f in self.data.reporters[reporter].func[1].items():
 				subkey = reporter+'-'+str(p)+'-pctile'
-				subseries.append(self.addSeries(plot, subkey, '', Color('#'+color).lighten(), style='--'))
+				subseries.append(self.addSeries(plot, subkey, '', color.lighten(), style='--'))
 
 		#Since many series are added at setup time, we have to de-dupe
 		for s in self.plots[plot].series:
@@ -209,7 +208,7 @@ class Helipad:
 		
 		#Blank breeds for any primitives not otherwise specified
 		for k,p in self.primitives.items():
-			if len(p.breeds)==0: self.addBreed('', '000000', prim=k)
+			if len(p.breeds)==0: self.addBreed('', '#000000', prim=k)
 		
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
@@ -343,7 +342,7 @@ class Helipad:
 		if name in itemDict:
 			warnings.warn(obj+' \''+name+'\' already defined. Overriding…', None, 2)
 		
-		cobj = Color('#'+color)
+		cobj = color if isinstance(color, Color) else Color(color)
 		cobj2 = cobj.lighten()
 		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
 		
@@ -907,11 +906,6 @@ class Shocks:
 	def everyn(self, n, offset=0):
 		def fn(t): return True if t%n-offset==0 else False
 		return fn
-
-#Append to the Color class
-def lighten(self):
-	return Color(hue=self.hue, saturation=self.saturation, luminance=.66+self.luminance/3)
-Color.lighten = lighten
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)

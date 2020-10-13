@@ -61,7 +61,7 @@ class JupyterCpanel(VBox):
 				i.add_class('helipad_checkgrid')
 	
 			if i is not None and param.type!='checkgrid':
-				circle='<span class="helipad_circle" style="background:'+circle.hex_l+'"></span>' if circle is not None else ''
+				circle='<span class="helipad_circle" style="background:'+circle.hex+'"></span>' if circle is not None else ''
 				i.children[0].description = circle+title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
 				i.children[0].description_tooltip = param.desc if param.desc is not None else ''

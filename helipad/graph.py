@@ -41,7 +41,7 @@ class Graph:
 		for pname, plot in self.plots.items():
 			plot.axes.margins(x=0)
 			if plot.stack:
-				lines = plot.axes.stackplot([], *[[] for s in plot.series], color=['#'+s.color for s in plot.series])
+				lines = plot.axes.stackplot([], *[[] for s in plot.series], color=[s.color.hex for s in plot.series])
 				for series, poly in zip(plot.series, lines): series.poly = poly
 				plot.axes.margins(y=0)
 			
@@ -52,7 +52,7 @@ class Graph:
 			#Create a line for each series
 			#Do this even for stackplots because the line object is necessary to create the legend
 			for series in plot.series:
-				series.line, = plot.axes.plot([], label=series.label, color='#'+series.color, linestyle=series.style)
+				series.line, = plot.axes.plot([], label=series.label, color=series.color.hex, linestyle=series.style)
 				series.fdata = []
 				series.line.subseries = series.subseries
 				series.line.label = series.label
@@ -105,7 +105,7 @@ class Graph:
 		for plot in self.plots.values():
 			#No way to update the stack (?) so redraw it from scratch
 			if plot.stack:
-				lines = plot.axes.stackplot(tseries, *[s.fdata for s in plot.series], colors=['#'+s.color for s in plot.series])
+				lines = plot.axes.stackplot(tseries, *[s.fdata for s in plot.series], colors=[s.color.hex for s in plot.series])
 				for series, poly in zip(plot.series, lines): series.poly = poly
 			else:
 				for serie in plot.series:

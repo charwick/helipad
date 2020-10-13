@@ -16,8 +16,8 @@ heli.order = 'match'
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5})
 heli.params['num_agent'].opts['step'] = 2 #Make sure we don't get stray agents
 
-heli.addGood('shmoo','11CC00', (1, 1000))
-heli.addGood('soma', 'CC0000', lambda breed: (1, floor(exp(heli.param('ratio'))*1000)))
+heli.addGood('shmoo','#11CC00', (1, 1000))
+heli.addGood('soma', '#CC0000', lambda breed: (1, floor(exp(heli.param('ratio'))*1000)))
 
 #===============
 # BEHAVIOR
@@ -68,7 +68,7 @@ heli.param('stopafter', stopCondition)
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
 heli.addPlot('price', 'Price', logscale=True, selected=True)
-heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '119900')
+heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '#119900')
 
 for p in ['demand', 'utility']: heli.plots[p].active(True)
 heli.param('updateEvery', 1)

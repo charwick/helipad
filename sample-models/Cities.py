@@ -12,9 +12,9 @@ heli = Helipad()
 # CONFIGURATION
 #================
 
-heli.addBreed('urban', 'CC0000')
-heli.addBreed('rural', '00CC00')
-heli.addGood('consumption', '000000')
+heli.addBreed('urban', '#CC0000')
+heli.addBreed('rural', '#00CC00')
+heli.addGood('consumption', '#000000')
 
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
 heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
@@ -167,7 +167,7 @@ heli.addPlot('wage', 'Wage', 3)
 heli.addPlot('wealth', 'Wealth', 4, logscale=True)
 heli.addPlot('rates', 'Rates', 5, logscale=True)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
-heli.addSeries('rates', 'theta', 'Death Rate', 'CCCCCC')
+heli.addSeries('rates', 'theta', 'Death Rate', '#CCCCCC')
 
 for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])

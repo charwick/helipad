@@ -25,3 +25,33 @@ class dictLike(dict):
 			index = index.replace('agents_', 'num_')
 			warnings.warn('The use of the \'agents_\' prefix to access the primitive population parameter is deprecated and will be removed in a future version. Use the \'num_\' prefix instead.', None, 3)
 		return index
+
+import colorsys, matplotlib.colors as mplcolor
+class Color:
+	def __init__(self, color):
+		if isinstance(color, str): self.rgb = mplcolor.hex2color(color) #can take a hex string or a color name
+		else: self.rgb = list(color)
+	
+	@property
+	def hex(self): return mplcolor.to_hex(self.rgb)
+	@property
+	def hsv(self): return mplcolor.rgb_to_hsv(self.rgb)
+	@property
+	def r(self): return self.rgb[0]
+	@property
+	def g(self): return self.rgb[1]
+	@property
+	def b(self): return self.rgb[2]
+	@property
+	def h(self): return self.hsv[0]
+	@property
+	def s(self): return self.hsv[1]
+	@property
+	def v(self): return self.hsv[2]
+	
+	def lighten(self):
+		hls = colorsys.rgb_to_hls(*self.rgb)
+		return Color(colorsys.hls_to_rgb(hls[0], .66 + hls[1]/3, hls[2]))
+	
+	def blend(self, color2):
+		return Color(((self.r+color2.r)/2, (self.g+color2.g)/2, (self.b+color2.b)/2))

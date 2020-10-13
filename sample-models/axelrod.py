@@ -30,22 +30,22 @@ heli.addParameter('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 
 def reset(model):
 	for a in model.agents['agent']: a.stocks['payoff'] = 0
 
-heli.addGood('payoff','009900')
+heli.addGood('payoff','#009900')
 
 #Store associated colors and default-checked state to cycle over later
 strategies = {
-	'alwaysCooperate': (True, '00CC00'),
-	'alwaysDefect': (True, 'CC0000'),
-	'randomly': (True, '006600'),
-	'TFT': (True, 'CC9900', 'Cooperates on the first round and thereafter plays the move last played by the opponent.'),
-	'Tullock': (False, '663311', 'Cooperates for the first 11 rounds then randomly cooperates 10% less often than the opponent has in the previous 10 rounds.'),
-	'Nydegger': (False, '003399', 'A stooge which has a memory and appears to be trustworthy, potentially cooperative, but not gullible.'),
-	'Grofman': (False, '9999CC', 'Cooperates with probability 2/7 if the players did different things on the previous move, otherwise cooperates.'),
-	'Shubik': (False, '666600', 'Punishes defection with an incrementing string of retaliations.'),
-	'Grudger': (True, '000066', 'Cooperates until the opponent defects, and then defects thereafter'),
-	'Davis': (False, '660000', 'Cooperates for 10 periods, and then plays Grudger.'),
-	'Feld': (False, '000000', 'Plays tit-for-tat, but with P[Cooperate] declining to 0.5 as the rounds approach the end'),
-	'Joss': (False, 'CCCCCC', 'Tit-For-Tat, except cooperation is only with 90% probability'),
+	'alwaysCooperate': (True, '#00CC00'),
+	'alwaysDefect': (True, '#CC0000'),
+	'randomly': (True, '#006600'),
+	'TFT': (True, '#CC9900', 'Cooperates on the first round and thereafter plays the move last played by the opponent.'),
+	'Tullock': (False, '#663311', 'Cooperates for the first 11 rounds then randomly cooperates 10% less often than the opponent has in the previous 10 rounds.'),
+	'Nydegger': (False, '#003399', 'A stooge which has a memory and appears to be trustworthy, potentially cooperative, but not gullible.'),
+	'Grofman': (False, '#9999CC', 'Cooperates with probability 2/7 if the players did different things on the previous move, otherwise cooperates.'),
+	'Shubik': (False, '#666600', 'Punishes defection with an incrementing string of retaliations.'),
+	'Grudger': (True, '#000066', 'Cooperates until the opponent defects, and then defects thereafter'),
+	'Davis': (False, '#660000', 'Cooperates for 10 periods, and then plays Grudger.'),
+	'Feld': (False, '#000000', 'Plays tit-for-tat, but with P[Cooperate] declining to 0.5 as the rounds approach the end'),
+	'Joss': (False, '#CCCCCC', 'Tit-For-Tat, except cooperation is only with 90% probability'),
 }
 
 #Build the strategies toggle

@@ -27,7 +27,6 @@ Helipad requires Python 3.6. Previous versions do not preserve dict order, so yo
 
 The following libraries are required:
 
-* [Colour](https://pypi.org/project/colour/) (for the user interface)
 * [Matplotlib](https://matplotlib.org/) (for plotting the time series output)
 * [Pandas](https://pandas.pydata.org/) (for data collection)
 

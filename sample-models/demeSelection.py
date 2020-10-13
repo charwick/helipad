@@ -45,9 +45,9 @@ def agentStep(agent, deme, stage):
 @heli.hook
 def demeInit(deme, model):
 	deme.param('num_agent', 20)
-	deme.addBreed('altruist', '009900')
-	deme.addBreed('selfish', '990000')
-	deme.addGood('payoff', '000099', 1)
+	deme.addBreed('altruist', '#009900')
+	deme.addBreed('selfish', '#990000')
+	deme.addGood('payoff', '#000099', 1)
 	deme.addHook('agentStep', agentStep)
 
 #Odds of winning follow a sigmoid distribution in the difference in strength
@@ -102,10 +102,10 @@ def fitness(model): return sum([sum([a.stocks['payoff'] for a in d.agents['agent
 heli.addPlot('pop', 'Population', selected=False)
 heli.addPlot('pheno', 'Phenotypes', stack=True)
 heli.addPlot('fitness', 'Fitness')
-heli.addSeries('pop', 'population', 'Total population', '000000')
-heli.addSeries('pheno', 'altruists', 'Altruists', '33CC33')
-heli.addSeries('pheno', 'selfish', 'Selfish', 'BB2222')
-heli.addSeries('fitness', 'fitness', 'Average Fitness', '000099')
+heli.addSeries('pop', 'population', 'Total population', '#000000')
+heli.addSeries('pheno', 'altruists', 'Altruists', '#33CC33')
+heli.addSeries('pheno', 'selfish', 'Selfish', '#BB2222')
+heli.addSeries('fitness', 'fitness', 'Average Fitness', '#000099')
 
 #===============
 # LAUNCH THE GUI

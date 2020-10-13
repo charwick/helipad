@@ -145,7 +145,7 @@ class Cpanel:
 							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
 						else: el.set(dflt)
 					el.grid(row=0, column=1)
-					if item is not None: drawCircle(wrap, param.keys[item].color.hex_l, bg).grid(row=0, column=0)
+					if item is not None: drawCircle(wrap, param.keys[item].color.hex, bg).grid(row=0, column=0)
 		
 				#These need a separate label
 				else:					
@@ -164,7 +164,7 @@ class Cpanel:
 					else:
 						lframe = Frame(wrap, bg=bg, padx=0, pady=0)
 						label = Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
-						drawCircle(lframe, param.keys[item].color.hex_l, bg).grid(row=0, column=0, pady=(0,8))
+						drawCircle(lframe, param.keys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
 					
