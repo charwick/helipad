@@ -97,7 +97,7 @@ def patchInit(agent, model):
 @heli.hook
 def modelPreSetup(model):
 	model.patches = [[] for i in range(model.param('dimension'))]
-	model.param('agents_patch', model.param('dimension')**2)
+	model.param('num_patch', model.param('dimension')**2)
 
 #Establish grid links
 @heli.hook

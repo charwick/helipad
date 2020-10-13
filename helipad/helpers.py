@@ -14,3 +14,14 @@ class Item:
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items():
 			setattr(self, k, v)
+
+#To handle deprecation of param['agents_…']
+#Remove in Helipad 1.3 or in April 2021, whichever is later
+class dictLike(dict):
+	def __getitem__(self, index): return super().__getitem__(self.normalize(index))
+	def __setitem__(self, index, value): super().__setitem__(self.normalize(index), value)
+	def normalize(self, index):
+		if 'agents_' in index:
+			index = index.replace('agents_', 'num_')
+			warnings.warn('The use of the \'agents_\' prefix to access the primitive population parameter is deprecated and will be removed in a future version. Use the \'num_\' prefix instead.', None, 3)
+		return index

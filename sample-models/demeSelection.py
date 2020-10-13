@@ -44,7 +44,7 @@ def agentStep(agent, deme, stage):
 #deme is the MultiLevel object, which inherits from both baseAgent and Helipad.
 @heli.hook
 def demeInit(deme, model):
-	deme.param('agents_agent', 20)
+	deme.param('num_agent', 20)
 	deme.addBreed('altruist', '009900')
 	deme.addBreed('selfish', '990000')
 	deme.addGood('payoff', '000099', 1)

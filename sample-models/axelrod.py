@@ -16,7 +16,7 @@ heli = Helipad()
 heli.name = 'Axelrod Tournament'
 heli.order = 'match'
 
-heli.params['agents_agent'].type = 'hidden' #So we can postpone breed determination until the end
+heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
 #Initial parameter values match the payoffs in Table 1
 heli.addParameter('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
@@ -156,7 +156,7 @@ def modelPreSetup(model):
 	for k in model.param('strategies'):
 		model.addBreed(k, strategies[k][1])
 	
-	model.param('agents_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
+	model.param('num_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
 	
 	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))

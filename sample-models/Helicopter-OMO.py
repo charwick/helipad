@@ -19,10 +19,10 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
+		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
 		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
 		
-		self.invTarget = {g:model.param(('prod','good',g))*model.param('agents_agent') for g in model.nonMoneyGoods}
+		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.nonMoneyGoods}
 		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
@@ -34,7 +34,7 @@ class Store(baseAgent):
 
 	def step(self, stage):
 		super().step(stage)
-		N = self.model.param('agents_agent')
+		N = self.model.param('num_agent')
 		
 		#Calculate wages
 		self.cashDemand = N * self.wage #Hold enough cash for one period's disbursements
@@ -190,7 +190,7 @@ class Bank(baseAgent):
 		#Pay interest on deposits
 		lia = self.liabilities
 		profit = self.assets - lia
-		if profit > self.model.param('agents_agent'):
+		if profit > self.model.param('num_agent'):
 			print('Disbursing profit of $',profit)
 			for id, a in self.accounts.items():
 				self.accounts[id] += profit/lia * a
@@ -299,7 +299,7 @@ heli.order = 'random'
 @heli.hook('terminate') #Reset the disabled checkmarks when terminating a model
 def bankChecks(model, val=None):
 	nobank = model.param('dist')!='omo'
-	model.param('agents_bank', 0 if nobank else 1)
+	model.param('num_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		model.params['plots'].element.disabled(i, nobank)
 	for e in model.primitives['agent'].breedParams['liqPref'].element.values():
@@ -431,7 +431,7 @@ heli.addSeries('wage', 'wage', 'Wage', '000000')
 #Do this here rather than at the beginning so we can decide at runtime
 @heli.hook
 def modelPreSetup(model):
-	if model.param('agents_bank') > 0:
+	if model.param('num_bank') > 0:
 		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
 		model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
 		model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
@@ -460,7 +460,7 @@ from helipad.utility import CES
 #Choose a bank if necessary
 @heli.hook
 def baseAgentInit(agent, model):
-	if model.param('agents_bank') > 0 and agent.primitive != 'bank':
+	if model.param('num_bank') > 0 and agent.primitive != 'bank':
 		agent.bank = model.agents['bank'][0]
 		agent.bank.setupAccount(agent)
 
@@ -476,7 +476,7 @@ def agentInit(agent, model):
 	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 	agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
 	
-	if model.param('agents_bank') > 0:
+	if model.param('num_bank') > 0:
 		agent.liqPref = model.param(('liqPref', 'breed', agent.breed, 'agent'))
 
 @heli.hook
@@ -568,20 +568,20 @@ class CentralBank(baseAgent):
 		#Set macroeconomic targets
 		expand = 0
 		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
-		if self.model.param('agents_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
+		if self.model.param('num_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
 		if expand != 0: self.expand(expand)
 			
 	def expand(self, amount):
 		
 		#Deposit with each bank in proportion to their liabilities
-		if 'bank' in self.model.primitives and self.model.param('agents_bank') > 0:
+		if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
 			self.stocks[self.model.moneyGood] += amount
 			r = self.model.agents['bank'][0].stocks[self.model.moneyGood]
 			if -amount > r: amount = -r + 1
 			self.model.agents['bank'][0].deposit(self, amount)
 				
 		elif self.model.param('dist') == 'lump':
-			amt = amount/self.model.param('agents_agent')
+			amt = amount/self.model.param('num_agent')
 			for a in self.model.agents['agent']:
 				a.stocks[self.model.moneyGood] += amt
 		else:
@@ -598,7 +598,7 @@ class CentralBank(baseAgent):
 	
 	@property
 	def M2(self):
-		if 'bank' not in self.model.primitives or self.model.param('agents_bank') == 0: return self.M0
+		if 'bank' not in self.model.primitives or self.model.param('num_bank') == 0: return self.M0
 		return sum([a.balance for a in self.model.allagents.values()])
 	
 	#Price level

@@ -49,7 +49,7 @@ heli.land = {k: Land(k) for k in ['urban', 'rural']}
 def modelPreSetup(model):
 	model.movers = {b:0 for b in heli.primitives['agent'].breeds}
 	model.births = {b:0 for b in heli.primitives['agent'].breeds}
-	model.param('agents_agent', 150)
+	model.param('num_agent', 150)
 	for b in heli.primitives['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)

@@ -32,7 +32,7 @@ class Helipad:
 		self.name = ''
 		self.agents = {}
 		self.primitives = {}
-		self.params = {}		#Global parameters
+		self.params = dictLike()#Global parameters
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
@@ -118,13 +118,13 @@ class Helipad:
 			breeds={},
 			breedParams={}
 		)
-		self.addParameter('agents_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
+		self.addParameter('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
 		self.agents[name] = []
 	
 	def removePrimitive(self, name):
 		del self.primitives[name]
 		del self.agents[name]
-		del self.params['agents_'+name]
+		del self.params['num_'+name]
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
@@ -261,7 +261,7 @@ class Helipad:
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)} #Sort by priority
 		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
 		for prim in self.primitives:
-			self.nUpdater(self, prim, self.param('agents_'+prim))
+			self.nUpdater(self, prim, self.param('num_'+prim))
 		
 		self.doHooks('modelPostSetup', [self])
 			
@@ -617,7 +617,7 @@ class Helipad:
 	def nUpdater(self, model, prim, val):
 		if not self.hasModel: return
 		
-		if 'agents_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes agents_{prim}
+		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
 		array = self.agents[prim]
 		diff = val - len(array)
 
@@ -699,14 +699,14 @@ class Helipad:
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
 		for k,p in self.primitives.items():
-			if self.params['agents_'+k].type != 'hidden':
+			if self.params['num_'+k].type != 'hidden':
 				l = len(p.breeds)
 				if not l: continue
-				self.params['agents_'+k].opts['low'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
-				self.params['agents_'+k].opts['high'] = makeDivisible(self.params['agents_'+k].opts['high'], l, 'max')
-				self.params['agents_'+k].opts['step'] = makeDivisible(self.params['agents_'+k].opts['low'], l, 'max')
-				self.params['agents_'+k].value = makeDivisible(self.params['agents_'+k].value, l, 'max')
-				self.params['agents_'+k].default = makeDivisible(self.params['agents_'+k].default, l, 'max')
+				self.params['num_'+k].opts['low'] = makeDivisible(self.params['num_'+k].opts['low'], l, 'max')
+				self.params['num_'+k].opts['high'] = makeDivisible(self.params['num_'+k].opts['high'], l, 'max')
+				self.params['num_'+k].opts['step'] = makeDivisible(self.params['num_'+k].opts['low'], l, 'max')
+				self.params['num_'+k].value = makeDivisible(self.params['num_'+k].value, l, 'max')
+				self.params['num_'+k].default = makeDivisible(self.params['num_'+k].default, l, 'max')
 		
 		try:
 			if self.moneyGood is None: self.removePlot('money')

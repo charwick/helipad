@@ -19,17 +19,17 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 		
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('agents_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
+		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
 		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
 		
-		self.invTarget = {g:model.param(('prod','good',g))*model.param('agents_agent') for g in model.nonMoneyGoods}
+		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.nonMoneyGoods}
 		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
 	
 	def step(self, stage):
 		super().step(stage)
-		N = self.model.param('agents_agent')
+		N = self.model.param('num_agent')
 		
 		#Calculate wages
 		self.cashDemand = N * self.wage #Hold enough cash for one period's disbursements
@@ -274,7 +274,7 @@ class CentralBank(baseAgent):
 	
 	def expand(self, amount):				
 		if self.model.param('dist') == 'lump':
-			amt = amount/self.model.param('agents_agent')
+			amt = amount/self.model.param('num_agent')
 			for a in self.model.agents['agent']:
 				a.stocks[self.model.moneyGood] += amt
 		else:
