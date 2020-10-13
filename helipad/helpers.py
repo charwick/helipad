@@ -3,6 +3,8 @@
 # None of these are intended to be user-facing
 # ==========
 
+import warnings
+
 def isIpy():
 	try:
 		__IPYTHON__
@@ -29,13 +31,19 @@ class dictLike(dict):
 import colorsys, matplotlib.colors as mplcolor
 class Color:
 	def __init__(self, color):
-		if isinstance(color, str): self.rgb = mplcolor.hex2color(color) #can take a hex string or a color name
+		if isinstance(color, str): #Can remove the try-except block in Helipad 1.3 or April 2021, whichever is later
+			try: self.rgb = mplcolor.hex2color(color) #can take a hex string or a color name
+			except ValueError:
+				if len(color)==6 or len(color)==3:
+					warnings.warn('Initializing a hex color without \'#\' is deprecated and will be removed in a future version. Please add a \'#\' to the beginning of all hex colors.', None, 3)
+					self.rgb = mplcolor.hex2color('#'+color)
+				else: raise
 		else: self.rgb = list(color)
 	
 	@property
 	def hex(self): return mplcolor.to_hex(self.rgb)
 	@property
-	def hsv(self): return mplcolor.rgb_to_hsv(self.rgb)
+	def hsv(self): return list(mplcolor.rgb_to_hsv(self.rgb))
 	@property
 	def r(self): return self.rgb[0]
 	@property
