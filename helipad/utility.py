@@ -133,6 +133,9 @@ class CobbDouglas(CES):
 			goods = {g:1/len(goods) for g in goods}
 		
 		super().__init__(goods, 1)
+	
+	@property
+	def exponents(self): return self.coeffs
 
 class Leontief(CES):
 	def __init__(self, goods):
