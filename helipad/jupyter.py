@@ -18,6 +18,31 @@ class JupyterCpanel(VBox):
 		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
 		self.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
 		
+		#Callback function generator for Jupyter elements
+		def setVar(param, item=None):
+			def sv(val): #Ipywidgets bases on the function signature, so can't use more than one here…
+				if param.type=='checkgrid': param.set(item, val, updateGUI=False)
+				else: param.set(val, item, updateGUI=False)
+				
+				if callable(param.callback):
+					if param.obj is None: param.callback(self.model, param.name, param.get(item))
+					else: param.callback(self.model, param.name, item, param.get(item))
+			
+			#Consolidate value from bool and string, and toggle entry disabled state
+			#Have to return a different function since Ipywidgets bases the interactive off the function signature
+			if param.type=='checkentry':
+				def sv2(b,s):
+					els = param.element if item is None else param.element[item]
+					els.children[1].disabled = not b
+					#Coercing an int can fail, so if there's an exception, reset the textbox content
+					try:
+						val = s if (b and s=='') or 'func〈' in s else (param.entryType(s) if b else False)
+						sv(val)
+					except: els.children[1].value = str(param.get())
+					
+				return sv2
+			else: return sv
+		
 		def renderParam(param, func, title, val, circle=None):
 			i=None
 			if param.type=='slider':
@@ -53,7 +78,7 @@ class JupyterCpanel(VBox):
 				for k,v in param.opts.items():
 					if not isinstance(v, (tuple, list)): v = (v, None)
 					elif len(v) < 2: v = (v[0], None)
-					param.element[k] = interactive(param.setf(k, model=self.model), val=param.vars[k])
+					param.element[k] = interactive(setVar(param, k), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
 					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
 				i = Accordion(children=[HBox(list(param.element.values()))])
@@ -75,7 +100,7 @@ class JupyterCpanel(VBox):
 		def constructAccordion(param, itemList):
 			param.element = {}
 			for item, good in itemList.items():
-				param.element[item] = renderParam(param, param.setf(item, model=self.model), item.title(), param.get(item), circle=good.color)
+				param.element[item] = renderParam(param, setVar(param, item), item.title(), param.get(item), circle=good.color)
 		
 			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
@@ -88,7 +113,7 @@ class JupyterCpanel(VBox):
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
+			param.element = renderParam(param, setVar(param), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and getattr(param, 'func', None) is None: param.element.children[1].value = '10000'
@@ -112,7 +137,7 @@ class JupyterCpanel(VBox):
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, param.setf(model=self.model), param.title, param.get())
+			param.element = renderParam(param, setVar(param), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 		
 		#Checkgrids

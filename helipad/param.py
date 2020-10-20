@@ -55,15 +55,6 @@ class Param(Item):
 	def get(self, item=None):
 		return self.value if self.obj is None or item is None else self.value[item]
 	
-	#Returns a one-parameter setter since Jupyter needs it
-	def setf(self, item=None, model=None):
-		def set(val):
-			self.set(val, item, updateGUI=False)
-			if callable(self.callback):
-				if self.obj is None: self.callback(model, self.name, self.get(item))
-				else: self.callback(model, self.name, item, self.get(item))
-		return set
-	
 	def disabled(self, disable):
 		if not hasattr(self, 'element'): return
 		for e in ([self.element] if self.obj is None else self.element.values()):
@@ -278,19 +269,6 @@ class CheckentryParam(Param):
 			els = self.element.children if self.obj is None else self.element[item].children
 			els[0].value = val != False 
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
-		
-	#Override because it's a complex type
-	def setf(self, item=None, model=None):
-		def sets(b, s):
-			val = s if (b and s=='') or 'func〈' in s else (self.entryType(s) if b else False)
-			self.set(val, item, updateGUI=False)
-			els = self.element if item is None else self.element[item]
-			els.children[1].disabled = not b
-			
-			if callable(self.callback):
-				if self.obj is None: self.callback(model, self.name, self.get(item))
-				else: self.callback(model, self.name, item, self.get(item))
-		return sets
 	
 	#Only re-enable the textbox if the checkbox is checked
 	def disabled(self, disable):
@@ -331,14 +309,6 @@ class CheckgridParam(Param):
 			else: self.vars[item] = val
 			
 			if updateGUI and isIpy() and hasattr(self, 'element'): self.element[item].children[0].value = val
-	
-	def setf(self, item, model=None):
-		def set(val):
-			self.set(item, val, updateGUI=False)
-			if callable(self.callback):
-				if self.obj is None: self.callback(model, self.name, self.get(item))
-				else: self.callback(model, self.name, item, self.get(item))
-		return set
 	
 	@property
 	def range(self):
