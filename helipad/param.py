@@ -29,13 +29,13 @@ class Param(Item):
 	#Per-breed universal generic:	int → dict{int}
 	#Per-breed specific generic:	dict{int} → dict{int}
 	def reset(self):
-		if self.obj is None: self.set(self.default)
+		if self.obj is None: self.setSpecific(self.default)
 		else:
 			if isinstance(self.default, dict):
 				for i in self.keys:
-					self.set(self.default[i] if i in self.default else self.defaultVal, i)
+					self.setSpecific(self.default[i] if i in self.default else self.defaultVal, i)
 			else:
-				for i in self.keys: self.set(self.default, i)
+				for i in self.keys: self.setSpecific(self.default, i)
 	
 	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI=True):
@@ -47,13 +47,11 @@ class Param(Item):
 			else: self.element[item].children[0].value = val
 	
 	#Don't override this one
-	def set(self, *args, **kwargs):
+	def set(self, val, item=None, updateGUI=True):
 		if getattr(self, 'setter', False):
-			args = list(args) #Comes in as a tuple
-			idx = 1 if self.type=='checkgrid' else 0 #Function signature is different
-			args[idx] = self.setter(*args)
-			if args[idx] is not None: self.setSpecific(*args, **kwargs)
-		else: self.setSpecific(*args, **kwargs)
+			val = self.setter(val, item)
+			if val is not None: self.setSpecific(val, item)
+		else: self.setSpecific(val, item, updateGUI)
 	
 	#A generic set method to be overridden
 	def setSpecific(self, val, item=None, updateGUI=True):
@@ -315,6 +313,8 @@ class CheckgridParam(Param):
 		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
+	
+	def set(self, item, val=True, updateGUI=True): super().set(val, item, updateGUI)
 	
 	#Takes a list of strings, or a key-bool pair
 	def setSpecific(self, item, val=True, updateGUI=True):

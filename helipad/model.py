@@ -614,6 +614,10 @@ class Helipad:
 		nx.draw(G)
 		plt.show()
 	
+	def spatial(self, *args, **kwargs):
+		from helipad.spatial import spatialSetup
+		spatialSetup(self, *args, **kwargs)
+	
 	@property
 	def allagents(self):
 		agents = {}
