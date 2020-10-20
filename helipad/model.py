@@ -303,14 +303,14 @@ class Helipad:
 		params[name] = pclass(**args)
 		if getattr(self, 'cpanel', False) and isIpy(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
 	
-	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None):
+	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim)
+		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
 	
-	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None):
-		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc)
+	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
+		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
 	
 	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
