@@ -155,14 +155,12 @@ class baseAgent:
 		for p in parents:
 			p.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
-		self.model.param('num_'+self.primitive, self.model.param('num_'+self.primitive)+1)
 		
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
 	
 	def die(self, updateGUI=True):
 		self.model.agents[self.primitive].remove(self)
-		self.model.params['num_'+self.primitive].set(self.model.param('num_'+self.primitive)-1, updateGUI=updateGUI)
 		for edge in self.alledges: edge.cut()
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 		self.dead = True

@@ -21,6 +21,7 @@ heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'low':0, 'high': 0.25, 'step': 0.01})
 heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living')
+heli.param('num_agent', 150)
 
 heli.name = 'Cities'
 heli.stages = 2
@@ -38,6 +39,7 @@ class Land():
 		return self.product
 
 heli.land = {k: Land(k) for k in ['urban', 'rural']}
+heli.params['num_agent'].type = 'hidden'
 
 #================
 # AGENT BEHAVIOR
@@ -49,7 +51,6 @@ heli.land = {k: Land(k) for k in ['urban', 'rural']}
 def modelPreSetup(model):
 	model.movers = {b:0 for b in heli.primitives['agent'].breeds}
 	model.births = {b:0 for b in heli.primitives['agent'].breeds}
-	model.param('num_agent', 150)
 	for b in heli.primitives['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
@@ -127,7 +128,7 @@ def agentStep(agent, model, stage):
 #Organize some data and pause if all agents are dead
 @heli.hook
 def modelPostStep(model):
-	if len(model.agents['agent']) == 0: model.gui.pause()
+	if len(model.agents['agent']) == 0: model.stop()
 	else:
 		for b in model.primitives['agent'].breeds:
 			pop = len(model.agent(b))

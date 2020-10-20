@@ -117,7 +117,12 @@ class Helipad:
 			breeds={},
 			breedParams={}
 		)
-		self.addParameter('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, callback=self.nUpdater)
+		def popget(name, model):
+			prim = name.split('_')[1]
+			if not model.hasModel: return None
+			else: return len(model.agents[prim])
+			
+		self.addParameter('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.nUpdater, getter=popget)
 		self.agents[name] = []
 	
 	def removePrimitive(self, name):
@@ -253,25 +258,30 @@ class Helipad:
 				self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
 				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
-	
-		self.hasModel = True #Declare before instantiating agents
 		
 		#Initialize agents
-		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)} #Sort by priority
-		self.agents = {k: [] for k in self.primitives.keys()} #Clear any surviving agents from last run
-		for prim in self.primitives:
-			self.nUpdater(self, prim, self.param('num_'+prim))
+		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
+		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
+		self.agents = {k: [] for k in self.primitives.keys()}												#Clear any surviving agents from last run
+		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
+		self.hasModel = True
 		
 		self.doHooks('modelPostSetup', [self])
 			
 	#Registers an adjustable parameter exposed in the control panel.	
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, **args):
+	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, getter=None, setter=None, **args):
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim].breedParams
 		elif paramType=='good': params=self.goodParams
 		else: raise ValueError('Invalid object \''+paramType+'\'')
 		
 		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
+		
+		if callable(getter):
+			args['getter'] = lambda item=None: getter(*([name, self] if paramType is None else [name, self, item]))
+		
+		if callable(setter):
+			args['setter'] = lambda val, item=None: setter(*([val, name, self] if paramType is None else [val, name, self, item]))
 		
 		args.update({
 			'name': name,
@@ -612,9 +622,9 @@ class Helipad:
 		return agents
 	
 	#CALLBACK FOR DEFAULT PARAMETERS
-	#Model param redundant, strictly speaking, but it's necessary to make the signature match the other callbacks, where it is necessary
-	def nUpdater(self, model, prim, val):
-		if not self.hasModel: return
+	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
+	def nUpdater(self, val, prim, model, force=False):
+		if not self.hasModel and not force: return val
 		
 		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
 		array = self.agents[prim]

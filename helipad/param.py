@@ -46,13 +46,29 @@ class Param(Item):
 			if self.obj is None: self.element.children[0].value = val
 			else: self.element[item].children[0].value = val
 	
+	#Don't override this one
+	def set(self, *args, **kwargs):
+		if getattr(self, 'setter', False):
+			args = list(args) #Comes in as a tuple
+			idx = 1 if self.type=='checkgrid' else 0 #Function signature is different
+			args[idx] = self.setter(*args)
+			if args[idx] is not None: self.setSpecific(*args, **kwargs)
+		else: self.setSpecific(*args, **kwargs)
+	
 	#A generic set method to be overridden
-	def set(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
 		if self.obj is None: self.value = val
 		else: self.value[item] = val
 	
+	#Don't override this one
 	def get(self, item=None):
+		if getattr(self, 'getter', False):
+			v = self.getter(item)
+			if v is not None: return v #Allow passing to the default getter
+		return self.getSpecific(item)
+	
+	def getSpecific(self, item=None):
 		return self.value if self.obj is None or item is None else self.value[item]
 	
 	def disabled(self, disable):
@@ -90,12 +106,12 @@ class MenuParam(Param):
 		self.value = StringVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:StringVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
 	
-	def set(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
 		if self.obj is None: self.value.set(self.opts[val])
 		else: self.value[item].set(self.opts[val])
 	
-	def get(self, item=None):
+	def getSpecific(self, item=None):
 		#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
 		flip = {y:x for x,y in self.opts.items()}
 		if self.obj is None: return flip[self.value.get()]								#Global parameter
@@ -124,12 +140,12 @@ class CheckParam(Param):
 		self.value = BooleanVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:BooleanVar() for b in kwargs['keys']}
 		super().__init__(**kwargs)
 	
-	def set(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
 		if self.obj is None: self.value.set(val)
 		else: self.value[item].set(val)
 	
-	def get(self, item=None):
+	def getSpecific(self, item=None):
 		if item is None and self.obj is not None: return {k:v.get() for k,v in self.value.items()}
 		else: return self.value.get() if self.obj is None else self.value[item].get()
 	
@@ -143,12 +159,12 @@ class CheckParam(Param):
 class SliderParam(Param):
 	type='slider'
 	
-	def set(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI=True):
 		#If we're receiving a value from a Jupyter logslider, it's an index and not a value
 		if not updateGUI and isIpy() and isinstance(self.opts, list): val = self.opts[val]
 		
 		self.setParent(val, item, updateGUI)
-		super().set(val, item, updateGUI)
+		super().setSpecific(val, item, updateGUI)
 		
 		#Because the slider tkinter widget doesn't use a Var() object like the others, we have
 		#to explicitly push the value to the slider if necessary
@@ -156,8 +172,8 @@ class SliderParam(Param):
 			if self.obj is None: self.element.set(val)
 			else: self.element[item].set(val)
 	
-	def get(self, item=None):
-		v = super().get(item)
+	def getSpecific(self, item=None):
+		v = super().getSpecific(item)
 		#Have sliders with an int step value return an int
 		if self.opts is not None and 'step' in self.opts and isinstance(self.opts['step'], int):
 			if isinstance(v, dict): v = {k: int(val) for k,val in v.items()}
@@ -204,7 +220,7 @@ class CheckentryParam(Param):
 		kwargs['entryType'] = int if 'entryType' in kwargs and kwargs['entryType']=='int' else str
 		super().__init__(**kwargs)
 	
-	def get(self, item=None):
+	def getSpecific(self, item=None):
 		#Global parameter
 		if self.obj is None:
 			if getattr(self, 'func', None) is not None: return self.func
@@ -219,7 +235,7 @@ class CheckentryParam(Param):
 			if hasattr(self, 'element') and item in self.element and not isIpy(): return self.element[item].get()
 			else: return self.svar[item] if self.bvar[item] else False
 	
-	def set(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
 		if self.obj is None:
 			
@@ -294,14 +310,14 @@ class CheckgridParam(Param):
 	@property
 	def keys(self): return list(self.vars.keys())
 	
-	def get(self, item=None):
+	def getSpecific(self, item=None):
 		useElement = hasattr(self, 'element') and not isIpy()
 		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 	
 	#Takes a list of strings, or a key-bool pair
-	def set(self, item, val=True, updateGUI=True):
+	def setSpecific(self, item, val=True, updateGUI=True):
 		if isinstance(item, list):
 			for i in self.keys: self.set(i, i in item)
 		else:
