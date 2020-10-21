@@ -1,0 +1,120 @@
+# A sample spatial model with agents eating grass off patches.
+# No visualization as of yet
+
+#===============
+# SETUP
+#===============
+
+from helipad import Helipad
+
+heli = Helipad()
+heli.name = 'Grass Eating'
+heli.order = 'random'
+heli.stages = 5
+
+heli.addParameter('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
+heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
+heli.addParameter('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
+heli.addParameter('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
+heli.addParameter('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})
+heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=3, opts={'low': 1, 'high': 100, 'step': 1})
+
+heli.params['num_agent'].opts = {'low': 1, 'high': 200, 'step': 1}
+heli.param('num_agent', 200)
+
+heli.addBreed('male', 'blue')
+heli.addBreed('female', 'pink')
+heli.addGood('energy', 'red', 5)
+
+heli.spatial(x=16, diag=True)
+from random import choice, randint
+from numpy import mean
+
+#===============
+# BEHAVIOR
+#===============
+
+#Dividing it into stages like this (like in the NetLogo version) appears to make it more viable,
+#perhaps because it encourages bunching onto the same fecund patch, with more opportunities for
+#reproduction, whereas if they do it all at once, they avoid each other too much
+
+@heli.hook
+def agentStep(agent, model, stage):
+	
+	#Look for the neighboring patch with the most grass and move to it, if smart
+	if stage==1:
+		if model.param('smart'):
+			maxenergy = max([n.stocks['energy'] for n in agent.patch.neighbors])
+			prospects = [n for n in agent.patch.neighbors if n.stocks['energy'] == maxenergy]
+		else: prospects = agent.patch.neighbors
+		destination = choice(prospects).position
+		agent.moveTo(*destination)
+		agent.stocks['energy'] -= 1
+	
+	#Eat grass
+	elif stage==2:
+		if agent.patch.stocks['energy'] > 0:
+			agent.patch.stocks['energy'] -= 1
+			agent.stocks['energy'] += model.param('energy')
+	
+	#Reproduce
+	elif stage==3:
+		if agent.breed == 'male':
+			e = model.param('e2reproduce')
+			p = model.param('maleportion')
+			me, fe = e*p/100, e*(100-p)/100
+			if agent.stocks['energy'] > me:
+				prospects = [f for f in agent.patch.agentsOn if f.breed=='female' and f.stocks['energy']>fe]
+				if len(prospects):
+					mate = choice(prospects)
+					agent.stocks['energy'] -= me
+					mate.stocks['energy'] -= fe
+					child = mate.reproduce(inherit=[('breed', 'rand')], partners=[agent])
+					child.stocks['energy'] = e
+	
+	#Die
+	elif stage==4:
+		if agent.stocks['energy'] <= 0 or agent.age > model.param('maxLife'):
+			agent.die()
+			model.deathAge.append(agent.age)
+			if len(model.deathAge) > 100: model.deathAge.pop(0)
+
+@heli.hook
+def patchStep(patch, model, stage):
+	#Regrow grass
+	if stage==5 and patch.stocks['energy'] < 5 and randint(1,100) <= model.param('grassrate'):
+		patch.stocks['energy'] += 1
+
+@heli.hook
+def modelPostSetup(model):
+	model.deathAge = []
+
+#===============
+# CONFIGURATION
+#===============
+
+#Stop the model when we have no more females left to reproduce
+heli.param('stopafter', lambda model: len(model.agent('female')) <= 1)
+
+heli.addPlot('pop', 'Population', logscale=True)
+heli.addPlot('sexratio', 'Sex Ratio', logscale=True)
+heli.addPlot('age', 'Age')
+heli.addPlot('energy', 'Energy')
+heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
+heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
+heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
+heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
+heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
+heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
+heli.addSeries('pop', 'num_agent', 'Population', 'black')
+heli.addSeries('pop', 'grass', 'Grass', 'green')
+heli.addSeries('sexratio', 'sexratio', 'M/F Sex Ratio', 'brown')
+heli.addSeries('age', 'age', 'Average Age', 'blue')
+heli.addSeries('age', 'expectancy', 'Life Expectancy', 'black')
+heli.addSeries('energy', 'agentenergy', 'Energy', 'green')
+
+#===============
+# LAUNCH THE GUI
+#===============
+
+heli.launchCpanel()

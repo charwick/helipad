@@ -112,6 +112,8 @@ class Data:
 			elif stat=='mean':	return mean(u)
 			elif stat=='gmean':	return exp(log(u).sum()/len(u))
 			elif stat=='std':	return std(u)
+			elif stat=='max':	return max(u)
+			elif stat=='min':	return min(u)
 			elif 'percentile-' in stat:
 				pctile = int(stat.split('-')[1])
 				if pctile==100: return max(u)
