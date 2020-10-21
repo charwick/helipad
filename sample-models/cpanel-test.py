@@ -1,3 +1,5 @@
+#This is not a model and will not run. It does, however, register parameters of every available type in order to test the rendering of the control panel.
+
 #===============
 # PREAMBLE
 #===============
@@ -10,9 +12,9 @@ heli.name = 'Test'
 
 #A handful of breeds and goods
 breeds = [
-	('hobbit', 'jam', 'D73229'),
-	('dwarf', 'axe', '2D8DBE'),
-	('elf', 'lembas', 'CCBB22')
+	('hobbit', 'jam', '#D73229'),
+	('dwarf', 'axe', '#2D8DBE'),
+	('elf', 'lembas', '#CCBB22')
 ]
 AgentGoods = {}
 for b in breeds:
