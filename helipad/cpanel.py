@@ -5,7 +5,8 @@
 
 from tkinter import *
 from tkinter.ttk import Progressbar
-from colour import Color
+from helipad.helpers import Color
+import sys, colorsys
 from math import ceil
 
 class Cpanel:	
@@ -383,31 +384,27 @@ class textCheck(Label):
 		self.bg = (Color(bg[0]), Color(bg[1]))
 		self.fg = (Color(fg[0]), Color(fg[1]))
 		
+		def lighten(color):
+			hls = colorsys.rgb_to_hls(*color.rgb)
+			return Color(colorsys.hls_to_rgb(hls[0], .5+hls[1]/2, hls[2]))
+		
+		def darken(color):
+			hls = colorsys.rgb_to_hls(*color.rgb)
+			return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
+		
 		#Generate disabled and hover colors
-		self.disabledbg = (
-			self.bg[0],
-			Color(hue=self.bg[1].hue, saturation=self.bg[1].saturation, luminance=.5+self.bg[1].luminance/2)
-		)
-		self.disabledfg = (
-			Color(hue=self.fg[0].hue, saturation=self.fg[0].saturation, luminance=.5+self.fg[0].luminance/2),
-			Color(hue=self.fg[1].hue, saturation=self.fg[1].saturation, luminance=.5+self.fg[1].luminance/2)
-		)
-		hoverbg = (
-			Color(hue=self.bg[0].hue, saturation=self.bg[0].saturation, luminance=self.bg[0].luminance-0.075 if self.bg[0].luminance-0.075 > 0 else 0),
-			Color(hue=self.bg[1].hue, saturation=self.bg[1].saturation, luminance=self.bg[1].luminance-0.075 if self.bg[1].luminance-0.075 > 0 else 0)
-		)
-		hoverfg = (
-			Color(hue=self.fg[0].hue, saturation=self.fg[0].saturation, luminance=self.fg[0].luminance-0.075 if self.fg[0].luminance-0.075 > 0 else 0),
-			Color(hue=self.fg[1].hue, saturation=self.fg[1].saturation, luminance=self.fg[1].luminance-0.075 if self.fg[1].luminance-0.075 > 0 else 0)
-		)
+		self.disabledbg = (self.bg[0], lighten(self.bg[1]))
+		self.disabledfg = (lighten(self.fg[0]), lighten(self.fg[1]))
+		hoverbg = (darken(self.bg[0]), darken(self.bg[1]))
+		hoverfg = (darken(self.fg[0]), darken(self.fg[1]))
 		
 		self.value = defaultValue
 		self.enabled = True
 		
 		def hover(event):
-			if self.enabled: self.config(bg=hoverbg[self.value], fg=hoverfg[self.value])
+			if self.enabled: self.config(bg=hoverbg[self.value].hex, fg=hoverfg[self.value].hex)
 		def leave(event):
-			if self.enabled: self.config(bg=self.bg[self.value], fg=self.fg[self.value])
+			if self.enabled: self.config(bg=self.bg[self.value].hex, fg=self.fg[self.value].hex)
 		
 		#Have to do this *before* any other bindings because pmw.bind deletes all the others
 		if hasattr(self, 'pmw') and desc: self.pmw.bind(self, desc)
@@ -422,7 +419,7 @@ class textCheck(Label):
 		if not self.enabled: return
 		
 		self.value = bool(value)
-		self.config(bg=self.bg[self.value], fg=self.fg[self.value])
+		self.config(bg=self.bg[self.value].hex, fg=self.fg[self.value].hex)
 		if self.callback is not None: self.callback(value)
 	
 	def toggle(self, event=None): self.set(not self.value)
@@ -438,7 +435,7 @@ class textCheck(Label):
 			fg = self.fg
 		
 		self.enabled = not bool(disable)
-		self.config(bg=bg[self.value], fg=fg[self.value])
+		self.config(bg=bg[self.value].hex, fg=fg[self.value].hex)
 
 # A checkbox that enables/disables a text box
 class checkEntry(Frame):

@@ -18,6 +18,8 @@ setuptools.setup(
 		'Source Code': 'https://github.com/charwick/helipad'
 	},
 	packages=setuptools.find_packages(),
+	include_package_data=True,
+	package_data={  "": ["*.css"] },
 	license='MIT',
 	install_requires=[
 		'matplotlib',

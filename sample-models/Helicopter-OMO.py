@@ -2,7 +2,6 @@
 # Download the paper at https://ssrn.com/abstract=2545488
 
 from itertools import combinations
-from colour import Color
 import pandas
 
 from helipad import *

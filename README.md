@@ -17,7 +17,7 @@ Once installed, getting started with a model is very simple.
 	
 	#Use the heli object to set up here
 	
-	heli.launchGUI()
+	heli.launchCpanel()
 
 The included [bootstrap model](https://github.com/charwick/helipad/blob/master/sample-models/bootstrap.py) contains a more detailed template, and the [sample models](https://github.com/charwick/helipad/tree/master/sample-models) exemplify various use cases. The documentation also includes a complete [hook and function reference](https://helipad.dev/functions/).
 
