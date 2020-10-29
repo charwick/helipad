@@ -314,7 +314,11 @@ class CheckgridParam(Param):
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 	
-	def set(self, item, val=True, updateGUI=True): super().set(val, item, updateGUI)
+	def set(self, item, val=True, updateGUI=True):
+		if getattr(self, 'setter', False):
+			val = self.setter(val, item)
+			if val is not None: self.setSpecific(item, val)
+		else: self.setSpecific(item, val, updateGUI)
 	
 	#Takes a list of strings, or a key-bool pair
 	def setSpecific(self, item, val=True, updateGUI=True):
