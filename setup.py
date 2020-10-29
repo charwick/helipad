@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
 	name="helipad",
-	version="1.1.1",
+	version="1.1.2",
 	author="C Harwick",
 	author_email="cameron@cameronharwick.com",
 	description="An agent-based modeling framework for Python focused on time-series output.",
@@ -18,8 +18,9 @@ setuptools.setup(
 		'Source Code': 'https://github.com/charwick/helipad'
 	},
 	packages=setuptools.find_packages(),
+	package_dir={'helipad': 'helipad'},
 	include_package_data=True,
-	package_data={  "": ["*.css"] },
+	package_data={'': ['*.css']},
 	license='MIT',
 	install_requires=[
 		'matplotlib',
