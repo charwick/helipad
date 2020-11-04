@@ -384,17 +384,13 @@ class textCheck(Label):
 		self.bg = (Color(bg[0]), Color(bg[1]))
 		self.fg = (Color(fg[0]), Color(fg[1]))
 		
-		def lighten(color):
-			hls = colorsys.rgb_to_hls(*color.rgb)
-			return Color(colorsys.hls_to_rgb(hls[0], .5+hls[1]/2, hls[2]))
-		
 		def darken(color):
 			hls = colorsys.rgb_to_hls(*color.rgb)
 			return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
 		
 		#Generate disabled and hover colors
-		self.disabledbg = (self.bg[0], lighten(self.bg[1]))
-		self.disabledfg = (lighten(self.fg[0]), lighten(self.fg[1]))
+		self.disabledbg = (self.bg[0], self.bg[1].lighten(2))
+		self.disabledfg = (self.fg[0].lighten(2), self.fg[1].lighten(2))
 		hoverbg = (darken(self.bg[0]), darken(self.bg[1]))
 		hoverfg = (darken(self.fg[0]), darken(self.fg[1]))
 		

@@ -57,9 +57,9 @@ class Color:
 	@property
 	def v(self): return self.hsv[2]
 	
-	def lighten(self):
+	def lighten(self, factor=3):
 		hls = colorsys.rgb_to_hls(*self.rgb)
-		return Color(colorsys.hls_to_rgb(hls[0], .66 + hls[1]/3, hls[2]))
+		return Color(colorsys.hls_to_rgb(hls[0], (1-1/factor) + hls[1]/factor, hls[2]))
 	
 	def blend(self, color2):
 		return Color(((self.r+color2.r)/2, (self.g+color2.g)/2, (self.b+color2.b)/2))
