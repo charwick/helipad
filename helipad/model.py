@@ -382,6 +382,23 @@ class Helipad:
 		if prioritize: self.hooks[place].insert(0, func)
 		else: self.hooks[place].append(func)
 	
+	def removeHook(self, place, fname, removeall=False):
+		if not place in self.hooks: return False
+		if isinstance(fname, list): return [self.removeHook(place, f, removeall) for f in fname]
+		did = False
+		for h in self.hooks[place]:
+			if h.__name__ == fname:
+				self.hooks[place].remove(h)
+				if not removeall: return True
+				else: did = True
+		return did
+	
+	def clearHooks(self, place):
+		if isinstance(place, list): return [self.clearHooks(p) for p in place]
+		if not place in self.hooks or not len(self.hooks[place]): return False
+		self.hooks[place] = []
+		return True
+	
 	#Returns the value of the last function in the list
 	def doHooks(self, place, args):
 		#Take a list of hooks; go until we get a response

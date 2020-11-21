@@ -215,10 +215,8 @@ class JupyterCpanel(VBox):
 					self.layout.visibility = 'hidden'
 			
 			#Remove previous hooks so we don't double up when re-running launchCpanel()
-			for p in ['plotsPreLaunch', 'terminate']:
-				if p in model.hooks:
-					for i,h in enumerate(model.hooks[p]):
-						if 'cpanel_' in h.__name__: del(model.hooks[p][i])
+			model.removeHook('plotsPreLaunch', 'cpanel_plotsPreLaunch')
+			model.removeHook('terminate', 'cpanel_terminate')
 		
 			#Model flow control: pause/run button and progress bar
 			@model.hook('plotsPreLaunch', prioritize=True)
