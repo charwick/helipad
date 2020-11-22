@@ -10,7 +10,7 @@ from helipad.graph import *
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
-# import time	#For performance testing
+import time	#For performance testing
 
 if not isIpy():
 	from tkinter import *
@@ -40,6 +40,7 @@ class Helipad:
 		self.hasModel = False	#Have we initialized?
 		self.moneyGood = None
 		self.allEdges = {}
+		self.timer = False
 		
 		#Default parameters
 		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
@@ -126,9 +127,12 @@ class Helipad:
 		self.agents[name] = []
 	
 	def removePrimitive(self, name):
+		if isinstance(name, list): return [self.removePrimitive(n) for n in name]
+		if not name in self.primitives: return False
 		del self.primitives[name]
 		del self.agents[name]
 		del self.params['num_'+name]
+		return True
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
@@ -490,12 +494,15 @@ class Helipad:
 	
 	#This is split out as an async function to allow user input while running the loop in Jupyter
 	async def run(self):
-		# self.begin = time.time()
+		if self.timer:
+			begin = time.time()
 		while self.running:
 			t = self.step()
 			st = self.param('stopafter')
 			
 			if t%self.param('updateEvery')==0:
+				if self.timer: t2 = time.time()
+				
 				if getattr(self, 'cpanel', False) and st and not callable(st): self.cpanel.progress.update(t/st)
 				
 				#Update graph
@@ -515,10 +522,11 @@ class Helipad:
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
 					else: self.root.update() #Make sure we don't hang the interface if plotless
 			
-				# # Performance indicator
-				# newtime = time.time()
-				# print('Period', t, 'at', self.param('updateEvery')/(newtime-self.begin), 'periods/second')
-				# self.begin = newtime
+				# Performance indicator
+				if self.timer:
+					newtime = time.time()
+					print('Period', t, ':', round(self.param('updateEvery')/(newtime-begin),2), 'periods/second (',round((t2-begin)/(newtime-begin)*100,2),'% model, ',round((newtime-t2)/(newtime-begin)*100,2),'% graphing)')
+					begin = newtime
 	
 			if st:
 				stop = st(self) if callable(st) else t>=st
