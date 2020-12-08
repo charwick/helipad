@@ -686,18 +686,19 @@ class Helipad:
 		
 	#
 	# DEBUG FUNCTIONS
-	# Only call from the console, not in the code
+	# Only call from the console, not in user code
 	#
 	
 	# Requires to be run from Terminal (⌘-⇧-R in TextMate). `self` will refer to the model object
 	# Readline doesn't look like it's doing anything here, but it enables certain console features
 	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
+	# Has to be called *after* Cpanel.__init__() is called, or the cpanel object won't be available.
 	def debugConsole(self):
 		if sys.platform=='darwin':
 			try:
 				import code, readline
 				vars = globals().copy()
-				vars.update(locals())
+				vars['self'] = self
 				shell = code.InteractiveConsole(vars)
 				shell.interact()
 			except: print('Use pip to install readline and code for a debug console')
@@ -751,15 +752,15 @@ class Helipad:
 		except: pass #Can't remove plot if re-drawing the cpanel
 		
 		if not isIpy():
-			from helipad.cpanel import Cpanel
-			self.cpanel = Cpanel(self.root, self)
+			from helipad.cpanelTkinter import Cpanel
+			self.cpanel = Cpanel(self)
 			self.debugConsole()
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
 			self.root.mainloop()		#Launch the control panel
 		else:
-			from helipad.jupyter import JupyterCpanel, SilentExit
+			from helipad.cpanelJupyter import Cpanel, SilentExit
 			if getattr(self, 'cpanel', False): self.cpanel.invalidate('Control panel was redrawn in another cell.')
-			self.cpanel = JupyterCpanel(self)
+			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
 			raise SilentExit() #Don't blow past the cpanel if doing "run all"
 		

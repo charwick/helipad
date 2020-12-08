@@ -3,7 +3,7 @@ from IPython.display import display
 from helipad.graph import Plot
 import os
 
-class JupyterCpanel(VBox):
+class Cpanel(VBox):
 	def __init__(self, model, redraw=False):
 		super().__init__()
 		self.model = model

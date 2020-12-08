@@ -10,12 +10,12 @@ import sys, colorsys
 from math import ceil
 
 class Cpanel:	
-	def __init__(self, parent, model):
-		self.parent = parent
+	def __init__(self, model):
 		self.model = model
+		self.parent = model.root
 		try:
 			import Pmw
-			self.balloon = Pmw.Balloon(parent)
+			self.balloon = Pmw.Balloon(self.parent)
 			textCheck.pmw = self.balloon
 		except:
 			self.balloon = None
@@ -277,8 +277,8 @@ class Cpanel:
 			fnum += 1
 		
 		#Set application name
-		parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
-		parent.resizable(0,0)
+		self.parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
+		self.parent.resizable(0,0)
 		if sys.platform=='darwin':
 			try:
 				from Foundation import NSBundle

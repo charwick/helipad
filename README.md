@@ -23,9 +23,7 @@ The included [bootstrap model](https://github.com/charwick/helipad/blob/master/s
 
 ## Requirements
 
-Helipad requires Python 3.6. Previous versions do not preserve dict order, so you may get unexpected results. Python 2 is not supported.
-
-The following libraries are required:
+Helipad requires Python 3.6 or higher. The following libraries are also required:
 
 * [Matplotlib](https://matplotlib.org/) (for plotting the time series output)
 * [Pandas](https://pandas.pydata.org/) (for data collection)
