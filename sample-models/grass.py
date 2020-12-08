@@ -106,12 +106,12 @@ heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
 heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
-heli.addSeries('pop', 'num_agent', 'Population', 'black')
-heli.addSeries('pop', 'grass', 'Grass', 'green')
-heli.addSeries('sexratio', 'sexratio', 'M/F Sex Ratio', 'brown')
-heli.addSeries('age', 'age', 'Average Age', 'blue')
-heli.addSeries('age', 'expectancy', 'Life Expectancy', 'black')
-heli.addSeries('energy', 'agentenergy', 'Energy', 'green')
+heli.plots['pop'].addSeries('num_agent', 'Population', 'black')
+heli.plots['pop'].addSeries('grass', 'Grass', 'green')
+heli.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
+heli.plots['age'].addSeries('age', 'Average Age', 'blue')
+heli.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
+heli.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
 
 #===============
 # LAUNCH THE GUI

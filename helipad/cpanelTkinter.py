@@ -447,7 +447,7 @@ class checkEntry(Frame):
 				for c in insert:
 					if c not in '0123456789':
 						allow = False
-			if allow: self.callback(int(newval) if self.type=='int' else newval)
+			if allow: self.callback(int(newval) if self.type=='int' and newval!='' else newval)
 			return allow
 		valint = self.register(validate)
 			

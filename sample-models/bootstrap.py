@@ -61,12 +61,13 @@ def modelStep(model, stage):
 
 #Plots are areas on the graph where series can be drawn to keep track of reporter data in real time.
 
-heli.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
+myplot = heli.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 
 #Series draw reporter data on a plot. Here we draw two series on the same plot.
+#The Plot object can also be accessed later with heli.plots['myplot'], so the following two methods are identical.
 
-# heli.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
-# heli.addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
+# myplot.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
+# heli.plots['myplot'].addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
 
 #===============
 # LAUNCH THE GUI

@@ -144,6 +144,8 @@ def match(agents, primitive, model, stage):
 		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
 		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 
+plot = heli.addPlot('payoffs', 'Payoffs')
+
 #Add breeds last-minute so we can toggle them in the control panel
 @heli.hook
 def modelPreSetup(model):
@@ -160,7 +162,7 @@ def modelPreSetup(model):
 	
 	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
-		model.addSeries('payoffs', b+'-proportion', b, d.color)
+		plot.addSeries(b+'-proportion', b, d.color)
 
 #===============
 # CONFIGURATION
@@ -175,8 +177,6 @@ def proportionReporter(breed):
 	def func(model):
 		return model.data.agentReporter('stocks', breed=breed, good='payoff', stat='sum')(model)/model.totalP
 	return func
-
-heli.addPlot('payoffs', 'Payoffs')
 
 #===============
 # LAUNCH THE GUI

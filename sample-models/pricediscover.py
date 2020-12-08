@@ -67,8 +67,8 @@ heli.param('stopafter', stopCondition)
 #===============
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
-heli.addPlot('price', 'Price', logscale=True, selected=True)
-heli.addSeries('price', 'ssprice', 'Soma/Shmoo Price', '#119900')
+pricePlot = heli.addPlot('price', 'Price', logscale=True, selected=True)
+pricePlot.addSeries('ssprice', 'Soma/Shmoo Price', '#119900')
 
 for p in ['demand', 'utility']: heli.plots[p].active(True)
 heli.param('updateEvery', 1)

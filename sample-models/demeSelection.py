@@ -102,10 +102,10 @@ def fitness(model): return sum([sum([a.stocks['payoff'] for a in d.agents['agent
 heli.addPlot('pop', 'Population', selected=False)
 heli.addPlot('pheno', 'Phenotypes', stack=True)
 heli.addPlot('fitness', 'Fitness')
-heli.addSeries('pop', 'population', 'Total population', '#000000')
-heli.addSeries('pheno', 'altruists', 'Altruists', '#33CC33')
-heli.addSeries('pheno', 'selfish', 'Selfish', '#BB2222')
-heli.addSeries('fitness', 'fitness', 'Average Fitness', '#000099')
+heli.plots['pop'].addSeries('population', 'Total population', '#000000')
+heli.plots['pheno'].addSeries('altruists', 'Altruists', '#33CC33')
+heli.plots['pheno'].addSeries('selfish', 'Selfish', '#BB2222')
+heli.plots['fitness'].addSeries('fitness', 'Average Fitness', '#000099')
 
 #===============
 # LAUNCH THE GUI

@@ -153,6 +153,33 @@ class Plot(Item):
 		self.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isIpy() and hasattr(self, 'check'):
 			self.check.set(val)
+	
+	#First arg is a reporter name registered in DataCollector, or a lambda function
+	#Second arg is the series name. Use '' to not show in the legend.
+	#Third arg is the plot's hex color, or a Color object
+	def addSeries(self, reporter, label, color, style='-'):
+		if not isinstance(color, Color): color = Color(color)
+
+		#Check against columns and not reporters so percentiles work
+		if not callable(reporter) and not reporter in self.model.data.all:
+			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
+		
+		#Add subsidiary series (e.g. percentile bars)
+		subseries = []
+		if reporter in self.model.data.reporters and isinstance(self.model.data.reporters[reporter].func, tuple):
+			for p, f in self.model.data.reporters[reporter].func[1].items():
+				subkey = reporter+'-'+str(p)+'-pctile'
+				subseries.append(self.addSeries(subkey, '', color.lighten(), style='--'))
+
+		#Since many series are added at setup time, we have to de-dupe
+		for s in self.series:
+			if s.reporter == reporter:
+				self.series.remove(s)
+		
+		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
+		self.series.append(series)
+		if reporter in self.model.data.reporters: self.model.data.reporters[reporter].series.append(series)
+		return series
 
 def keepEvery(lst, n):
 	i,l = (1, [])

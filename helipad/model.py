@@ -136,6 +136,7 @@ class Helipad:
 		
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
+		if hasattr(self, 'breed'): return #Doesn't matter if it's not the top-level model
 		if getattr(self, 'cpanel', False):
 			if isIpy(): self.cpanel.invalidate()
 			else: raise RuntimeError('Cannot add plots after control panel is drawn')
@@ -177,35 +178,11 @@ class Helipad:
 		del self.params['plots'].vars[name]
 		if name in self.params['plots'].default: self.params['plots'].default.remove(name)
 	
-	#First arg is the plot it's a part of
-	#Second arg is a reporter name registered in DataCollector, or a lambda function
-	#Third arg is the series name. Use '' to not show in the legend.
-	#Fourth arg is the plot's hex color, or a Color object
+	#Deprecated in Helipad 1.2 in favor of Plot.addSeries()
+	#To be removed in Helipad 1.4
 	def addSeries(self, plot, reporter, label, color, style='-'):
-		if hasattr(self, 'breed'): return #Doesn't matter if it's not the top-level model
-		if not isinstance(color, Color): color = Color(color)
-		if not plot in self.plots:
-			raise KeyError('Plot \''+plot+'\' does not exist. Be sure to register plots before adding series.')
-		#Check against columns and not reporters so percentiles work
-		if not callable(reporter) and not reporter in self.data.all:
-			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
-		
-		#Add subsidiary series (e.g. percentile bars)
-		subseries = []
-		if reporter in self.data.reporters and isinstance(self.data.reporters[reporter].func, tuple):
-			for p, f in self.data.reporters[reporter].func[1].items():
-				subkey = reporter+'-'+str(p)+'-pctile'
-				subseries.append(self.addSeries(plot, subkey, '', color.lighten(), style='--'))
-
-		#Since many series are added at setup time, we have to de-dupe
-		for s in self.plots[plot].series:
-			if s.reporter == reporter:
-				self.plots[plot].series.remove(s)
-		
-		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=plot)
-		self.plots[plot].series.append(series)
-		if reporter in self.data.reporters: self.data.reporters[reporter].series.append(series)
-		return series
+		warnings.warn('model.addSeries() is deprecated and will be removed in a future version. Use Plot.addSeries() instead.', None, 2)
+		return self.plots[plot].addSeries(reporter, label, color, style)
 	
 	def addButton(self, text, func, desc=None):
 		self.shocks.register(text, None, func, 'button', True, desc)
@@ -245,7 +222,7 @@ class Helipad:
 
 		if (self.moneyGood is not None):
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
-			self.addSeries('money', 'M0', 'Monetary Base', self.goods[self.moneyGood].color)
+			self.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
@@ -254,14 +231,15 @@ class Helipad:
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in next(iter(self.primitives.values())).breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
-			self.addSeries('utility', 'utility-'+breed, breed.title()+' Utility', b.color)
+			if hasattr(self, 'plots'): self.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
 	
 		if len(self.goods) >= 2:
 			for good, g in self.nonMoneyGoods.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-				self.addSeries('demand', 'demand-'+good, good.title()+' Demand', g.color)
 				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
-				self.addSeries('shortage', 'shortage-'+good, good.title()+' Shortage', g.color)
+				if hasattr(self, 'plots'):
+					self.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
+					self.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
 		
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
