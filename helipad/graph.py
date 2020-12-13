@@ -14,6 +14,7 @@ class Graph:
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.lastUpdate = 0
 		self.resolution = 1
+		self.verticals = []
 		if isIpy():
 			plt.ioff() #Can't re-launch plots without manually closing otherwise
 			plt.rcParams['figure.figsize'] = [12, 8]
@@ -138,6 +139,12 @@ class Graph:
 		# 		g.autoscale_view(tight=True)
 		
 		self.fig.canvas.draw()
+	
+	def addVertical(self, t, color, linestyle, linewidth):
+		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.plots.values()])
+		
+		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
+		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
 class Plot(Item):
 	def __init__(self, **kwargs):

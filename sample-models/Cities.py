@@ -16,10 +16,11 @@ heli.addBreed('urban', '#CC0000')
 heli.addBreed('rural', '#00CC00')
 heli.addGood('consumption', '#000000')
 
+heli.addParameter('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city')
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
 heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'low':0, 'high': 0.25, 'step': 0.01})
-heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
+heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0.1, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living')
 heli.param('num_agent', 150)
 
@@ -54,6 +55,19 @@ def modelPreSetup(model):
 	for b in heli.primitives['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
+	
+	#Mark the different phases of the Malthusian model
+	model.clearEvents()
+	if not model.param('city'):
+		@heli.event(triggerFn=eventDo)
+		def exp1(model):	return sum(diff(model.data['ruralPop'][-20:])) > 3
+		@heli.event(triggerFn=eventDo)
+		def taper2(model):	return model.events['exp1'].triggered and sum(diff(model.data['ruralPop'][-20:])) < -1
+		@heli.event(triggerFn=eventDo)
+		def cull3(model):	return model.events['taper2'].triggered and sum(diff(model.data['ruralH-25-pctile'][-20:])) > 2
+		@heli.event(triggerFn=eventDo)
+		def stab4(model):	return model.events['cull3'].triggered and sum(diff(model.data['ruralPop'][-400:])) > 0
+		heli.param('stopafter', 15000)
 
 # from helipad.utility import CobbDouglas
 @heli.hook
@@ -91,18 +105,19 @@ def agentStep(agent, model, stage):
 			)
 		}	#(Eq. 1')
 		
-		otherloc = 'urban' if agent.breed == 'rural' else 'rural'
-		oprod = exp(model.land[otherloc].product)+agent.prod[otherloc]
-		otherwage = log(oprod)*agent.prod[otherloc]/oprod		
+		if model.param('city'):
+			otherloc = 'urban' if agent.breed == 'rural' else 'rural'
+			oprod = exp(model.land[otherloc].product)+agent.prod[otherloc]
+			otherwage = log(oprod)*agent.prod[otherloc]/oprod		
 		
-		#Decide whether or not to move
-		mvc = model.param('movecost')
-		if otherwage > agent.lastWage*1.25 and agent.wealth > mvc: #and model.t > 10000:
-		# if agent.prod[otherloc]-mvc > agent.prod[agent.breed] and agent.wealth > mvc: #and model.t > 10000:
-			# print('T=',model.t,', HC',agent.H,':',agent.breed,'wage=',agent.lastWage,',',otherloc,'wage=',otherwage)
-			agent.wealth -= mvc
-			model.movers[agent.breed] += 1
-			agent.breed = otherloc
+			#Decide whether or not to move
+			mvc = model.param('movecost')
+			if otherwage > agent.lastWage*1.25 and agent.wealth > mvc: #and model.t > 10000:
+			# if agent.prod[otherloc]-mvc > agent.prod[agent.breed] and agent.wealth > mvc: #and model.t > 10000:
+				# print('T=',model.t,', HC',agent.H,':',agent.breed,'wage=',agent.lastWage,',',otherloc,'wage=',otherwage)
+				agent.wealth -= mvc
+				model.movers[agent.breed] += 1
+				agent.breed = otherloc
 
 		model.land[agent.breed].input += agent.prod[agent.breed] #Work
 		

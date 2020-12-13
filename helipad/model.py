@@ -35,6 +35,7 @@ class Helipad:
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
+		self.events = {}
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
@@ -49,9 +50,11 @@ class Helipad:
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
 		def hookdec(name, fn, kwargs): self.addHook(name, fn, **kwargs)
 		def buttondec(name, fn, kwargs): self.addButton(name, fn, **kwargs)
+		def eventdec(name, fn, kwargs): self.addEvent(name, fn, **kwargs)
 		self.reporter = self.genDecorator(repdec)
 		self.hook = self.genDecorator(hookdec)
 		self.button = self.genDecorator(buttondec)
+		self.event = self.genDecorator(eventdec)
 		
 		#A few things that only make sense to do if it's the topmost model
 		if not hasattr(self, 'breed'):
@@ -393,6 +396,17 @@ class Helipad:
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
 		return r
+	
+	def addEvent(self, name, fn, **kwargs):
+		self.events[name] = HelipadEvent(name, fn, **kwargs)
+		return self.events[name]
+	
+	def removeEvent(self, name):
+		if not name in self.events: return False
+		del self.events[name]
+		return True
+	
+	def clearEvents(self): self.events = {}
 				
 	def step(self, stage=1):
 		self.t += 1
@@ -467,6 +481,9 @@ class Helipad:
 						a.step(self.stage)
 		
 		self.data.collect(self)
+		for e in self.events.values():
+			if not e.triggered and e.check(self) and getattr(self, 'graph', False):
+				self.graph.addVertical(self.t, e.color, e.linestyle, e.linewidth)
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
@@ -830,6 +847,24 @@ class MultiLevel(agent.baseAgent, Helipad):
 	def step(self, stage):
 		self.dontStepAgents = False
 		super().step(stage)
+
+class HelipadEvent:
+	def __init__(self, name, f, color='#CC0000', linestyle='--', linewidth=1, triggerFn=None):
+		self.name = name
+		self.f = f
+		self.color = color
+		self.linestyle = linestyle
+		self.linewidth = linewidth
+		self.triggerFn = triggerFn
+		self.triggered = False
+	
+	def check(self, model):
+		if self.triggered: return False
+		if (isinstance(self.f, int) and model.t==self.f) or (callable(self.f) and self.f(model)):
+			self.triggered = model.t
+			if callable(self.triggerFn): self.result = self.triggerFn(model, self.name)
+			self.data = {k: v[0] for k,v in model.data.getLast(1).items()}
+			return True
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)
