@@ -203,6 +203,7 @@ class Helipad:
 		#Breeds and goods should already be registered at this point
 		
 		self.data.reset()
+		for e in self.events.values(): e.reset()
 		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		
 		def pReporter(param, item=None):
@@ -398,7 +399,7 @@ class Helipad:
 		return r
 	
 	def addEvent(self, name, fn, **kwargs):
-		self.events[name] = HelipadEvent(name, fn, **kwargs)
+		self.events[name] = Event(name, fn, **kwargs)
 		return self.events[name]
 	
 	def removeEvent(self, name):
@@ -848,23 +849,25 @@ class MultiLevel(agent.baseAgent, Helipad):
 		self.dontStepAgents = False
 		super().step(stage)
 
-class HelipadEvent:
-	def __init__(self, name, f, color='#CC0000', linestyle='--', linewidth=1, triggerFn=None):
+class Event:
+	def __init__(self, name, f, color='#CC0000', linestyle='--', linewidth=1):
 		self.name = name
 		self.f = f
 		self.color = color
 		self.linestyle = linestyle
 		self.linewidth = linewidth
-		self.triggerFn = triggerFn
 		self.triggered = False
 	
 	def check(self, model):
 		if self.triggered: return False
 		if (isinstance(self.f, int) and model.t==self.f) or (callable(self.f) and self.f(model)):
 			self.triggered = model.t
-			if callable(self.triggerFn): self.result = self.triggerFn(model, self.name)
 			self.data = {k: v[0] for k,v in model.data.getLast(1).items()}
 			return True
+	
+	def reset(self):
+		self.triggered = False
+		self.data = None
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)
