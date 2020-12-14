@@ -483,7 +483,7 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if not e.triggered and e.check(self) and getattr(self, 'graph', False):
+			if not e.triggered and e.check(self) and getattr(self, 'graph', False) and e.linestyle:
 				self.graph.addVertical(self.t, e.color, e.linestyle, e.linewidth)
 		self.doHooks('modelPostStep', [self])
 		return self.t
@@ -850,9 +850,9 @@ class MultiLevel(agent.baseAgent, Helipad):
 		super().step(stage)
 
 class Event:
-	def __init__(self, name, f, color='#CC0000', linestyle='--', linewidth=1):
+	def __init__(self, name, trigger, color='#CC0000', linestyle='--', linewidth=1):
 		self.name = name
-		self.f = f
+		self.trigger = trigger
 		self.color = color
 		self.linestyle = linestyle
 		self.linewidth = linewidth
@@ -860,7 +860,7 @@ class Event:
 	
 	def check(self, model):
 		if self.triggered: return False
-		if (isinstance(self.f, int) and model.t==self.f) or (callable(self.f) and self.f(model)):
+		if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
 			self.triggered = model.t
 			self.data = {k: v[0] for k,v in model.data.getLast(1).items()}
 			return True
