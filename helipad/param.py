@@ -216,13 +216,14 @@ class CheckentryParam(Param):
 		self.bvar = True if 'obj' not in kwargs or kwargs['obj'] is None else {k:True for k in kwargs['keys']}
 		self.svar = self.defaultVal if 'obj' not in kwargs or kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
 		self.value = None
+		self.event = False
 		kwargs['entryType'] = int if 'entryType' in kwargs and kwargs['entryType']=='int' else str
 		super().__init__(**kwargs)
 	
 	def getSpecific(self, item=None):
 		#Global parameter
 		if self.obj is None:
-			if self.name=='stopafter' and isinstance(self.svar, str): return self.svar
+			if self.name=='stopafter' and self.event: return self.svar
 			elif hasattr(self, 'element') and not isIpy(): return self.element.get()
 			else: return self.svar if self.bvar else False
 		#Per-item parameter, get all
@@ -240,7 +241,8 @@ class CheckentryParam(Param):
 			
 			#Manage setting stopafter to an event
 			if self.name == 'stopafter':
-				if isinstance(val, str):
+				if val and isinstance(val, str):
+					self.event = True
 					if hasattr(self, 'element'):
 						if isIpy():
 							self.element.children[1].value = 'Event: '+val
@@ -254,7 +256,8 @@ class CheckentryParam(Param):
 					self.svar = val
 					self.bvar = True
 					return
-				elif isinstance(self.get(), str) and hasattr(self, 'element'):
+				elif self.event and hasattr(self, 'element'):
+					self.event = False
 					if isIpy():
 						if isinstance(val, bool): self.element.children[1].value = ''
 						self.element.children[0].disabled = False

@@ -139,7 +139,7 @@ class Cpanel:
 					elif param.type=='checkentry':
 						dflt = param.get(item)
 						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=setVar(param, item))
-						if param.name=='stopafter' and isinstance(param.get(), str):
+						if param.name=='stopafter' and param.event:
 							el.disable()
 							el.entryValue.set('Event: '+param.get())
 							el.checkVar.set(True)
@@ -184,7 +184,7 @@ class Cpanel:
 		frame1 = Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
-		if not isinstance(self.model.param('stopafter'), str): self.model.params['stopafter'].element.entryValue.set(10000)
+		if not self.model.params['stopafter'].event: self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 		
@@ -480,7 +480,7 @@ class checkEntry(Frame):
 		if isinstance(val, bool):
 			self.checkVar.set(val)
 		elif isinstance(val, str) or isinstance(val, int):
-			if self.type=='int': val=int(val)
+			if self.type=='int' and val!='': val=int(val)
 			self.checkVar.set(True)
 			self.entryValue.set(val)
 		self.disableTextfield()

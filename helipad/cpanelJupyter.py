@@ -59,8 +59,8 @@ class Cpanel(VBox):
 				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
 			elif param.type=='checkentry':
 				defaults = (
-					(isinstance(val, param.entryType) or val) if not (param.name=='stopafter' and isinstance(val, str)) else True,				#Bool
-					(str(val) if isinstance(val, param.entryType) else '') if not (param.name=='stopafter' and isinstance(val, str)) else 'Event: '+val	#Str
+					(isinstance(val, param.entryType) or val) if not (param.name=='stopafter' and param.event) else True,				#Bool
+					(str(val) if isinstance(val, param.entryType) else '') if not (param.name=='stopafter' and param.event) else 'Event: '+val	#Str
 				)
 				i = interactive(func, b=defaults[0], s=defaults[1])
 				if param.obj is None:
@@ -69,7 +69,7 @@ class Cpanel(VBox):
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
 				
-				if param.name=='stopafter' and isinstance(val, str):
+				if param.name=='stopafter' and param.event:
 					i.children[0].disabled = True
 					i.children[1].disabled = True
 					i.add_class('helipad_checkentry_func')
@@ -116,8 +116,8 @@ class Cpanel(VBox):
 			param.element = renderParam(param, setVar(param), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set('filename')
-			if n=='stopafter' and not isinstance(param.get(), str): param.element.children[1].value = '10000'
-			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and isinstance(param.get(), str)): param.set(False)
+			if n=='stopafter' and not param.event: param.element.children[1].value = '10000'
+			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and param.event): param.set(False)
 		
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
 		if caip: self.children += (caip,)

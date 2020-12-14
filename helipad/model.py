@@ -609,8 +609,10 @@ class Helipad:
 			
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
 			else: data = self.data.dataframe
+			
+			events = [Item(name=e.name, triggered=e.triggered, data=e.data) for e in self.events]
 				
-			alldata.append((run, data))
+			alldata.append(Item(vars=run, data=data, events=events))
 		return alldata
 	
 	#Creates an unweighted and undirected network of a certain density
