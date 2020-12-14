@@ -300,9 +300,16 @@ class Helipad:
 	
 	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
+		
+		#Deprecated in Helipad 1.2, remove in Helipad 1.4
+		if param=='stopafter' and callable(val):
+			warnings.warn('Setting the \'stopafter\' parameter to a function is deprecated and will be removed in a future version. Use model.addEvent() and set \'stopafter\' to the event name instead.', None, 2)
+			self.addEvent(val.__name__, val)
+			val = val.__name__
+		
 		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
 		param = self.parseParamId(param)
-		
+			
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
 	
@@ -483,7 +490,7 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if not e.triggered and e.check(self) and getattr(self, 'graph', False) and e.linestyle:
+			if not e.triggered and e.check(self) and getattr(self, 'graph', False) and e.linestyle and e.name!=self.param('stopafter'):
 				self.graph.addVertical(self.t, e.color, e.linestyle, e.linewidth)
 		self.doHooks('modelPostStep', [self])
 		return self.t
@@ -499,7 +506,7 @@ class Helipad:
 			if t%self.param('updateEvery')==0:
 				if self.timer: t2 = time.time()
 				
-				if getattr(self, 'cpanel', False) and st and not callable(st): self.cpanel.progress.update(t/st)
+				if getattr(self, 'cpanel', False) and st and isinstance(st, int): self.cpanel.progress.update(t/st)
 				
 				#Update graph
 				if getattr(self, 'graph', None) is not None:
@@ -525,7 +532,7 @@ class Helipad:
 					begin = newtime
 	
 			if st:
-				stop = st(self) if callable(st) else t>=st
+				stop = self.events[st].triggered if isinstance(st, str) else t>=st
 				if stop: self.terminate()
 	
 	#The *args allows it to be used as an Ipywidgets callback
@@ -776,7 +783,7 @@ class Helipad:
 		#Start the progress bar
 		if getattr(self, 'cpanel', None):
 			st = self.param('stopafter')
-			self.cpanel.progress.determinate(st and not callable(st))
+			self.cpanel.progress.determinate(st and isinstance(st, int))
 			self.cpanel.runButton.run()
 		
 		self.setup()

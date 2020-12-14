@@ -222,7 +222,7 @@ class CheckentryParam(Param):
 	def getSpecific(self, item=None):
 		#Global parameter
 		if self.obj is None:
-			if getattr(self, 'func', None) is not None: return self.func
+			if self.name=='stopafter' and isinstance(self.svar, str): return self.svar
 			elif hasattr(self, 'element') and not isIpy(): return self.element.get()
 			else: return self.svar if self.bvar else False
 		#Per-item parameter, get all
@@ -238,24 +238,23 @@ class CheckentryParam(Param):
 		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
 		if self.obj is None:
 			
-			#Stuff to manage setting it to a function
-			if callable(val):
-				self.func = val
-				if hasattr(self, 'element'):
-					if isIpy():
-						self.element.children[1].value = 'func〈'+self.func.__name__+'〉'
-						self.element.children[0].value = True
-						self.element.add_class('helipad_checkentry_func')
-						for e in self.element.children: e.disabled = True
-					else:
-						self.element.disable()
-						self.element.entryValue.set('func〈'+self.func.__name__+'〉')
-						self.element.checkVar.set(True)
-						self.element.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
-				return
-			elif getattr(self, 'func', None) is not None:
-				self.func = None
-				if hasattr(self, 'element'):
+			#Manage setting stopafter to an event
+			if self.name == 'stopafter':
+				if isinstance(val, str):
+					if hasattr(self, 'element'):
+						if isIpy():
+							self.element.children[1].value = 'Event: '+val
+							self.element.children[0].value = True
+							self.element.add_class('helipad_checkentry_func')
+						else:
+							self.element.entryValue.set('Event: '+val)
+							self.element.checkVar.set(True)
+							self.element.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
+						self.disable()
+					self.svar = val
+					self.bvar = True
+					return
+				elif isinstance(self.get(), str) and hasattr(self, 'element'):
 					if isIpy():
 						if isinstance(val, bool): self.element.children[1].value = ''
 						self.element.children[0].disabled = False

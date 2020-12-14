@@ -58,9 +58,10 @@ def match(agents, primitive, model, stage):
 	agents[1].utils = agents[1].utility.calculate(agents[1].stocks)
 
 #Stop the model when we're basically equilibrated
+@heli.event
 def stopCondition(model):
 	return model.t > 1 and model.data.getLast('demand-shmoo') < 20 and model.data.getLast('demand-soma') < 20
-heli.param('stopafter', stopCondition)
+heli.param('stopafter', 'stopCondition')
 
 #===============
 # CONFIGURATION
