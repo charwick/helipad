@@ -490,7 +490,7 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if not e.triggered and e.check(self) and getattr(self, 'graph', False) and e.linestyle and e.name!=self.param('stopafter'):
+			if (not e.triggered or e.repeat) and e.check(self) and getattr(self, 'graph', False) and e.linestyle and e.name!=self.param('stopafter'):
 				self.graph.addVertical(self.t, e.color, e.linestyle, e.linewidth)
 		self.doHooks('modelPostStep', [self])
 		return self.t
@@ -859,24 +859,30 @@ class MultiLevel(agent.baseAgent, Helipad):
 		super().step(stage)
 
 class Event:
-	def __init__(self, name, trigger, color='#CC0000', linestyle='--', linewidth=1):
+	def __init__(self, name, trigger, repeat=False, color='#CC0000', linestyle='--', linewidth=1):
 		self.name = name
 		self.trigger = trigger
 		self.color = color
 		self.linestyle = linestyle
 		self.linewidth = linewidth
-		self.triggered = False
+		self.repeat = repeat
+		self.reset()
 	
 	def check(self, model):
 		if self.triggered: return False
 		if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
-			self.triggered = model.t
-			self.data = {k: v[0] for k,v in model.data.getLast(1).items()}
+			data = {k: v[0] for k,v in model.data.getLast(1).items()}
+			if self.repeat:
+				self.data.append(data)
+				self.triggered.append(model.t)
+			else:
+				self.data = data
+				self.triggered = model.t
 			return True
 	
 	def reset(self):
-		self.triggered = False
-		self.data = None
+		self.data = [] if self.repeat else None
+		self.triggered = [] if self.repeat else False
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)

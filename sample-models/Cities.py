@@ -60,13 +60,13 @@ def modelPreSetup(model):
 	model.clearEvents()
 	if not model.param('city'):
 		@heli.event
-		def exp1(model):	return sum(diff(model.data['ruralPop'][-20:])) > 3
+		def exp1(model):	return sum(diff(model.data.getLast('ruralPop', 20))) > 3
 		@heli.event
-		def taper2(model):	return model.events['exp1'].triggered and sum(diff(model.data['ruralPop'][-20:])) < -1
+		def taper2(model):	return model.events['exp1'].triggered and sum(diff(model.data.getLast('ruralPop', 20))) < -1
 		@heli.event
-		def cull3(model):	return model.events['taper2'].triggered and sum(diff(model.data['ruralH-25-pctile'][-20:])) > 2
+		def cull3(model):	return model.events['taper2'].triggered and sum(diff(model.data.getLast('ruralH-25-pctile', 20))) > 2
 		@heli.event
-		def stab4(model):	return model.events['cull3'].triggered and sum(diff(model.data['ruralPop'][-400:])) > 0
+		def stab4(model):	return model.events['cull3'].triggered and sum(diff(model.data.getLast('ruralPop', 400))) > 0
 		heli.param('stopafter', 15000)
 
 # from helipad.utility import CobbDouglas
