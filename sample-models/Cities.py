@@ -67,7 +67,6 @@ def modelPreSetup(model):
 		def cull3(model):	return model.events['taper2'].triggered and sum(diff(model.data.getLast('ruralH-25-pctile', 20))) > 2
 		@heli.event
 		def stab4(model):	return model.events['cull3'].triggered and sum(diff(model.data.getLast('ruralPop', 400))) > 0
-		heli.param('stopafter', 15000)
 
 # from helipad.utility import CobbDouglas
 @heli.hook
@@ -200,3 +199,12 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
 
 heli.launchCpanel()
+
+#Malthusian parameter sweep
+
+# heli.param('csv', 'CSVs/malthusian')
+# @heli.hook('modelPreSetup', prioritize=True)
+# def turnOffCity(model): model.param('city', False)
+# heli.param('stopafter', 15000)
+# results = heli.paramSweep(['rent', 'fixed'])
+# print([{e.name: e.triggered for e in run.events} for run in results])
