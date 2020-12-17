@@ -189,70 +189,6 @@ class Helipad:
 	
 	def addButton(self, text, func, desc=None):
 		self.shocks.register(text, None, func, 'button', True, desc)
-	
-	#Get ready to actually run the model
-	def setup(self):
-		self.doHooks('modelPreSetup', [self])
-		self.t = 0
-		
-		#Blank breeds for any primitives not otherwise specified
-		for k,p in self.primitives.items():
-			if len(p.breeds)==0: self.addBreed('', '#000000', prim=k)
-		
-		#SERIES AND REPORTERS
-		#Breeds and goods should already be registered at this point
-		
-		self.data.reset()
-		for e in self.events.values(): e.reset()
-		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
-		
-		def pReporter(param, item=None):
-			def reporter(model): return param.get(item)
-			return reporter
-		
-		#Add reporters for all parameters
-		for item, i in self.goods.items():				#Cycle through goods
-			for n,p in self.goodParams.items():			#Cycle through parameters
-				if p.type == 'hidden': continue			#Skip hidden parameters
-				self.data.addReporter(n+'-'+item, pReporter(p, item))
-		for prim, pdata in self.primitives.items():		#Cycle through primitives
-			for breed, i in pdata.breeds.items():		#Cycle through breeds
-				for n,p in pdata.breedParams.items():	#Cycle through parameters
-					if p.type == 'hidden': continue		#Skip hidden parameters
-					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
-		for n,p in self.params.items():					#Cycle through parameters
-			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
-			self.data.addReporter(n, pReporter(p))
-
-		if (self.moneyGood is not None):
-			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
-			self.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
-		
-		#Unconditional variables to report
-		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
-		
-		#Per-breed and per-good series and reporters
-		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in next(iter(self.primitives.values())).breeds.items():
-			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
-			if hasattr(self, 'plots'): self.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
-	
-		if len(self.goods) >= 2:
-			for good, g in self.nonMoneyGoods.items():
-				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
-				if hasattr(self, 'plots'):
-					self.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
-					self.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
-		
-		#Initialize agents
-		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
-		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
-		self.agents = {k: [] for k in self.primitives.keys()}												#Clear any surviving agents from last run
-		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
-		self.hasModel = True
-		
-		self.doHooks('modelPostSetup', [self])
 			
 	#Registers an adjustable parameter exposed in the control panel.	
 	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, getter=None, setter=None, **args):
@@ -415,6 +351,70 @@ class Helipad:
 		return True
 	
 	def clearEvents(self): self.events = {}
+	
+	#Get ready to actually run the model
+	def setup(self):
+		self.doHooks('modelPreSetup', [self])
+		self.t = 0
+		
+		#Blank breeds for any primitives not otherwise specified
+		for k,p in self.primitives.items():
+			if len(p.breeds)==0: self.addBreed('', '#000000', prim=k)
+		
+		#SERIES AND REPORTERS
+		#Breeds and goods should already be registered at this point
+		
+		self.data.reset()
+		for e in self.events.values(): e.reset()
+		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
+		
+		def pReporter(param, item=None):
+			def reporter(model): return param.get(item)
+			return reporter
+		
+		#Add reporters for all parameters
+		for item, i in self.goods.items():				#Cycle through goods
+			for n,p in self.goodParams.items():			#Cycle through parameters
+				if p.type == 'hidden': continue			#Skip hidden parameters
+				self.data.addReporter(n+'-'+item, pReporter(p, item))
+		for prim, pdata in self.primitives.items():		#Cycle through primitives
+			for breed, i in pdata.breeds.items():		#Cycle through breeds
+				for n,p in pdata.breedParams.items():	#Cycle through parameters
+					if p.type == 'hidden': continue		#Skip hidden parameters
+					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
+		for n,p in self.params.items():					#Cycle through parameters
+			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
+			self.data.addReporter(n, pReporter(p))
+
+		if (self.moneyGood is not None):
+			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
+			self.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
+		
+		#Unconditional variables to report
+		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
+		
+		#Per-breed and per-good series and reporters
+		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
+		for breed, b in next(iter(self.primitives.values())).breeds.items():
+			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
+			if hasattr(self, 'plots'): self.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
+	
+		if len(self.goods) >= 2:
+			for good, g in self.nonMoneyGoods.items():
+				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
+				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
+				if hasattr(self, 'plots'):
+					self.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
+					self.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
+		
+		#Initialize agents
+		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
+		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
+		self.agents = {k: [] for k in self.primitives.keys()}												#Clear any surviving agents from last run
+		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
+		self.hasModel = True
+		
+		self.doHooks('modelPostSetup', [self])
 				
 	def step(self, stage=1):
 		self.t += 1
@@ -548,9 +548,8 @@ class Helipad:
 		#that the statement in the try block doesn't get executed…?
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
-			try: asyncio.run(self.run())	#If Tkinter, it needs an event loop
-			except:							#If Jupyter, it already has an event loop
-				asyncio.ensure_future(self.run())
+			if not isIpy(): asyncio.run(self.run())	#If Tkinter, it needs an event loop
+			else: asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
 	
 	def stop(self, *args):
 		self.running = False
@@ -575,7 +574,7 @@ class Helipad:
 		#Re-enable parameters
 		for param in self.allParams:
 			if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
-			if not param.runtime or (self.graph is None and param.name in ['stopafter', 'csv']): param.enable()
+			if not param.runtime or (getattr(self, 'graph', None) is None and param.name in ['stopafter', 'csv']): param.enable()
 		
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
@@ -791,8 +790,8 @@ class Helipad:
 		self.setup()
 		
 		#If we've got plots, instantiate the Graph object
-		title = self.name+(' ' if self.name!='' else '')+'Data Plots'
 		if len(plotsToDraw):
+			title = self.name+(' ' if self.name!='' else '')+'Data Plots'
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
