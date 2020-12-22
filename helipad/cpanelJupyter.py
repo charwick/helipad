@@ -141,7 +141,6 @@ class Cpanel(VBox):
 			if param.element is not None: self.children += (param.element,)
 		
 		#Checkgrids
-		self.model.params['plots'] = self.model.params.pop('plots') #Move plot list to end
 		for param in model.params.values():
 			if param.type!='checkgrid': continue
 			acc = renderParam(param, None, param.title, None)

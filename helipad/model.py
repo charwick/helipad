@@ -330,6 +330,7 @@ class Helipad:
 			warnings.warn('Visualizations can only be registered on the top-level model.', None, 2)
 			return #Doesn't matter if it's not the top-level model
 		self.visual = viz(self)
+		return self.visual
 	
 	#Get ready to actually run the model
 	def setup(self):
@@ -540,6 +541,7 @@ class Helipad:
 		self.doHooks('modelStop', [self])
 	
 	def terminate(self, evt=False):
+		if not self.hasModel: return
 		self.running = False
 		self.hasModel = False
 		if self.visual is not None: self.visual.terminate(self) #Clean up visualizations
@@ -754,6 +756,7 @@ class Helipad:
 	
 	def launchVisuals(self):
 		#Make sure we're set up visualization-wise. Go ahead if any of the visualizations are good to go
+		if self.visual is None: raise RuntimeError('No visualization has been set. Use model.useVisual() before launching visuals.')
 		if self.visual.canLaunch(self)!=True:
 			print('No visualizations are prepared to run.')
 			return

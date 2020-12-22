@@ -5,6 +5,7 @@
 #===============
 
 from helipad import Helipad
+from helipad.graph import TimeSeries
 from helipad.utility import CobbDouglas
 from math import sqrt, exp, floor
 import random
@@ -12,6 +13,7 @@ import random
 heli = Helipad()
 heli.name = 'Price Discover'
 heli.order = 'match'
+viz = heli.useVisual(TimeSeries)
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5}, runtime=False)
 heli.params['num_agent'].opts['step'] = 2 #Make sure we don't get stray agents
@@ -68,10 +70,10 @@ heli.param('stopafter', 'stopCondition')
 #===============
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
-pricePlot = heli.addPlot('price', 'Price', logscale=True, selected=True)
+pricePlot = viz.addPlot('price', 'Price', logscale=True, selected=True)
 pricePlot.addSeries('ssprice', 'Soma/Shmoo Price', '#119900')
 
-for p in ['demand', 'utility']: heli.plots[p].active(True)
+for p in ['demand', 'utility']: viz.plots[p].active(True)
 heli.param('updateEvery', 1)
 
 heli.launchCpanel()

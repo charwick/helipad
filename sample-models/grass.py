@@ -6,11 +6,13 @@
 #===============
 
 from helipad import Helipad
+from helipad.graph import TimeSeries
 
 heli = Helipad()
 heli.name = 'Grass Eating'
 heli.order = 'random'
 heli.stages = 5
+viz = heli.useVisual(TimeSeries)
 
 heli.addParameter('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
 heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
@@ -94,24 +96,26 @@ def modelPostSetup(model):
 #===============
 
 #Stop the model when we have no more females left to reproduce
-heli.param('stopafter', lambda model: len(model.agent('female')) <= 1)
+@heli.event
+def nofemales(model): return len(model.agent('female')) <= 1
+heli.param('stopafter', 'nofemales')
 
-heli.addPlot('pop', 'Population', logscale=True)
-heli.addPlot('sexratio', 'Sex Ratio', logscale=True)
-heli.addPlot('age', 'Age')
-heli.addPlot('energy', 'Energy')
+viz.addPlot('pop', 'Population', logscale=True)
+viz.addPlot('sexratio', 'Sex Ratio', logscale=True)
+viz.addPlot('age', 'Age')
+viz.addPlot('energy', 'Energy')
 heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
 heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
 heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
 heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
-heli.plots['pop'].addSeries('num_agent', 'Population', 'black')
-heli.plots['pop'].addSeries('grass', 'Grass', 'green')
-heli.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
-heli.plots['age'].addSeries('age', 'Average Age', 'blue')
-heli.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
-heli.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
+viz.plots['pop'].addSeries('num_agent', 'Population', 'black')
+viz.plots['pop'].addSeries('grass', 'Grass', 'green')
+viz.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
+viz.plots['age'].addSeries('age', 'Average Age', 'blue')
+viz.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
+viz.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
 
 #===============
 # LAUNCH THE GUI

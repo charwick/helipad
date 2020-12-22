@@ -5,8 +5,10 @@ from itertools import combinations
 import pandas
 
 from helipad import *
+from helipad.graph import TimeSeries
 from math import sqrt
 heli = Helipad()
+viz = heli.useVisual(TimeSeries)
 
 #===============
 # STORE AND BANK CLASSES
@@ -360,17 +362,17 @@ def rbaltodemand(breed):
 	return reporter
 
 #Data Collection
-heli.addPlot('prices', 'Prices', 1, selected=True)
-heli.addPlot('inventory', 'Inventory', 3)
-heli.addPlot('rbal', 'Real Balances', 5)
-heli.addPlot('ngdp', 'NGDP', 7, selected=False)
-heli.addPlot('capital', 'Production', 9, selected=False)
-heli.addPlot('wage', 'Wage', 11, selected=False)
-heli.addPlot('debt', 'Debt', selected=False)
-heli.addPlot('rr', 'Reserve Ratio', selected=False)
-heli.addPlot('i', 'Interest Rate', selected=False)
+viz.addPlot('prices', 'Prices', 1, selected=True)
+viz.addPlot('inventory', 'Inventory', 3)
+viz.addPlot('rbal', 'Real Balances', 5)
+viz.addPlot('ngdp', 'NGDP', 7, selected=False)
+viz.addPlot('capital', 'Production', 9, selected=False)
+viz.addPlot('wage', 'Wage', 11, selected=False)
+viz.addPlot('debt', 'Debt', selected=False)
+viz.addPlot('rr', 'Reserve Ratio', selected=False)
+viz.addPlot('i', 'Interest Rate', selected=False)
 
-heli.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
+viz.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
 for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
@@ -380,42 +382,42 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', good=AgentGoods[breed]))
 	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
 	
-	heli.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
-	heli.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
-	heli.plots['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
-	heli.plots['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
-	heli.plots['capital'].addSeries('portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
-	# heli.plots['wage'].addSeries('expWage', 'Expected Wage', '#999999')
+	viz.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
+	viz.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
+	viz.plots['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
+	viz.plots['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
+	viz.plots['capital'].addSeries('portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
+	# viz.plots['wage'].addSeries('expWage', 'Expected Wage', '#999999')
 
 #Do this one separately so it draws on top
 for good, g in heli.nonMoneyGoods.items():
 	heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
-	heli.plots['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
+	viz.plots['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
 	heli.data.addReporter('price-'+good, heli.data.agentReporter('price', 'store', good=good))
-	heli.plots['prices'].addSeries('price-'+good, good.title()+' Price', g.color)
+	viz.plots['prices'].addSeries('price-'+good, good.title()+' Price', g.color)
 
 #Price ratio plots
 def ratioReporter(item1, item2):
 	def reporter(model):
 		return model.data.agentReporter('price', 'store', good=item1)(model)/model.data.agentReporter('price', 'store', good=item2)(model)
 	return reporter
-heli.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
-heli.plots['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
+viz.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
+viz.plots['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 
 for r in combinations(heli.nonMoneyGoods.keys(), 2):
 	heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
 	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
-	heli.plots['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
+	viz.plots['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
 
 #Misc plots
 heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
-heli.plots['ngdp'].addSeries('ngdp', 'NGDP', '#000000')
+viz.plots['ngdp'].addSeries('ngdp', 'NGDP', '#000000')
 heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
-heli.plots['money'].addSeries('storeCash', 'Store Cash', '#777777')
+viz.plots['money'].addSeries('storeCash', 'Store Cash', '#777777')
 heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
-heli.plots['money'].addSeries('StoreCashDemand', 'Store Cash Demand', '#CCCCCC')
+viz.plots['money'].addSeries('StoreCashDemand', 'Store Cash Demand', '#CCCCCC')
 heli.data.addReporter('wage', heli.data.agentReporter('wage', 'store'))
-heli.plots['wage'].addSeries('wage', 'Wage', '#000000')
+viz.plots['wage'].addSeries('wage', 'Wage', '#000000')
 
 #================
 # AGENT BEHAVIOR
@@ -440,14 +442,14 @@ def modelPreSetup(model):
 		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
 		model.data.addReporter('M2', lambda model: model.cb.M2)
 
-		model.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
-		model.plots['money'].addSeries('M2', 'Money Supply', '#000000')
-		model.plots['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
-		model.plots['rr'].addSeries('targetRR', 'Target', '#777777')
-		model.plots['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
-		model.plots['i'].addSeries('i', 'Nominal interest', '#000000')
-		model.plots['i'].addSeries('r', 'Real interest', '#0000CC')
-		model.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
+		viz.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
+		viz.plots['money'].addSeries('M2', 'Money Supply', '#000000')
+		viz.plots['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
+		viz.plots['rr'].addSeries('targetRR', 'Target', '#777777')
+		viz.plots['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
+		viz.plots['i'].addSeries('i', 'Nominal interest', '#000000')
+		viz.plots['i'].addSeries('r', 'Real interest', '#0000CC')
+		viz.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
 
 #
 # Agents

@@ -234,7 +234,6 @@ class Cpanel:
 		fnum += 1
 		
 		#Checkgrid parameters
-		self.model.params['plots'] = self.model.params.pop('plots') #Move to end
 		for p in self.model.params.values():
 			if p.type!='checkgrid': continue
 			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=setVar(p))

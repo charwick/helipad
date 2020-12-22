@@ -6,6 +6,7 @@
 #===============
 
 from helipad import Helipad, MultiLevel, Agent
+from helipad.graph import TimeSeries
 from random import choice
 import numpy.random as nprand
 from math import exp, sqrt
@@ -14,6 +15,7 @@ heli = Helipad()
 heli.name = 'Deme Selection'
 heli.order = ['linear', 'linear', 'match']
 heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, stage 3 for war
+viz = heli.useVisual(TimeSeries)
 
 heli.addPrimitive('deme', MultiLevel, dflt=20, priority=1)
 heli.removePrimitive('agent')
@@ -99,13 +101,13 @@ def selfish(model): return sum([len(d.agent('selfish')) for d in model.agents['d
 @heli.reporter
 def fitness(model): return sum([sum([a.stocks['payoff'] for a in d.agents['agent']]) for d in model.agents['deme']])/population(model)
 
-heli.addPlot('pop', 'Population', selected=False)
-heli.addPlot('pheno', 'Phenotypes', stack=True)
-heli.addPlot('fitness', 'Fitness')
-heli.plots['pop'].addSeries('population', 'Total population', '#000000')
-heli.plots['pheno'].addSeries('altruists', 'Altruists', '#33CC33')
-heli.plots['pheno'].addSeries('selfish', 'Selfish', '#BB2222')
-heli.plots['fitness'].addSeries('fitness', 'Average Fitness', '#000099')
+viz.addPlot('pop', 'Population', selected=False)
+viz.addPlot('pheno', 'Phenotypes', stack=True)
+viz.addPlot('fitness', 'Fitness')
+viz.plots['pop'].addSeries('population', 'Total population', '#000000')
+viz.plots['pheno'].addSeries('altruists', 'Altruists', '#33CC33')
+viz.plots['pheno'].addSeries('selfish', 'Selfish', '#BB2222')
+viz.plots['fitness'].addSeries('fitness', 'Average Fitness', '#000099')
 
 #===============
 # LAUNCH THE GUI

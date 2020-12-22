@@ -7,12 +7,14 @@
 #===============
 
 from helipad import Helipad
+from helipad.graph import TimeSeries
 # from utility import CobbDouglas
 
 heli = Helipad()
 heli.name = 'Model Name'
 heli.order = 'random' #Can be changed to 'linear' or 'match'
 heli.stages = 1 #Change to create a multi-stage model
+viz = heli.useVisual(TimeSeries)
 
 # heli.addParameter('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
 # heli.addGood('good1','hex color', lambda breed: endowment)
@@ -61,7 +63,7 @@ def modelStep(model, stage):
 
 #Plots are areas on the graph where series can be drawn to keep track of reporter data in real time.
 
-myplot = heli.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
+myplot = viz.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 
 #Series draw reporter data on a plot. Here we draw two series on the same plot.
 #The Plot object can also be accessed later with heli.plots['myplot'], so the following two methods are identical.

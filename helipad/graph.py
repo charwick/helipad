@@ -37,6 +37,11 @@ class TimeSeries:
 									self.plots[s.plot].series.remove(sss)
 									continue
 						self.plots[s.plot].series.remove(s)
+		
+		#Move the plots parameter to the end when the cpanel launches
+		@model.hook('CpanelPreLaunch')
+		def movePlotParam(model):
+			model.params['plots'] = model.params.pop('plots')
 	
 	def canLaunch(self, model):
 		if not [plot for plot in self.plots.values() if plot.selected] and (not model.param('stopafter') or not model.param('csv')):

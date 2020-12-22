@@ -4,9 +4,11 @@ from collections import namedtuple
 import pandas, random as rand2
 
 from helipad import Helipad
+from helipad.graph import TimeSeries
 from math import sqrt, log
 from numpy import *
 heli = Helipad()
+viz = heli.useVisual(TimeSeries)
 
 #================
 # CONFIGURATION
@@ -176,13 +178,13 @@ def perCapGdp(model, loc):
 		else: return model.land[loc].product/pop
 	return tmp
 
-heli.addPlot('pop', 'Population', 1, logscale=True)
-heli.addPlot('hcap', 'Human Capital', 2, logscale=True)
-heli.addPlot('wage', 'Wage', 3)
-heli.addPlot('wealth', 'Wealth', 4, logscale=True)
-heli.addPlot('rates', 'Rates', 5, logscale=True)
+viz.addPlot('pop', 'Population', 1, logscale=True)
+viz.addPlot('hcap', 'Human Capital', 2, logscale=True)
+viz.addPlot('wage', 'Wage', 3)
+viz.addPlot('wealth', 'Wealth', 4, logscale=True)
+viz.addPlot('rates', 'Rates', 5, logscale=True)
 heli.data.addReporter('theta', lambda model: model.param('deathrate')/100)
-heli.plots['rates'].addSeries('theta', 'Death Rate', '#CCCCCC')
+viz.plots['rates'].addSeries('theta', 'Death Rate', '#CCCCCC')
 
 for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter(breed+'Pop', locals()[breed+'Pop'])
@@ -191,12 +193,12 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', 'agent', breed=breed, stat='gmean'))
 	heli.data.addReporter(breed+'moveRate', heli.data.modelReporter('moverate'+breed), smooth=0.98)
 	heli.data.addReporter(breed+'birthrate', heli.data.modelReporter('birthrate'+breed), smooth=0.98)
-	heli.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
-	heli.plots['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
-	heli.plots['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
-	heli.plots['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
-	heli.plots['rates'].addSeries(breed+'moveRate', breed.title()+' Move Rate', d.color2)
-	heli.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
+	viz.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
+	viz.plots['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
+	viz.plots['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
+	viz.plots['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
+	viz.plots['rates'].addSeries(breed+'moveRate', breed.title()+' Move Rate', d.color2)
+	viz.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
 
 heli.launchCpanel()
 
