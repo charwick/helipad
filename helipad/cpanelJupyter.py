@@ -176,7 +176,7 @@ class Cpanel(VBox):
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += (cbot,)
 		
-		self.postinstruct = self.displayAlert('After setting parameter values, run launchPlots() or start() to start the model.')
+		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisuals() or start() to start the model.')
 		if not redraw:
 			display(self)
 		
@@ -215,12 +215,12 @@ class Cpanel(VBox):
 					self.layout.visibility = 'hidden'
 			
 			#Remove previous hooks so we don't double up when re-running launchCpanel()
-			model.removeHook('plotsPreLaunch', 'cpanel_plotsPreLaunch')
+			model.removeHook('visualPreLaunch', 'cpanel_visualPreLaunch')
 			model.removeHook('terminate', 'cpanel_terminate')
 		
 			#Model flow control: pause/run button and progress bar
-			@model.hook('plotsPreLaunch', prioritize=True)
-			def cpanel_plotsPreLaunch(model):
+			@model.hook('visualPreLaunch', prioritize=True)
+			def cpanel_visualPreLaunch(model):
 				self.runButton = runButton(description='Pause', icon='pause')
 				self.progress = progressBar()
 				self.postinstruct.layout = Layout(display='none')

@@ -8,9 +8,50 @@ import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from helipad.helpers import *
 mlpstyle.use('fast')
 
-class Graph:
+class TimeSeries:
+	def __init__(self, model):
+		self.hasWindow = False
+		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
+		self.model = model #Unhappy with this
+		
+		#Plot categories
+		self.plots = {}
+		plotList = {
+			'demand': 'Demand',
+			'shortage': 'Shortages',
+			'money': 'Money',
+			'utility': 'Utility'
+		}
+		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
+		
+		#Delete the corresponding series when a reporter is removed
+		@model.hook('removeReporter')
+		def deleteSeries(data, key):
+			for p in self.plots.values():
+				for s in p.series:
+					if s.reporter==key:
+						# Remove subseries
+						for ss in s.subseries:
+							for sss in self.model.plots[s.plot].series:
+								if sss.reporter == ss:
+									self.plots[s.plot].series.remove(sss)
+									continue
+						self.plots[s.plot].series.remove(s)
+	
+	def canLaunch(self, model):
+		if not [plot for plot in self.plots.values() if plot.selected] and (not model.param('stopafter') or not model.param('csv')):
+			warnings.warn('Plotless mode requires stop period and CSV export to be enabled.', None, 3)
+			return False
+		else: return True
+	
+	@property
+	def activePlots(self):
+		return {k:plot for k,plot in self.plots.items() if plot.selected}
+	
 	#listOfPlots is the trimmed model.plots list
-	def __init__(self, listOfPlots, **kwargs):
+	def launch(self, title, **kwargs):
+		if not len(self.activePlots): return #Windowless mode
+		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.lastUpdate = 0
 		self.resolution = 1
@@ -21,14 +62,13 @@ class Graph:
 		
 		#The Tkinter way of setting the title doesn't work in Jupyter
 		#The Jupyter way works in Tkinter, but also serves as the figure id, so new graphs draw on top of old ones
-		self.fig, plots = plt.subplots(len(listOfPlots), sharex=True, num=kwargs['title'] if isIpy() else None)
-		if not isIpy(): self.fig.canvas.set_window_title(kwargs['title'])
+		self.fig, plots = plt.subplots(len(self.activePlots), sharex=True, num=title if isIpy() else None)
+		if not isIpy(): self.fig.canvas.set_window_title(title)
 		
 		if not isinstance(plots, ndarray):
 			plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
-		for plot, axes in zip(listOfPlots.values(), plots):
+		for plot, axes in zip(self.activePlots.values(), plots):
 			plot.axes = axes
-		self.plots = listOfPlots
 		
 		#Position graph window
 		fm = plt.get_current_fig_manager()
@@ -39,7 +79,7 @@ class Graph:
 			fm.window.wm_geometry("+400+0")
 		
 		#Cycle over plots
-		for pname, plot in self.plots.items():
+		for pname, plot in self.activePlots.items():
 			plot.axes.margins(x=0)
 			if plot.stack:
 				lines = plot.axes.stackplot([], *[[] for s in plot.series], color=[s.color.hex for s in plot.series])
@@ -78,15 +118,22 @@ class Graph:
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
+		self.hasWindow = True
 		plt.draw()
+	
+	#Called from model.terminate()
+	def terminate(self, model):
+		if not self.hasWindow:
+			for p in ['stopafter', 'csv']: model.params[p].enable()
+		self.hasWindow = False
 	
 	#data is the *incremental* data
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
-		time = newlen + len(next(iter(self.plots.values())).series[0].fdata)*self.resolution
+		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
 		
 		#Append new data to cumulative series
-		for plot in self.plots.values():
+		for plot in self.activePlots.values():
 			for serie in plot.series:
 				if callable(serie.reporter):						#Lambda functions
 					for i in range(int(newlen/self.resolution)):
@@ -97,13 +144,13 @@ class Graph:
 		#Redo resolution at 2500, 25000, etc
 		if 10**(log10(time/2.5)-3) >= self.resolution:
 			self.resolution *= 10
-			for plot in self.plots.values():
+			for plot in self.activePlots.values():
 				for serie in plot.series:
 					serie.fdata = keepEvery(serie.fdata, 10)
 		
 		#Update the actual graphs. Has to be after the new resolution is set
 		tseries = range(0, time, self.resolution)
-		for plot in self.plots.values():
+		for plot in self.activePlots.values():
 			#No way to update the stack (?) so redraw it from scratch
 			if plot.stack:
 				lines = plot.axes.stackplot(tseries, *[s.fdata for s in plot.series], colors=[s.color.hex for s in plot.series])
@@ -133,12 +180,56 @@ class Graph:
 
 		## Won't work because autoscale_view also includes hidden lines
 		## Will have to actually remove and reinstate the line for this to work
-		# for g in self.plots:
+		# for g in self.activePlots:
 		# 	if c1.series in g.get_lines():
 		# 		g.relim()
 		# 		g.autoscale_view(tight=True)
 		
 		self.fig.canvas.draw()
+	
+	#Position is the number you want it to be, *not* the array position
+	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
+		if getattr(self.model, 'cpanel', False):
+			if isIpy(): self.model.cpanel.invalidate()
+			else: raise RuntimeError('Cannot add plots after control panel is drawn')
+		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
+		if position is None or position > len(self.plots):
+			self.selector.opts[name] = label
+			self.plots[name] = plot
+		else:		#Reconstruct the dicts because there's no insert method…
+			newopts, newplots, i = ({}, {}, 1)
+			for k,v in self.selector.opts.items():
+				if position==i:
+					newopts[name] = label
+					newplots[name] = plot
+				newopts[k] = v
+				newplots[k] = self.plots[k]
+				i+=1
+			self.selector.opts = newopts
+			self.plots = newplots
+		
+		self.selector.vars[name] = selected
+		if selected: self.selector.default.append(name)
+		if getattr(self.model, 'cpanel', False) and not self.cpanel.valid: self.model.cpanel.__init__(self.model, redraw=True) #Redraw if necessary
+		
+		return plot
+	
+	def removePlot(self, name, reassign=None):
+		if getattr(self.model, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if isinstance(name, list):
+			for p in name: self.removePlot(p, reassign)
+			return
+		
+		if not name in self.plots:
+			warnings.warn('No plot \''+name+'\' to remove', None, 2)
+			return False
+				
+		if reassign is not None: self.plots[reassign].series += self.plots[name].series
+		del self.plots[name]
+		del self.selector.opts[name]
+		del self.selector.vars[name]
+		if name in self.selector.default: self.selector.default.remove(name)
+		return True
 	
 	def addVertical(self, t, color, linestyle, linewidth):
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.plots.values()])

@@ -42,6 +42,7 @@ class Helipad:
 		self.moneyGood = None
 		self.allEdges = {}
 		self.timer = False
+		self.visual = None
 		
 		#Default parameters
 		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
@@ -71,17 +72,6 @@ class Helipad:
 			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
-			self.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
-			
-			#Plot categories
-			self.plots = {}
-			plotList = {
-				'demand': 'Demand',
-				'shortage': 'Shortages',
-				'money': 'Money',
-				'utility': 'Utility'
-			}
-			for name, label in plotList.items(): self.addPlot(name, label, selected=False)
 		
 			#Check for updates
 			from helipad.__init__ import __version__
@@ -137,49 +127,31 @@ class Helipad:
 		del self.params['num_'+name]
 		return True
 		
-	#Position is the number you want it to be, *not* the array position
-	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		if hasattr(self, 'breed'): return #Doesn't matter if it's not the top-level model
-		if getattr(self, 'cpanel', False):
-			if isIpy(): self.cpanel.invalidate()
-			else: raise RuntimeError('Cannot add plots after control panel is drawn')
-		plot = Plot(model=self, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
-		if position is None or position > len(self.plots):
-			self.params['plots'].opts[name] = label
-			self.plots[name] = plot
-		else:		#Reconstruct the dicts because there's no insert method…
-			newopts, newplots, i = ({}, {}, 1)
-			for k,v in self.params['plots'].opts.items():
-				if position==i:
-					newopts[name] = label
-					newplots[name] = plot
-				newopts[k] = v
-				newplots[k] = self.plots[k]
-				i+=1
-			self.params['plots'].opts = newopts
-			self.plots = newplots
-		
-		self.params['plots'].vars[name] = selected
-		if selected: self.params['plots'].default.append(name)
-		if getattr(self, 'cpanel', False) and not self.cpanel.valid: self.cpanel.__init__(self, redraw=True) #Redraw if necessary
-		
-		return plot
+	#Deprecated in Helipad 1.2
+	#Remove in Helipad 1.4
+	@property
+	def plots(self):
+		warnings.warn('model.plots is deprecated and will be removed in a future version. The list of TimeSeries plots can be accessed with model.visual.plots.', None, 2)
+		from helipad.graph import TimeSeries
+		if not isinstance(self.visual, TimeSeries): self.useVisual(TimeSeries)
+		return self.visual.plots
 	
-	def removePlot(self, name, reassign=None):
-		if getattr(self, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
-		if isinstance(name, list):
-			for p in name: self.removePlot(p, reassign)
-			return
+	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
+	#To be removed in Helipad 1.4
+	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
+		from helipad.graph import TimeSeries
 		
-		if not name in self.plots:
-			warnings.warn('No plot \''+name+'\' to remove', None, 2)
-			return
-				
-		if reassign is not None: self.plots[reassign].series += self.plots[name].series
-		del self.plots[name]
-		del self.params['plots'].opts[name]
-		del self.params['plots'].vars[name]
-		if name in self.params['plots'].default: self.params['plots'].default.remove(name)
+		warnings.warn('model.addPlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.addPlot() instead.', None, 2)
+		if not isinstance(self.visual, TimeSeries):
+			self.useVisual(TimeSeries)
+			warnings.warn('Visualization must be explicitly specified. Adding TimeSeries for compatibility…', None, 2)
+		
+		return self.visual.addPlot(name, label, position, selected, logscale, stack)
+	
+	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
+	#To be removed in Helipad 1.4
+	def removePlot(self, name, reassign=None):
+		if isinstance(self.visual, TimeSeries): return self.visual.removePlot(name, reassign)
 	
 	#Deprecated in Helipad 1.2 in favor of Plot.addSeries()
 	#To be removed in Helipad 1.4
@@ -224,15 +196,16 @@ class Helipad:
 			args['type'] = type
 		params[name] = pclass(**args)
 		if getattr(self, 'cpanel', False) and isIpy(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
+		return params[name]
 	
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
+		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
 	
 	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
-		self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
+		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
 	
 	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
@@ -352,6 +325,12 @@ class Helipad:
 	
 	def clearEvents(self): self.events = {}
 	
+	def useVisual(self, viz):
+		if hasattr(self, 'breed'):
+			warnings.warn('Visualizations can only be registered on the top-level model.', None, 2)
+			return #Doesn't matter if it's not the top-level model
+		self.visual = viz(self)
+	
 	#Get ready to actually run the model
 	def setup(self):
 		self.doHooks('modelPreSetup', [self])
@@ -388,7 +367,8 @@ class Helipad:
 
 		if (self.moneyGood is not None):
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
-			self.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
+			if self.visual is not None and hasattr(self.visual, 'plots'):
+				self.visual.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
@@ -397,15 +377,16 @@ class Helipad:
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in next(iter(self.primitives.values())).breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
-			if hasattr(self, 'plots'): self.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
+			if self.visual is not None and hasattr(self.visual, 'plots'):
+				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
 	
 		if len(self.goods) >= 2:
 			for good, g in self.nonMoneyGoods.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
-				if hasattr(self, 'plots'):
-					self.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
-					self.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
+				if self.visual is not None and hasattr(self.visual, 'plots'):
+					self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
+					self.visual.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
 		
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
@@ -490,8 +471,8 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if (not e.triggered or e.repeat) and e.check(self) and getattr(self, 'graph', False) and e.linestyle and e.name!=self.param('stopafter'):
-				self.graph.addVertical(self.t, e.color, e.linestyle, e.linewidth)
+			if (not e.triggered or e.repeat) and e.check(self) and self.visual is not None and e.linestyle and e.name!=self.param('stopafter'):
+				self.visual.addVertical(self.t, e.color, e.linestyle, e.linewidth)
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
@@ -509,17 +490,17 @@ class Helipad:
 				if getattr(self, 'cpanel', False) and st and isinstance(st, int): self.cpanel.progress.update(t/st)
 				
 				#Update graph
-				if getattr(self, 'graph', None) is not None:
+				if self.visual is not None and self.visual.hasWindow:
 					await asyncio.sleep(0.001) #Listen for keyboard input
-					data = self.data.getLast(t - self.graph.lastUpdate)
+					data = self.data.getLast(t - self.visual.lastUpdate)
 	
-					if (self.graph.resolution > 1):
-						data = {k: keepEvery(v, self.graph.resolution) for k,v in data.items()}
-					self.graph.update(data)
-					self.graph.lastUpdate = t
-					if self.graph.resolution > self.param('updateEvery'): self.param('updateEvery', self.graph.resolution)
+					if (self.visual.resolution > 1):
+						data = {k: keepEvery(v, self.visual.resolution) for k,v in data.items()}
+					self.visual.update(data)
+					self.visual.lastUpdate = t
+					if self.visual.resolution > self.param('updateEvery'): self.param('updateEvery', self.visual.resolution)
 				
-					self.doHooks('graphUpdate', [self, self.graph])
+					self.doHooks('visualUpdate', [self, self.visual])
 				
 				elif getattr(self, 'cpanel', None):
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
@@ -528,7 +509,7 @@ class Helipad:
 				# Performance indicator
 				if self.timer:
 					newtime = time.time()
-					print('Period', t, ':', round(self.param('updateEvery')/(newtime-begin),2), 'periods/second (',round((t2-begin)/(newtime-begin)*100,2),'% model, ',round((newtime-t2)/(newtime-begin)*100,2),'% graphing)')
+					print('Period', t, ':', round(self.param('updateEvery')/(newtime-begin),2), 'periods/second (',round((t2-begin)/(newtime-begin)*100,2),'% model, ',round((newtime-t2)/(newtime-begin)*100,2),'% visuals)')
 					begin = newtime
 	
 			if st:
@@ -561,20 +542,21 @@ class Helipad:
 	def terminate(self, evt=False):
 		self.running = False
 		self.hasModel = False
+		if self.visual is not None: self.visual.terminate(self) #Clean up visualizations
 		
 		remainder = int(self.t % self.param('updateEvery')) #For some reason this returns a float sometimes?
-		if remainder > 0 and getattr(self, 'graph', None) is not None: self.graph.update(self.data.getLast(remainder)) #Last update at the end
+		if remainder > 0 and self.visual is not None: self.visual.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
 		if getattr(self, 'cpanel', False):
-			if getattr(self.cpanel, 'progress', False): self.cpanel.progress.done()
-			if getattr(self.cpanel, 'runButton', False): self.cpanel.runButton.terminate()
-		elif getattr(self, 'graph', False): self.root.destroy() #Quit if we're in cpanel-less mode
+			self.cpanel.progress.done()
+			self.cpanel.runButton.terminate()
+		elif getattr(self, 'visual', False): self.root.destroy() #Quit if we're in cpanel-less mode
 		
 		#Re-enable parameters
 		for param in self.allParams:
-			if param.type=='checkentry' and getattr(param, 'func', None) is not None: continue
-			if not param.runtime or (getattr(self, 'graph', None) is None and param.name in ['stopafter', 'csv']): param.enable()
+			if param.type=='checkentry' and param.event: continue
+			if not param.runtime: param.enable()
 		
 		self.doHooks('terminate', [self, self.data.dataframe])
 			
@@ -770,16 +752,13 @@ class Helipad:
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	
-	def launchPlots(self):		
-		#Trim the plot list to the checked items and sent it to Graph
-		plotsToDraw = {k:plot for k,plot in self.plots.items() if plot.selected}
-		
-		#If there are any graphs to plot
-		if not len(plotsToDraw.items()) and (not self.param('stopafter') or not self.param('csv')):
-			print('Plotless mode requires stop period and CSV export to be enabled.')
+	def launchVisuals(self):
+		#Make sure we're set up visualization-wise. Go ahead if any of the visualizations are good to go
+		if self.visual.canLaunch(self)!=True:
+			print('No visualizations are prepared to run.')
 			return
 		
-		self.doHooks('plotsPreLaunch', [self])
+		self.doHooks('visualPreLaunch', [self])
 		
 		#Start the progress bar
 		if getattr(self, 'cpanel', None):
@@ -788,48 +767,47 @@ class Helipad:
 			self.cpanel.runButton.run()
 		
 		self.setup()
+				
+		def catchKeypress(event):
+			#Toggle legend boxes
+			if event.key == 't':
+				for plot in self.visual.plots.values():
+					leg = plot.axes.get_legend()
+					leg.set_visible(not leg.get_visible())
+				self.visual.fig.canvas.draw()
 		
-		#If we've got plots, instantiate the Graph object
-		if len(plotsToDraw):
-			title = self.name+(' ' if self.name!='' else '')+'Data Plots'
-			def catchKeypress(event):
-				#Toggle legend boxes
-				if event.key == 't':
-					for plot in self.graph.plots.values():
-						leg = plot.axes.get_legend()
-						leg.set_visible(not leg.get_visible())
-					self.graph.fig.canvas.draw()
-			
-				#Pause on spacebar
-				elif event.key == ' ':
-					if self.running: self.stop()
-					else: self.start()
-			
-				#User functions
-				self.doHooks('graphKeypress', [event.key, self])
+			#Pause on spacebar
+			elif event.key == ' ':
+				if self.running: self.stop()
+				else: self.start()
 		
-			self.graph = Graph(plotsToDraw, title=title)				
-			
-			self.graph.fig.canvas.mpl_connect('close_event', self.terminate)
-			self.graph.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+			#User functions
+			self.doHooks('graphKeypress', [event.key, self])
 		
-		#Otherwise don't allow stopafter to be disabled or we won't have any way to stop the model
+		self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
+		
+		if self.visual.hasWindow:
+			self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
+			self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		else:
-			self.graph = None
 			self.params['stopafter'].disable()
 			self.params['csv'].disable()
 		
 		for param in self.allParams:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
-		self.doHooks('plotsLaunch', [self, self.graph])
+		self.doHooks('visualLaunch', [self, self.visual])
 		
 		#If we're running in cpanel-less mode, hook through mainloop so it doesn't exit on pause
-		if len(plotsToDraw) and not hasattr(self, 'cpanel') and not isIpy():
+		if self.visual.hasWindow and not hasattr(self, 'cpanel') and not isIpy():
 			self.root.after(1, self.start)
 			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
 			self.debugConsole()
 			self.root.mainloop()
 		else: self.start() #As long as we haven't already started
+	
+	def launchPlots(self):
+		warnings.warn('model.launchPlots() is deprecated. Use model.launchVisuals() instead.', None, 2)
+		self.launchVisuals()
 	
 	# Generates function decorators for hooks, reporters, etc.
 	def genDecorator(self, todo):

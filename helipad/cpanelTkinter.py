@@ -76,7 +76,7 @@ class Cpanel:
 		
 		class runButton(Button):
 			def __init__(self2, root, bg='#EEEEEE'):
-				super().__init__(root, text='Run', command=self.model.launchPlots, padx=10, pady=10, highlightbackground=bg)
+				super().__init__(root, text='Run', command=self.model.launchVisuals, padx=10, pady=10, highlightbackground=bg)
 			
 			def run(self2):
 				self2['text'] = 'Pause'
@@ -88,7 +88,7 @@ class Cpanel:
 			
 			def terminate(self2):
 				self2['text'] = 'New Model'
-				self2['command'] = self.model.launchPlots
+				self2['command'] = self.model.launchVisuals
 		
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE

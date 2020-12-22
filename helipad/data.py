@@ -54,14 +54,7 @@ class Data:
 		if self.model.hasModel:
 			raise RuntimeError('removeReporter cannot be called while a model is active.')
 		for c in self.reporters[key].children: del self.all[c]
-		for s in self.reporters[key].series:
-			# Remove subseries
-			for ss in s.subseries:
-				for sss in self.model.plots[s.plot].series:
-					if sss.reporter == ss:
-						self.model.plots[s.plot].series.remove(sss)
-						continue
-			self.model.plots[s.plot].series.remove(s)
+		self.model.doHooks('removeReporter', [self, key])
 		del self.reporters[key]
 
 	def collect(self, model):

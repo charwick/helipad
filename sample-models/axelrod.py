@@ -9,12 +9,14 @@
 #===============
 
 from helipad import Helipad
+from helipad.graph import TimeSeries
 import numpy.random as random
 from numpy import mean
 
 heli = Helipad()
 heli.name = 'Axelrod Tournament'
 heli.order = 'match'
+# heli.useVisual(TimeSeries)
 
 heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
