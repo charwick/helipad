@@ -5,10 +5,25 @@
 
 from numpy import ndarray, asanyarray, log10
 import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
+from abc import ABC, abstractmethod
 from helipad.helpers import *
 mlpstyle.use('fast')
 
-class TimeSeries:
+class BaseVisualization:
+	
+	#Create the window. Mandatory to implement
+	@abstractmethod
+	def launch(self, title): pass
+	
+	#Refresh every so many periods. Mandatory to implement
+	#data is the *incremental* data
+	@abstractmethod
+	def update(self, data): pass
+	
+	#Called from model.terminate(). Optional to implement
+	def terminate(self, model): pass
+
+class TimeSeries(BaseVisualization):
 	def __init__(self, model):
 		self.hasWindow = False
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
@@ -52,7 +67,7 @@ class TimeSeries:
 		return {k:plot for k,plot in self.plots.items() if plot.selected}
 	
 	#listOfPlots is the trimmed model.plots list
-	def launch(self, title, **kwargs):
+	def launch(self, title):
 		if not len(self.activePlots): return #Windowless mode
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
@@ -124,13 +139,11 @@ class TimeSeries:
 		self.hasWindow = True
 		plt.draw()
 	
-	#Called from model.terminate()
 	def terminate(self, model):
 		if not self.hasWindow:
 			for p in ['stopafter', 'csv']: model.params[p].enable()
 		self.hasWindow = False
 	
-	#data is the *incremental* data
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution

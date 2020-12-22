@@ -6,7 +6,7 @@
 import sys, warnings, pandas
 from random import shuffle, choice
 from numpy import random
-from helipad.graph import *
+from helipad.graph import BaseVisualization
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
@@ -329,7 +329,11 @@ class Helipad:
 		if hasattr(self, 'breed'):
 			warnings.warn('Visualizations can only be registered on the top-level model.', None, 2)
 			return #Doesn't matter if it's not the top-level model
-		self.visual = viz(self)
+		
+		if viz is not None and not issubclass(viz, BaseVisualization):
+			raise RuntimeError('Visualization class must inherit from BaseVisualization.')
+		
+		self.visual = viz(self) if viz is not None else None
 		return self.visual
 	
 	#Get ready to actually run the model
