@@ -755,11 +755,13 @@ class Helipad:
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	
 	def launchVisuals(self):
-		#Make sure we're set up visualization-wise. Go ahead if any of the visualizations are good to go
-		if self.visual is None: raise RuntimeError('No visualization has been set. Use model.useVisual() before launching visuals.')
-		if self.visual.canLaunch(self)!=True:
-			print('No visualizations are prepared to run.')
-			return
+		if self.visual is None or self.visual.isNull:
+			if not getattr(self, 'cpanel', False):
+				print('No visualizations available. To run the model with no GUI, use model.start() instead.')
+				return
+			if not self.param('stopafter') or not self.param('csv'):
+				print('Running from the control panel with no visualization requires stop period and CSV export to be enabled.')
+				return
 		
 		self.doHooks('visualPreLaunch', [self])
 		
@@ -770,38 +772,39 @@ class Helipad:
 			self.cpanel.runButton.run()
 		
 		self.setup()
-				
-		def catchKeypress(event):
-			#Toggle legend boxes
-			if event.key == 't':
-				for plot in self.visual.plots.values():
-					leg = plot.axes.get_legend()
-					leg.set_visible(not leg.get_visible())
-				self.visual.fig.canvas.draw()
 		
-			#Pause on spacebar
-			elif event.key == ' ':
-				if self.running: self.stop()
-				else: self.start()
+		if self.visual is not None:
+			def catchKeypress(event):
+				#Toggle legend boxes
+				if event.key == 't':
+					for plot in self.visual.plots.values():
+						leg = plot.axes.get_legend()
+						leg.set_visible(not leg.get_visible())
+					self.visual.fig.canvas.draw()
 		
-			#User functions
-			self.doHooks('graphKeypress', [event.key, self])
+				#Pause on spacebar
+				elif event.key == ' ':
+					if self.running: self.stop()
+					else: self.start()
 		
-		self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
+				#User functions
+				self.doHooks('graphKeypress', [event.key, self])
+			
+			self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
 		
-		if self.visual.hasWindow:
-			self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
-			self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
-		else:
-			self.params['stopafter'].disable()
-			self.params['csv'].disable()
+			if self.visual.hasWindow:
+				self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
+				self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+			else:
+				self.params['stopafter'].disable()
+				self.params['csv'].disable()
 		
 		for param in self.allParams:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 		self.doHooks('visualLaunch', [self, self.visual])
 		
 		#If we're running in cpanel-less mode, hook through mainloop so it doesn't exit on pause
-		if self.visual.hasWindow and not hasattr(self, 'cpanel') and not isIpy():
+		if not hasattr(self, 'cpanel') and self.visual.hasWindow and not isIpy():
 			self.root.after(1, self.start)
 			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
 			self.debugConsole()

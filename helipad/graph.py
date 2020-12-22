@@ -43,11 +43,9 @@ class TimeSeries:
 		def movePlotParam(model):
 			model.params['plots'] = model.params.pop('plots')
 	
-	def canLaunch(self, model):
-		if not [plot for plot in self.plots.values() if plot.selected] and (not model.param('stopafter') or not model.param('csv')):
-			warnings.warn('Plotless mode requires stop period and CSV export to be enabled.', None, 3)
-			return False
-		else: return True
+	@property
+	def isNull(self):
+		return not [plot for plot in self.plots.values() if plot.selected]
 	
 	@property
 	def activePlots(self):
@@ -237,7 +235,7 @@ class TimeSeries:
 		return True
 	
 	def addVertical(self, t, color, linestyle, linewidth):
-		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.plots.values()])
+		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 		
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
