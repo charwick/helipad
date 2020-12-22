@@ -583,6 +583,14 @@ class Helipad:
 		from itertools import product
 		space = [{p[0]:run[k] for k,p in enumerate(params.items())} for run in product(*[p[1].range for p in params.values()])]
 		
+		#For backward-compatibility with pre-1.2 paramSweep results.
+		#Can be removed and replaced with Item in Helipad 1.4
+		class Result(Item):
+			def __getitem__(self, index):
+				warnings.warn('Parameter sweep results are now an object, not a tuple. Access by numeric index is deprecated and will be removed in a future version.', None, 2)
+				if index==0: return self.vars
+				elif index==1: return self.data
+		
 		#Run the model
 		alldata = []
 		for i,run in enumerate(space):
@@ -597,7 +605,7 @@ class Helipad:
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
 			else: data = self.data.dataframe
 			
-			events = [Item(name=e.name, triggered=e.triggered, data=e.data) for e in self.events.values()]
+			events = [Result(name=e.name, triggered=e.triggered, data=e.data) for e in self.events.values()]
 				
 			alldata.append(Item(vars=run, data=data, events=events))
 		return alldata
