@@ -7,14 +7,12 @@
 #===============
 
 from helipad import Helipad
-from helipad.graph import TimeSeries
 # from utility import CobbDouglas
 
 heli = Helipad()
 heli.name = 'Model Name'
 heli.order = 'random' #Can be changed to 'linear' or 'match'
 heli.stages = 1 #Change to create a multi-stage model
-viz = heli.useVisual(TimeSeries)
 
 # heli.addParameter('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
 # heli.addGood('good1','hex color', lambda breed: endowment)
@@ -52,9 +50,12 @@ def modelStep(model, stage):
 	pass
 
 #===============
-# CONFIGURATION
+# DATA AND VISUALIZATION
 # Register reporters, plots, and series here
 #===============
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 
 #Reporters collect data from the model each period, generally from parameters set in agentInit and modelPostSetup.
 

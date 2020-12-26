@@ -30,13 +30,13 @@ class TimeSeries(BaseVisualization):
 		
 		#Plot categories
 		self.plots = {}
-		plotList = {
-			'demand': 'Demand',
-			'shortage': 'Shortages',
-			'money': 'Money',
-			'utility': 'Utility'
-		}
-		for name, label in plotList.items(): self.addPlot(name, label, selected=False)
+		self.addPlot('utility', 'Utility', selected=False)
+		
+		if len(model.goods) >= 2:
+			self.addPlot('demand', 'Demand', selected=False)
+			self.addPlot('shortage', 'Shortages', selected=False)
+		if model.moneyGood is not None:
+			self.addPlot('money', 'Money', selected=False)
 		
 		#Delete the corresponding series when a reporter is removed
 		@model.hook('removeReporter')
@@ -223,7 +223,7 @@ class TimeSeries(BaseVisualization):
 		
 		self.selector.vars[name] = selected
 		if selected: self.selector.default.append(name)
-		if getattr(self.model, 'cpanel', False) and not self.cpanel.valid: self.model.cpanel.__init__(self.model, redraw=True) #Redraw if necessary
+		if getattr(self.model, 'cpanel', False) and not self.model.cpanel.valid: self.model.cpanel.__init__(self.model, redraw=True) #Redraw if necessary
 		
 		return plot
 	

@@ -1,8 +1,7 @@
-#A reconstruction of Hurford (2003), "The Evolution of the Critical Period for Language Acquisition"
+#A reconstruction of Hurford (1991), "The Evolution of the Critical Period for Language Acquisition"
 #https://www.sciencedirect.com/science/article/abs/pii/001002779190024X
 
 from helipad import Helipad, Agent
-from helipad.graph import TimeSeries
 import random
 from numpy.random import choice
 from numpy import mean
@@ -10,7 +9,6 @@ from numpy import mean
 heli = Helipad()
 heli.name = 'Critical Period'
 heli.order = 'random'
-viz = heli.useVisual(TimeSeries)
 
 heli.addParameter('pleio', 'Pleiotropy', 'slider', dflt=7, opts={'low': 0, 'high': 10, 'step': 1}, runtime=False)
 heli.addParameter('acq', 'Acquisition from', 'menu', dflt='mother', opts={'mother': 'Mother', 'wholepop': 'Whole Population'})
@@ -105,6 +103,9 @@ def agentDie(agent):
 		r = random.randrange(len(baby.dominantLap))
 		baby.dominantLap[r] = -baby.dominantLap[r]
 
+#Visualization
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 lplot = viz.addPlot('language', 'Language')
 lplot.addSeries('adultLanguage', 'Adult Language', 'blue')
 

@@ -5,7 +5,6 @@
 #===============
 
 from helipad import Helipad
-from helipad.graph import TimeSeries
 from helipad.utility import CobbDouglas
 from math import sqrt, exp, floor
 import random
@@ -13,7 +12,6 @@ import random
 heli = Helipad()
 heli.name = 'Price Discover'
 heli.order = 'match'
-viz = heli.useVisual(TimeSeries)
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5}, runtime=False)
 heli.params['num_agent'].opts['step'] = 2 #Make sure we don't get stray agents
@@ -66,8 +64,11 @@ def stopCondition(model):
 heli.param('stopafter', 'stopCondition')
 
 #===============
-# CONFIGURATION
+# DATA AND VISUALIZATION
 #===============
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
 pricePlot = viz.addPlot('price', 'Price', logscale=True, selected=True)

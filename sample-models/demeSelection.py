@@ -6,7 +6,6 @@
 #===============
 
 from helipad import Helipad, MultiLevel, Agent
-from helipad.graph import TimeSeries
 from random import choice
 import numpy.random as nprand
 from math import exp, sqrt
@@ -15,7 +14,6 @@ heli = Helipad()
 heli.name = 'Deme Selection'
 heli.order = ['linear', 'linear', 'match']
 heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, stage 3 for war
-viz = heli.useVisual(TimeSeries)
 
 heli.addPrimitive('deme', MultiLevel, dflt=20, priority=1)
 heli.removePrimitive('agent')
@@ -89,8 +87,11 @@ def modelStep(model, stage):
 			while len(d.agents['agent']) < 20: choice(d.agents['agent']).reproduce()
 
 #===============
-# CONFIGURATION
+# DATA AND VISUALIZATION
 #===============
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 
 @heli.reporter
 def population(model): return sum([len(d.agents['agent']) for d in model.agents['deme']])

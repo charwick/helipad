@@ -4,11 +4,9 @@ from collections import namedtuple
 import pandas, random as rand2
 
 from helipad import Helipad
-from helipad.graph import TimeSeries
 from math import sqrt, log
 from numpy import *
 heli = Helipad()
-viz = heli.useVisual(TimeSeries)
 
 #================
 # CONFIGURATION
@@ -161,6 +159,9 @@ def decideBreed(id, choices, model):
 #================
 # REPORTERS AND PLOTS
 #================
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 
 def urbanPop(model): return len(model.agent('urban'))
 def ruralPop(model): return len(model.agent('rural'))

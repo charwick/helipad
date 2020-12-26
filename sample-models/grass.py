@@ -6,13 +6,11 @@
 #===============
 
 from helipad import Helipad
-from helipad.graph import TimeSeries
 
 heli = Helipad()
 heli.name = 'Grass Eating'
 heli.order = 'random'
 heli.stages = 5
-viz = heli.useVisual(TimeSeries)
 
 heli.addParameter('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
 heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
@@ -91,14 +89,17 @@ def patchStep(patch, model, stage):
 def modelPostSetup(model):
 	model.deathAge = []
 
-#===============
-# CONFIGURATION
-#===============
-
 #Stop the model when we have no more females left to reproduce
 @heli.event
 def nofemales(model): return len(model.agent('female')) <= 1
 heli.param('stopafter', 'nofemales')
+
+#===============
+# DATA AND VISUALIZATION
+#===============
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 
 viz.addPlot('pop', 'Population', logscale=True)
 viz.addPlot('sexratio', 'Sex Ratio', logscale=True)

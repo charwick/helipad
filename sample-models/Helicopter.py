@@ -5,10 +5,8 @@ from itertools import combinations
 import pandas
 
 from helipad import *
-from helipad.graph import TimeSeries
 from math import sqrt
 heli = Helipad()
-viz = heli.useVisual(TimeSeries)
 
 #===============
 # STORE CLASS
@@ -144,7 +142,13 @@ def rbaltodemand(breed):
 
 	return reporter
 
-#Data Collection
+#===============
+# DATA COLLECTION AND VISUALIZATION
+#===============
+
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
+
 viz.addPlot('prices', 'Prices', 1, selected=True)
 viz.addPlot('inventory', 'Inventory', 3)
 viz.addPlot('rbal', 'Real Balances', 5)

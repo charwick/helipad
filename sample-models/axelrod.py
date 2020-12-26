@@ -9,14 +9,12 @@
 #===============
 
 from helipad import Helipad
-from helipad.graph import TimeSeries
 import numpy.random as random
 from numpy import mean
 
 heli = Helipad()
 heli.name = 'Axelrod Tournament'
 heli.order = 'match'
-viz = heli.useVisual(TimeSeries)
 
 heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
@@ -146,6 +144,9 @@ def match(agents, primitive, model, stage):
 		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
 		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 
+#Visualization
+from helipad.graph import TimeSeries
+viz = heli.useVisual(TimeSeries)
 plot = viz.addPlot('payoffs', 'Payoffs')
 
 #Add breeds last-minute so we can toggle them in the control panel

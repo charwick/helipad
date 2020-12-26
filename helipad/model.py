@@ -275,6 +275,20 @@ class Helipad:
 		if money:
 			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
 			self.moneyGood = name
+			
+			#Add the M0 plot once we have a money good
+			if (self.visual is None or self.visual.isNull) and hasattr(self.visual, 'plots'):
+				try:
+					if not 'money' in self.visual.plots: self.visual.addPlot('money', 'Money', selected=False)
+				except: pass #Can't add plot if re-drawing the cpanel
+		
+		#Add demand and shortage plots once we have at least 2 goods
+		if len(self.goods) == 1 and (self.visual is None or self.visual.isNull) and hasattr(self.visual, 'plots'):
+			try:
+				if not 'demand' in self.visual.plots: self.visual.addPlot('demand', 'Demand', selected=False)
+				if not 'shortages' in self.visual.plots: self.visual.addPlot('shortage', 'Shortages', selected=False)
+			except: pass
+			
 		return self.addItem('good', name, color, endowment=endowment, money=money)
 	
 	@property
@@ -374,7 +388,7 @@ class Helipad:
 
 		if (self.moneyGood is not None):
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
-			if self.visual is not None and hasattr(self.visual, 'plots'):
+			if self.visual is not None and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
 				self.visual.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
 		
 		#Unconditional variables to report
@@ -392,8 +406,8 @@ class Helipad:
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
 				if self.visual is not None and hasattr(self.visual, 'plots'):
-					self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
-					self.visual.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
+					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
+					if 'shortage' in self.visual.plots: self.visual.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
 		
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
@@ -748,10 +762,6 @@ class Helipad:
 				self.params['num_'+k].opts['step'] = makeDivisible(self.params['num_'+k].opts['low'], l, 'max')
 				self.params['num_'+k].value = makeDivisible(self.params['num_'+k].value, l, 'max')
 				self.params['num_'+k].default = makeDivisible(self.params['num_'+k].default, l, 'max')
-		
-		try:
-			if self.moneyGood is None and self.visual is not None and hasattr(self.visual, 'removePlot'): self.visual.removePlot('money')
-		except: pass #Can't remove plot if re-drawing the cpanel
 		
 		if not isIpy():
 			from helipad.cpanelTkinter import Cpanel
