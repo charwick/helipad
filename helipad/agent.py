@@ -201,7 +201,7 @@ class baseAgent:
 	
 	@property
 	def parent(self):
-		p = self.inbound('lineage')
+		p = self.inbound('lineage', obj='agent')
 		if len(p)==0: return None
 		elif len(p)==1: return p[0]
 		else: return p
