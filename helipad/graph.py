@@ -25,7 +25,6 @@ class BaseVisualization:
 
 class TimeSeries(BaseVisualization):
 	def __init__(self, model):
-		self.hasWindow = False
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.model = model #Unhappy with this
 		
@@ -136,13 +135,11 @@ class TimeSeries(BaseVisualization):
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
-		self.hasWindow = True
 		plt.draw()
 	
 	def terminate(self, model):
-		if not self.hasWindow:
+		if self.isNull:
 			for p in ['stopafter', 'csv']: model.params[p].enable()
-		self.hasWindow = False
 	
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution

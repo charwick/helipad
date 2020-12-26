@@ -162,8 +162,8 @@ class baseAgent:
 	def die(self, updateGUI=True):
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.alledges: edge.cut()
-		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 		self.dead = True
+		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 	
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
 		return Edge(self, partner, kind, direction, weight)

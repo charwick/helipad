@@ -495,7 +495,7 @@ class Helipad:
 				if getattr(self, 'cpanel', False) and st and isinstance(st, int): self.cpanel.progress.update(t/st)
 				
 				#Update graph
-				if self.visual is not None and self.visual.hasWindow:
+				if self.visual is not None and not self.visual.isNull:
 					await asyncio.sleep(0.001) #Listen for keyboard input
 					data = self.data.getLast(t - self.visual.lastUpdate)
 	
@@ -804,7 +804,7 @@ class Helipad:
 			
 			self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
 		
-			if self.visual.hasWindow:
+			if not self.visual.isNull:
 				self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
 				self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 			else:
@@ -816,7 +816,7 @@ class Helipad:
 		self.doHooks('visualLaunch', [self, self.visual])
 		
 		#If we're running in cpanel-less mode, hook through mainloop so it doesn't exit on pause
-		if not hasattr(self, 'cpanel') and self.visual.hasWindow and not isIpy():
+		if not hasattr(self, 'cpanel') and not self.visual.isNull and not isIpy():
 			self.root.after(1, self.start)
 			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
 			self.debugConsole()

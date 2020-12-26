@@ -39,7 +39,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
-* [1.2](https://helipad.dev/2020/12/helipad-1-2/): Events, performance profiling
+* [1.2](https://helipad.dev/2020/12/helipad-1-2/): Extensible visualization API, events, performance profiling
 * [1.1](https://helipad.dev/2020/10/helipad-1-1/): Virtual parameters, improved Jupyter flexibility, spatial pre-alpha, misc improvements
 * [1.0](https://helipad.dev/2020/08/helipad-1-0/): Jupyter integration, hook decorators, and separated control panel from plotting
 * [0.7](https://helipad.dev/2020/06/helipad-0-7/): Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern
