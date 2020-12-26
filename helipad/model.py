@@ -6,7 +6,7 @@
 import sys, warnings, pandas
 from random import shuffle, choice
 from numpy import random
-from helipad.graph import BaseVisualization
+from helipad.graph import BaseVisualization, keepEvery
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
@@ -151,6 +151,8 @@ class Helipad:
 	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
 	#To be removed in Helipad 1.4
 	def removePlot(self, name, reassign=None):
+		from helipad.graph import TimeSeriesre
+		warnings.warn('model.removePlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.removePlot() instead.', None, 2)
 		if isinstance(self.visual, TimeSeries): return self.visual.removePlot(name, reassign)
 	
 	#Deprecated in Helipad 1.2 in favor of Plot.addSeries()
@@ -748,7 +750,7 @@ class Helipad:
 				self.params['num_'+k].default = makeDivisible(self.params['num_'+k].default, l, 'max')
 		
 		try:
-			if self.moneyGood is None: self.removePlot('money')
+			if self.moneyGood is None and self.visual is not None and hasattr(self.visual, 'removePlot'): self.visual.removePlot('money')
 		except: pass #Can't remove plot if re-drawing the cpanel
 		
 		if not isIpy():
