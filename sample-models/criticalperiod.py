@@ -110,16 +110,19 @@ viz = heli.useVisual(Charts)
 # lplot.addSeries('adultLanguage', 'Adult Language', 'blue')
 
 # gplot = viz.addPlot('geno', 'Genotypes')
-gchart = viz.addChart('geno', 'Genotypes')
+gchart = viz.addChart('geno', 'Capacity by stage (dominant allele)')
+gchart2 = viz.addChart('rec', 'Capacity by stage (recessive allele)', horizontal=True)
 
-def genoReporter(age):
+def genoReporter(age, gene=False):
 	def rep(model):
-		return mean([a.capacity(age=age) for a in model.agents['agent']])
+		return mean([a.capacity(gene=None if not gene else a.recessivLap, age=age) for a in model.agents['agent']])
 	return rep
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for age in range(10):
 	heli.data.addReporter('geno-'+str(age), genoReporter(age))
+	heli.data.addReporter('rec-'+str(age), genoReporter(age, gene='rec'))
 	# gplot.addSeries('geno-'+str(age), 'Capacity age '+str(age), '#'+gcolors[age])
 	gchart.addBar('geno-'+str(age), str(age), '#'+gcolors[age])
+	gchart2.addBar('rec-'+str(age), str(age), '#'+gcolors[age])
 
 heli.launchCpanel()

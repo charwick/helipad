@@ -323,30 +323,37 @@ class Charts(BaseVisualization):
 		
 		#Cycle over charts
 		for cname, chart in self.activeCharts.items():
-			rects = chart.axes.bar(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
+			cfunc = chart.axes.barh if chart.horizontal else chart.axes.bar
+			rects = cfunc(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
 			for bar, rect in zip(chart.bars, rects): bar.rect = rect
 			
 			chart.axes.set_xticklabels([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
+			chart.axes.set_title(chart.label)
 			
 			if chart.logscale:
-				chart.axes.set_yscale('log')
-				chart.axes.set_ylim(1/2, 2, auto=True)
+				if chart.horizontal:
+					chart.axes.set_xscale('log')
+					chart.axes.set_xlim(1/2, 2, auto=True)
+				else:
+					chart.axes.set_yscale('log')
+					chart.axes.set_ylim(1/2, 2, auto=True)
 		
 		plt.draw()
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
 		for c in self.activeCharts.values():
-			for b in c.bars: b.rect.set_height(data[b.reporter])
+			for b in c.bars:
+				bfunc = b.rect.set_width if c.horizontal else b.rect.set_height
+				bfunc(data[b.reporter])
 			c.axes.relim()
 			c.axes.autoscale_view(tight=False)
 		
 		plt.pause(0.0001)
 	
-	#reporters format: {'label':'reporterName'}
-	def addChart(self, name, label, logscale=False):
-		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale)
+	def addChart(self, name, label, logscale=False, horizontal=False):
+		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale, horizontal=horizontal)
 		return self.charts[name]
 	
 def keepEvery(lst, n):
