@@ -4,6 +4,7 @@
 # ==========
 
 from numpy import ndarray, asanyarray, log10
+from math import sqrt, ceil
 import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from abc import ABC, abstractmethod
 from helipad.helpers import *
@@ -109,7 +110,6 @@ class TimeSeries(BaseVisualization):
 	def launch(self, title):
 		if not len(self.activePlots): return #Windowless mode
 		
-		#fig is the figure, plots is a list of AxesSubplot objects
 		self.lastUpdate = 0
 		self.resolution = 1
 		self.verticals = []
@@ -117,15 +117,14 @@ class TimeSeries(BaseVisualization):
 			plt.ioff() #Can't re-launch plots without manually closing otherwise
 			plt.rcParams['figure.figsize'] = [12, 8]
 		
+		#fig is the figure, plots is a list of AxesSubplot objects
 		#The Tkinter way of setting the title doesn't work in Jupyter
 		#The Jupyter way works in Tkinter, but also serves as the figure id, so new graphs draw on top of old ones
 		self.fig, plots = plt.subplots(len(self.activePlots), sharex=True, num=title if isIpy() else None)
 		if not isIpy(): self.fig.canvas.set_window_title(title)
 		
-		if not isinstance(plots, ndarray):
-			plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
-		for plot, axes in zip(self.activePlots.values(), plots):
-			plot.axes = axes
+		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
+		for plot, axes in zip(self.activePlots.values(), plots): plot.axes = axes
 		
 		#Position graph window
 		fm = plt.get_current_fig_manager()
@@ -182,7 +181,8 @@ class TimeSeries(BaseVisualization):
 			for p in ['stopafter', 'csv']: model.params[p].enable()
 	
 	def update(self, data):
-		newlen = len(next(data[x] for x in data))*self.resolution #Length of the data times the resolution
+		newlen = len(next(data[x] for x in data))
+		if (self.resolution > 1): data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
 		
 		#Append new data to cumulative series
@@ -219,6 +219,7 @@ class TimeSeries(BaseVisualization):
 			ylim = plot.axes.get_ylim()
 			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
 		
+		if self.resolution > self.model.param('updateEvery'): self.model.param('updateEvery', self.resolution)
 		if isIpy(): self.fig.canvas.draw()
 		plt.pause(0.0001)
 	
@@ -282,22 +283,60 @@ class TimeSeries(BaseVisualization):
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
 class Charts(BaseVisualization):
-	def __init__(model):
+	def __init__(self, model):
 		self.charts = {}
+		
+		class Chart(Item):
+			pass
+		self.chartclass = Chart
 	
 	@property
 	def isNull(self):
 		return not [chart for chart in self.charts.values() if chart.selected]
 	
+	@property
+	def activeCharts(self):
+		return {k:chart for k,chart in self.charts.items() if chart.selected}
+	
 	def launch(self, title):
-		pass
+		if not len(self.activeCharts): return #Windowless mode
+		
+		self.lastUpdate = 0
+		n = len(self.activeCharts)
+		x = ceil(sqrt(n))
+		y = ceil(n/x)
+		
+		#fig is the figure, plots is a list of AxesSubplot objects
+		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None, constrained_layout=True)
+		if not isIpy(): self.fig.canvas.set_window_title(title)
+		
+		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
+		for plot, axes in zip(self.activeCharts.values(), plots): plot.axes = axes
+		
+		#Cycle over charts
+		for cname, chart in self.activeCharts.items():
+			chart.rects = chart.axes.bar(range(len(chart.reporters)), [0 for i in range(len(chart.reporters))], color=chart.color)
+			chart.axes.margins(x=0)
+			
+			if chart.logscale:
+				chart.axes.set_yscale('log')
+				chart.axes.set_ylim(1/2, 2, auto=True)
+		
+		plt.draw()
 	
 	def update(self, data):
-		pass
+		data = {k:v[-1] for k,v in data.items()}
+		for c in self.activeCharts.values():
+			for i,r in enumerate(c.reporters.values()):
+				c.rects[i].set_height(data[r])
+			c.axes.relim()
+			c.axes.autoscale_view(tight=False)
+		
+		plt.pause(0.0001)
 	
-	#inputs format: {'label':'reporterName'}
-	def addChart(self, name, label, inputs):
-		pass
+	#reporters format: {'label':'reporterName'}
+	def addChart(self, name, label, reporters, logscale=False, color='blue'):
+		self.charts[name] = self.chartclass(name=name, label=label, reporters=reporters, selected=True, logscale=logscale, color=color)
 	
 def keepEvery(lst, n):
 	i,l = (1, [])

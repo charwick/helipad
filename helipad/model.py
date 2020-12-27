@@ -6,7 +6,7 @@
 import sys, warnings, pandas
 from random import shuffle, choice
 from numpy import random
-from helipad.visualize import BaseVisualization, keepEvery
+from helipad.visualize import BaseVisualization
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
@@ -515,11 +515,8 @@ class Helipad:
 					await asyncio.sleep(0.001) #Listen for keyboard input
 					data = self.data.getLast(t - self.visual.lastUpdate)
 	
-					if (self.visual.resolution > 1):
-						data = {k: keepEvery(v, self.visual.resolution) for k,v in data.items()}
 					self.visual.update(data)
 					self.visual.lastUpdate = t
-					if self.visual.resolution > self.param('updateEvery'): self.param('updateEvery', self.visual.resolution)
 				
 					self.doHooks('visualUpdate', [self, self.visual])
 				
@@ -801,7 +798,7 @@ class Helipad:
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
-					for plot in self.visual.plots.values():
+					for plot in self.visual.activePlots.values():
 						leg = plot.axes.get_legend()
 						leg.set_visible(not leg.get_visible())
 					self.visual.fig.canvas.draw()
