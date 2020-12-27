@@ -28,6 +28,46 @@ class TimeSeries(BaseVisualization):
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.model = model #Unhappy with this
 		
+		class Plot(Item):
+			@property
+			def selected(self): return self.model.params['plots'].get(self.name)
+	
+			@selected.setter
+			def selected(self, val): self.active(val)
+	
+			def active(self, val, updateGUI=True):
+				self.model.params['plots'].set(self.name, bool(val))
+				if updateGUI and not isIpy() and hasattr(self, 'check'):
+					self.check.set(val)
+	
+			#First arg is a reporter name registered in DataCollector, or a lambda function
+			#Second arg is the series name. Use '' to not show in the legend.
+			#Third arg is the plot's hex color, or a Color object
+			def addSeries(self, reporter, label, color, style='-'):
+				if not isinstance(color, Color): color = Color(color)
+
+				#Check against columns and not reporters so percentiles work
+				if not callable(reporter) and not reporter in self.model.data.all:
+					raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
+		
+				#Add subsidiary series (e.g. percentile bars)
+				subseries = []
+				if reporter in self.model.data.reporters and isinstance(self.model.data.reporters[reporter].func, tuple):
+					for p, f in self.model.data.reporters[reporter].func[1].items():
+						subkey = reporter+'-'+str(p)+'-pctile'
+						subseries.append(self.addSeries(subkey, '', color.lighten(), style='--'))
+
+				#Since many series are added at setup time, we have to de-dupe
+				for s in self.series:
+					if s.reporter == reporter:
+						self.series.remove(s)
+		
+				series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
+				self.series.append(series)
+				if reporter in self.model.data.reporters: self.model.data.reporters[reporter].series.append(series)
+				return series
+		self.plotclass = Plot
+		
 		#Plot categories
 		self.plots = {}
 		self.addPlot('utility', 'Utility', selected=False)
@@ -202,7 +242,7 @@ class TimeSeries(BaseVisualization):
 	
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
+		plot = self.plotclass(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
 		
 		self.selector.addItem(name, label, position, selected)
 		if position is None or position > len(self.plots): self.plots[name] = plot
@@ -241,45 +281,24 @@ class TimeSeries(BaseVisualization):
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
-class Plot(Item):
+class Charts(BaseVisualization):
+	def __init__(model):
+		self.charts = {}
+	
 	@property
-	def selected(self): return self.model.params['plots'].get(self.name)
+	def isNull(self):
+		return not [chart for chart in self.charts.values() if chart.selected]
 	
-	@selected.setter
-	def selected(self, val): self.active(val)
+	def launch(self, title):
+		pass
 	
-	def active(self, val, updateGUI=True):
-		self.model.params['plots'].set(self.name, bool(val))
-		if updateGUI and not isIpy() and hasattr(self, 'check'):
-			self.check.set(val)
+	def update(self, data):
+		pass
 	
-	#First arg is a reporter name registered in DataCollector, or a lambda function
-	#Second arg is the series name. Use '' to not show in the legend.
-	#Third arg is the plot's hex color, or a Color object
-	def addSeries(self, reporter, label, color, style='-'):
-		if not isinstance(color, Color): color = Color(color)
-
-		#Check against columns and not reporters so percentiles work
-		if not callable(reporter) and not reporter in self.model.data.all:
-			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
-		
-		#Add subsidiary series (e.g. percentile bars)
-		subseries = []
-		if reporter in self.model.data.reporters and isinstance(self.model.data.reporters[reporter].func, tuple):
-			for p, f in self.model.data.reporters[reporter].func[1].items():
-				subkey = reporter+'-'+str(p)+'-pctile'
-				subseries.append(self.addSeries(subkey, '', color.lighten(), style='--'))
-
-		#Since many series are added at setup time, we have to de-dupe
-		for s in self.series:
-			if s.reporter == reporter:
-				self.series.remove(s)
-		
-		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
-		self.series.append(series)
-		if reporter in self.model.data.reporters: self.model.data.reporters[reporter].series.append(series)
-		return series
-
+	#inputs format: {'label':'reporterName'}
+	def addChart(self, name, label, inputs):
+		pass
+	
 def keepEvery(lst, n):
 	i,l = (1, [])
 	for k in lst:

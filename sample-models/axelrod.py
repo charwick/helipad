@@ -145,7 +145,7 @@ def match(agents, primitive, model, stage):
 		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 
 #Visualization
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 plot = viz.addPlot('payoffs', 'Payoffs')
 

@@ -54,7 +54,7 @@ def modelStep(model, stage):
 # Register reporters, plots, and series here
 #===============
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 #Reporters collect data from the model each period, generally from parameters set in agentInit and modelPostSetup.

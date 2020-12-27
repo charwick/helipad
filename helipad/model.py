@@ -6,7 +6,7 @@
 import sys, warnings, pandas
 from random import shuffle, choice
 from numpy import random
-from helipad.graph import BaseVisualization, keepEvery
+from helipad.visualize import BaseVisualization, keepEvery
 from helipad.helpers import *
 from helipad.param import *
 import matplotlib, asyncio
@@ -132,14 +132,14 @@ class Helipad:
 	@property
 	def plots(self):
 		warnings.warn('model.plots is deprecated and will be removed in a future version. The list of TimeSeries plots can be accessed with model.visual.plots.', None, 2)
-		from helipad.graph import TimeSeries
+		from helipad.visualize import TimeSeries
 		if not isinstance(self.visual, TimeSeries): self.useVisual(TimeSeries)
 		return self.visual.plots
 	
 	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
 	#To be removed in Helipad 1.4
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		from helipad.graph import TimeSeries
+		from helipad.visualize import TimeSeries
 		
 		warnings.warn('model.addPlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.addPlot() instead.', None, 2)
 		if not isinstance(self.visual, TimeSeries):
@@ -151,7 +151,7 @@ class Helipad:
 	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
 	#To be removed in Helipad 1.4
 	def removePlot(self, name, reassign=None):
-		from helipad.graph import TimeSeriesre
+		from helipad.visualize import TimeSeries
 		warnings.warn('model.removePlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.removePlot() instead.', None, 2)
 		if isinstance(self.visual, TimeSeries): return self.visual.removePlot(name, reassign)
 	

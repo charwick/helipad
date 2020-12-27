@@ -90,7 +90,7 @@ def modelStep(model, stage):
 # DATA AND VISUALIZATION
 #===============
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 @heli.reporter

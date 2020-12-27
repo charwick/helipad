@@ -104,7 +104,7 @@ def agentDie(agent):
 		baby.dominantLap[r] = -baby.dominantLap[r]
 
 #Visualization
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 lplot = viz.addPlot('language', 'Language')
 lplot.addSeries('adultLanguage', 'Adult Language', 'blue')

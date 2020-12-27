@@ -160,7 +160,7 @@ def decideBreed(id, choices, model):
 # REPORTERS AND PLOTS
 #================
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 def urbanPop(model): return len(model.agent('urban'))

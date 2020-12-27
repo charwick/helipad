@@ -98,7 +98,7 @@ heli.param('stopafter', 'nofemales')
 # DATA AND VISUALIZATION
 #===============
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 viz.addPlot('pop', 'Population', logscale=True)

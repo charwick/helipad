@@ -146,7 +146,7 @@ def rbaltodemand(breed):
 # DATA COLLECTION AND VISUALIZATION
 #===============
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 viz.addPlot('prices', 'Prices', 1, selected=True)

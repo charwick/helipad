@@ -67,7 +67,7 @@ heli.param('stopafter', 'stopCondition')
 # DATA AND VISUALIZATION
 #===============
 
-from helipad.graph import TimeSeries
+from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', stat='gmean', percentiles=[0,100]))
