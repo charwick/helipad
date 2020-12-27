@@ -7,6 +7,7 @@ from tkinter import *
 from tkinter.ttk import Progressbar
 from helipad.helpers import Color
 import sys, colorsys
+from helipad.param import Param
 from math import ceil
 
 class Cpanel:	
@@ -40,6 +41,7 @@ class Cpanel:
 				#If it's a slider, the parameter doesn't update automatically
 				if param.type=='slider': param.set(val, item, updateGUI=False)
 			return sv
+		Param.setVar = setVar
 		
 		#For shock buttons.
 		#Can't do an inline lambda here because lambdas apparently don't preserve variable context
@@ -135,10 +137,10 @@ class Cpanel:
 				#These put the circle beside the widget
 				if param.type in ['check', 'checkentry']:
 					if param.type=='check':
-						el = Checkbutton(wrap, text=title, var=val, onvalue=True, offvalue=False, command=setVar(param, item), bg=bg)
+						el = Checkbutton(wrap, text=title, var=val, onvalue=True, offvalue=False, command=param.setVar(item), bg=bg)
 					elif param.type=='checkentry':
 						dflt = param.get(item)
-						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=setVar(param, item))
+						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=param.setVar(item))
 						if param.name=='stopafter' and param.event:
 							el.disable()
 							el.entryValue.set('Event: '+param.get())
@@ -151,11 +153,11 @@ class Cpanel:
 				#These need a separate label
 				else:					
 					if param.type == 'menu':
-						el = OptionMenu(wrap, val, *param.opts.values(), command=setVar(param, item))
+						el = OptionMenu(wrap, val, *param.opts.values(), command=param.setVar(item))
 						el.config(bg=bg)
 					elif param.type == 'slider':
-						if isinstance(param.opts, dict): el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=setVar(param, item), bg=bg)
-						else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient=HORIZONTAL, values=param.opts, length=150, command=setVar(param, item), bg=bg)
+						if isinstance(param.opts, dict): el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=param.setVar(item), bg=bg)
+						else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient=HORIZONTAL, values=param.opts, length=150, command=param.setVar(item), bg=bg)
 						el.set(param.get(item))
 						
 					if item is None and not getattr(param, 'config', False):
@@ -236,7 +238,7 @@ class Cpanel:
 		#Checkgrid parameters
 		for p in self.model.params.values():
 			if p.type!='checkgrid': continue
-			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=setVar(p))
+			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
 			for k,v in p.opts.items():
 				if not isinstance(v, (tuple, list)): v = (v, None)
 				elif len(v) < 2: v = (v[0], None)

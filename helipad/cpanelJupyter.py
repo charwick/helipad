@@ -1,6 +1,6 @@
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
 from IPython.display import display
-from helipad.graph import Plot
+from helipad.param import Param
 import os
 
 class Cpanel(VBox):
@@ -42,6 +42,7 @@ class Cpanel(VBox):
 					
 				return sv2
 			else: return sv
+		Param.setVar = setVar
 		
 		def renderParam(param, func, title, val, circle=None):
 			i=None
@@ -78,10 +79,11 @@ class Cpanel(VBox):
 				for k,v in param.opts.items():
 					if not isinstance(v, (tuple, list)): v = (v, None)
 					elif len(v) < 2: v = (v[0], None)
-					param.element[k] = interactive(setVar(param, k), val=param.vars[k])
+					param.element[k] = interactive(param.setVar(k), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
 					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
-				i = Accordion(children=[HBox(list(param.element.values()))])
+				param.containerElement = HBox(list(param.element.values()))
+				i = Accordion(children=[param.containerElement])
 				i.set_title(0, title)
 				i.add_class('helipad_checkgrid')
 	
@@ -100,7 +102,7 @@ class Cpanel(VBox):
 		def constructAccordion(param, itemList):
 			param.element = {}
 			for item, good in itemList.items():
-				param.element[item] = renderParam(param, setVar(param, item), item.title(), param.get(item), circle=good.color)
+				param.element[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
 		
 			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
@@ -113,7 +115,7 @@ class Cpanel(VBox):
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, setVar(param), param.title, param.get())
+			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and not param.event: param.element.children[1].value = '10000'
@@ -137,7 +139,7 @@ class Cpanel(VBox):
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, setVar(param), param.title, param.get())
+			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 		
 		#Checkgrids

@@ -127,7 +127,7 @@ class Helipad:
 		del self.params['num_'+name]
 		return True
 		
-	#Deprecated in Helipad 1.2
+	#Deprecated in Helipad 1.2 and moved to TimeSeries.plots
 	#Remove in Helipad 1.4
 	@property
 	def plots(self):

@@ -202,29 +202,20 @@ class TimeSeries(BaseVisualization):
 	
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		if getattr(self.model, 'cpanel', False):
-			if isIpy(): self.model.cpanel.invalidate()
-			else: raise RuntimeError('Cannot add plots after control panel is drawn')
-		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack, selected=selected)
-		if position is None or position > len(self.plots):
-			self.selector.opts[name] = label
-			self.plots[name] = plot
+		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
+		
+		self.selector.addItem(name, label, position, selected)
+		if position is None or position > len(self.plots): self.plots[name] = plot
 		else:		#Reconstruct the dicts because there's no insert method…
-			newopts, newplots, i = ({}, {}, 1)
-			for k,v in self.selector.opts.items():
+			newplots, i = ({}, 1)
+			for k,v in self.plots.items():
 				if position==i:
-					newopts[name] = label
 					newplots[name] = plot
-				newopts[k] = v
-				newplots[k] = self.plots[k]
+				newplots[k] = v
 				i+=1
-			self.selector.opts = newopts
 			self.plots = newplots
 		
-		self.selector.vars[name] = selected
-		if selected: self.selector.default.append(name)
-		if getattr(self.model, 'cpanel', False) and not self.model.cpanel.valid: self.model.cpanel.__init__(self.model, redraw=True) #Redraw if necessary
-		
+		plot.selected = selected #Do this after CheckgridParam.addItem
 		return plot
 	
 	def removePlot(self, name, reassign=None):
@@ -251,9 +242,6 @@ class TimeSeries(BaseVisualization):
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
 class Plot(Item):
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-	
 	@property
 	def selected(self): return self.model.params['plots'].get(self.name)
 	

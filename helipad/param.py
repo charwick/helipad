@@ -343,7 +343,30 @@ class CheckgridParam(Param):
 		if hasattr(self, 'element') and isIpy():
 			for e in self.element.values(): e.children[0].disabled = disable
 		else: super().disabled(disable)
-
+	
+	def addItem(self, name, label, position=None, selected=False):
+		if getattr(self, 'element', False) and not isIpy(): raise RuntimeError('Cannot add checkgrid items after control panel is drawn')
+		
+		if position is None or position > len(self.vars): self.opts[name] = label
+		else:		#Reconstruct opts because there's no insert method
+			newopts, i = ({}, 1)
+			for k,v in self.opts.items():
+				if position==i: newopts[name] = label
+				newopts[k] = v
+				i+=1
+			self.opts = newopts
+		
+		#Refresh
+		if getattr(self, 'containerElement', False):
+			from ipywidgets import interactive
+			self.element[name] = interactive(self.setVar(name), val=selected)
+			self.element[name].children[0].description = label
+			if position is None or position > len(self.vars): self.containerElement.children += (self.element[name],)
+			else: self.containerElement.children = self.containerElement.children[:position-1] + (self.element[name],) + self.containerElement.children[position-1:]
+			
+		self.vars[name] = selected
+		if selected: self.default.append(name)
+		
 #This object is instantiated once and lives in model.shocks
 class Shocks:
 	def __init__(self, model):
