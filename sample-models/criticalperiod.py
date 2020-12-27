@@ -110,6 +110,7 @@ viz = heli.useVisual(Charts)
 # lplot.addSeries('adultLanguage', 'Adult Language', 'blue')
 
 # gplot = viz.addPlot('geno', 'Genotypes')
+gchart = viz.addChart('geno', 'Genotypes')
 
 def genoReporter(age):
 	def rep(model):
@@ -119,6 +120,6 @@ gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for age in range(10):
 	heli.data.addReporter('geno-'+str(age), genoReporter(age))
 	# gplot.addSeries('geno-'+str(age), 'Capacity age '+str(age), '#'+gcolors[age])
-gchart = viz.addChart('geno', 'Genotypes', {i:'geno-'+str(i) for i in range(10)}, color=['#'+c for c in gcolors])
+	gchart.addBar('geno-'+str(age), str(age), '#'+gcolors[age])
 
 heli.launchCpanel()

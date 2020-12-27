@@ -287,7 +287,15 @@ class Charts(BaseVisualization):
 		self.charts = {}
 		
 		class Chart(Item):
-			pass
+			def __init__(self, **kwargs):
+				super().__init__(**kwargs)
+				self.bars = []
+			
+			def addBar(self, reporter, label, color='blue', error=None, position=None):
+				bar = Item(reporter=reporter, label=label, color=color, error=error)
+				if position is None or position>=len(self.bars): self.bars.append(bar)
+				else: self.bars.insert(position-1, bar)
+				
 		self.chartclass = Chart
 	
 	@property
@@ -315,7 +323,10 @@ class Charts(BaseVisualization):
 		
 		#Cycle over charts
 		for cname, chart in self.activeCharts.items():
-			chart.rects = chart.axes.bar(range(len(chart.reporters)), [0 for i in range(len(chart.reporters))], color=chart.color)
+			rects = chart.axes.bar(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
+			for bar, rect in zip(chart.bars, rects): bar.rect = rect
+			
+			chart.axes.set_xticklabels([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
 			
 			if chart.logscale:
@@ -327,16 +338,16 @@ class Charts(BaseVisualization):
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
 		for c in self.activeCharts.values():
-			for i,r in enumerate(c.reporters.values()):
-				c.rects[i].set_height(data[r])
+			for b in c.bars: b.rect.set_height(data[b.reporter])
 			c.axes.relim()
 			c.axes.autoscale_view(tight=False)
 		
 		plt.pause(0.0001)
 	
 	#reporters format: {'label':'reporterName'}
-	def addChart(self, name, label, reporters, logscale=False, color='blue'):
-		self.charts[name] = self.chartclass(name=name, label=label, reporters=reporters, selected=True, logscale=logscale, color=color)
+	def addChart(self, name, label, logscale=False):
+		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale)
+		return self.charts[name]
 	
 def keepEvery(lst, n):
 	i,l = (1, [])
