@@ -412,7 +412,7 @@ class Helipad:
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
 		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
-		for prim in self.primitives.values(): prim.clear()												  #Clear any surviving agents from last run
+		for ags in self.agents.values(): ags.clear()														#Clear any surviving agents from last run
 		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
 		self.hasModel = True
 		
@@ -610,9 +610,9 @@ class Helipad:
 			print('Run',str(i+1)+'/'+str(len(space))+':',', '.join([k+'='+('\''+v+'\'' if isinstance(v, str) else str(v)) for k,v in run.items()])+'…')
 			for p in self.allParams:
 				if not getattr(p, 'config', False): p.reset()
-			self.setup()
-			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
 			
+			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
+			self.setup()
 			self.start()
 			
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
