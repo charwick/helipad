@@ -314,7 +314,7 @@ class Helipad:
 	def clearHooks(self, place):
 		if isinstance(place, list): return [self.clearHooks(p) for p in place]
 		if not place in self.hooks or not len(self.hooks[place]): return False
-		self.hooks[place] = []
+		self.hooks[place].clear()
 		return True
 	
 	#Returns the value of the last function in the list
@@ -339,7 +339,7 @@ class Helipad:
 		del self.events[name]
 		return True
 	
-	def clearEvents(self): self.events = {}
+	def clearEvents(self): self.events.clear()
 	
 	def useVisual(self, viz):
 		if hasattr(self, 'breed'):
@@ -412,7 +412,7 @@ class Helipad:
 		#Initialize agents
 		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
 		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
-		self.agents = {k: [] for k in self.primitives.keys()}												#Clear any surviving agents from last run
+		for prim in self.primitives.values(): prim.clear()												  #Clear any surviving agents from last run
 		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
 		self.hasModel = True
 		
@@ -885,8 +885,12 @@ class Event:
 			return True
 	
 	def reset(self):
-		self.data = [] if self.repeat else None
-		self.triggered = [] if self.repeat else False
+		if self.repeat:
+			self.data.clear()
+			self.triggered.clear()
+		else:
+			self.data = None
+			self.triggered = False
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)

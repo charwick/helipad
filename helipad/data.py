@@ -68,7 +68,7 @@ class Data:
 			self[var].append(reporter(model))
 	
 	def reset(self):
-		self.all = {k: [] for k in self.all.keys()}
+		for c in self.all.values(): c.clear()
 	
 	@property
 	def dataframe(self):

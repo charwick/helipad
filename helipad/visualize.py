@@ -327,7 +327,8 @@ class Charts(BaseVisualization):
 			rects = cfunc(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
 			for bar, rect in zip(chart.bars, rects): bar.rect = rect
 			
-			chart.axes.set_xticklabels([bar.label for bar in chart.bars])
+			cxfunc = chart.axes.set_yticklabels if chart.horizontal else chart.axes.set_xticklabels
+			cxfunc([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
 			chart.axes.set_title(chart.label)
 			
