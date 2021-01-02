@@ -144,7 +144,7 @@ class Cpanel(VBox):
 		
 		#Checkgrids
 		for param in model.params.values():
-			if param.type!='checkgrid': continue
+			if param.type!='checkgrid' or param.name=='shocks': continue
 			acc = renderParam(param, None, param.title, None)
 			if acc is not None: self.children += (acc,)
 		
@@ -153,16 +153,16 @@ class Cpanel(VBox):
 		
 		#Shocks
 		if len(model.shocks.shocks):
-			def sfunc(self, val): self.active = val
 			def sfuncButton(slef, *args): slef.do(self.model)
-			model.shocks.Shock.set = sfunc
 			model.shocks.Shock.setButton = sfuncButton
+			model.params['shocks'].element = {}
 			children = []
 			for shock in model.shocks.shocksExceptButtons.values():
-				shock.element = interactive(shock.set, val=shock.active)
+				shock.element = interactive(shock.setCallback, val=shock.selected)
 				shock.element.children[0].description = shock.name
 				shock.element.children[0].description_tooltip = shock.desc if shock.desc is not None else ''
 				children.append(shock.element)
+				model.params['shocks'].element[shock.name] = shock.element #For setting via model.param()
 			buttons = []
 			for shock in model.shocks.buttons.values():
 				shock.element = Button(description=shock.name, icon='bolt')

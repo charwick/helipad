@@ -72,6 +72,7 @@ class Helipad:
 			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
+			self.addParameter('shocks', 'Shocks', 'checkgrid', opts={}, dflt={}, runtime=True, config=True)
 		
 			#Check for updates
 			from helipad.__init__ import __version__

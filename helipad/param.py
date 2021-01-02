@@ -8,16 +8,6 @@ from numpy import arange
 from itertools import combinations
 from numpy import random
 
-#In the absence of Tkinter, minimal replacements
-if isIpy():
-	class StringVar:
-		def __init__(self, value=None): self.val=value
-		def get(self): return self.val
-		def set(self, val): self.val = val
-	BooleanVar = StringVar
-else:
-	from tkinter import StringVar, BooleanVar
-
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
@@ -285,7 +275,7 @@ class CheckgridParam(Param):
 	def keys(self): return list(self.vars.keys())
 	
 	def getSpecific(self, item=None):
-		useElement = hasattr(self, 'element') and not isIpy()
+		useElement = hasattr(self, 'element') and not isIpy() and self.name!='shocks'
 		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
@@ -302,7 +292,7 @@ class CheckgridParam(Param):
 			for i in self.keys: self.set(i, i in item)
 		else:
 			if hasattr(self, 'element') and not isIpy(): self.element.checks[item].set(val)
-			else: self.vars[item] = val
+			self.vars[item] = val
 			
 			if updateGUI and isIpy() and hasattr(self, 'element'): self.element[item].children[0].value = val
 	
@@ -346,17 +336,17 @@ class Shocks:
 		self.shocks = {}
 		self.model = model
 		
-		class Shock(Item):
-			def __init__(self, **kwargs):
-				self.boolvar = BooleanVar(value=kwargs['active'])
-				del kwargs['active']
-				super().__init__(**kwargs)
-			
+		class Shock(Item):	
 			@property
-			def active(self): return self.boolvar.get()
-			
-			@active.setter
-			def active(self, active): self.boolvar.set(active)
+			def selected(self2): return self.model.params['shocks'].get(self2.name)
+	
+			@selected.setter
+			def selected(self, val): self.active(val)
+	
+			def active(self2, val, updateGUI=True):
+				self.model.params['shocks'].set(self2.name, bool(val))
+				if updateGUI and not isIpy() and hasattr(self2, 'element'):
+					self2.element.BooleanVar.set(val)
 			
 			def do(self, model):
 				if self.param is not None:
@@ -369,6 +359,10 @@ class Shocks:
 							self.param.callback(model, self.param.name, newval)
 				else:
 					self.valFunc(model)
+			
+			def setCallback(self, val=None):
+				if not isIpy(): val = self.element.BooleanVar.get()
+				self.active(val, False)
 		self.Shock = Shock
 	
 	def __getitem__(self, index): return self.shocks[index]
@@ -393,8 +387,10 @@ class Shocks:
 			item=item,
 			valFunc=valFunc,
 			timerFunc=timerFunc,
-			active=active
+			selected=active
 		)
+		
+		if timerFunc != 'button': self.model.params['shocks'].addItem(name, name, selected=active)
 		
 	def step(self):
 		for name, shock in self.shocks.items():

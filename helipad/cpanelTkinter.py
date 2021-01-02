@@ -242,7 +242,7 @@ class Cpanel:
 		
 		#Checkgrid parameters
 		for p in self.model.params.values():
-			if p.type!='checkgrid': continue
+			if p.type!='checkgrid' or p.name=='shocks': continue
 			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
 			for k,v in p.opts.items():
 				if not isinstance(v, (tuple, list)): v = (v, None)
@@ -260,8 +260,14 @@ class Cpanel:
 		#Shock checkboxes and buttons
 		if self.model.shocks.number > 0:
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			frame8.checks = {}
+			active = self.model.param('shocks')
+			self.model.params['shocks'].element = frame8
 			for shock in self.model.shocks.shocksExceptButtons.values():
-				shock.element = Checkbutton(frame8.subframe, text=shock.name, var=shock.boolvar, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W)
+				bv = BooleanVar(value=shock.name in active)
+				shock.element = Checkbutton(frame8.subframe, text=shock.name, var=bv, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W, command=shock.setCallback)
+				shock.element.BooleanVar = bv #To set via the shock object
+				frame8.checks[shock.name] = bv #To set via the shock parameter
 				if self.balloon and shock.desc is not None: self.balloon.bind(shock.element, shock.desc)
 				shock.element.pack(fill=BOTH)
 			
