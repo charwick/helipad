@@ -22,7 +22,7 @@ class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		if not hasattr(self, 'obj'): self.obj=None
-		if self.obj and not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']}
+		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']} if self.obj else self.defaultVal
 		self.reset() #Populate with default values
 	
 	#Set values from defaults
@@ -100,31 +100,15 @@ class Param(Item):
 class MenuParam(Param):
 	type = 'menu'
 	
-	def __init__(self, **kwargs):
-		#Instantiate the objects once, because we don't want to overwrite them
-		self.value = StringVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:StringVar() for b in kwargs['keys']}
-		super().__init__(**kwargs)
-	
-	def setSpecific(self, val, item=None, updateGUI=True):
-		self.setParent(val, item, updateGUI)
-		if self.obj is None: self.value.set(self.opts[val])
-		else: self.value[item].set(self.opts[val])
-	
-	def getSpecific(self, item=None):
-		#Flip the k/v of the options dict and return the slug from the full text returned by the menu variable
-		flip = {y:x for x,y in self.opts.items()}
-		if self.obj is None: return flip[self.value.get()]								#Global parameter
-		else:
-			if item is None: return {o:flip[v.get()] for o,v in self.value.items()}		#Item parameter, item unspecified
-			else: return flip[self.value[item].get()]									#Item parameter, item specified
+	def setParent(self, val, item=None, updateGUI=True):
+		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if updateGUI and not isIpy() and hasattr(self, 'element'):
+			sv = self.element if self.obj is None else self.element[item]
+			sv.StringVar.set(self.opts[val]) #Saved the StringVar here
+		else: super().setParent(val, item, updateGUI)
 	
 	@property
 	def range(self): return self.opts.keys()
-	
-	def addKey(self, key):
-		if super().addkey(key) is None: return
-		self.value[key] = StringVar()
-		self.value[key].set(self.opts[self.defaultVal])
 	
 	#Choose first item of the list
 	@property
@@ -134,26 +118,15 @@ class CheckParam(Param):
 	defaultVal = False
 	type='check'
 	
-	def __init__(self, **kwargs):
-		#Instantiate the objects once, because we don't want to overwrite them
-		self.value = BooleanVar() if 'obj' not in kwargs or kwargs['obj'] is None else {b:BooleanVar() for b in kwargs['keys']}
-		super().__init__(**kwargs)
-	
-	def setSpecific(self, val, item=None, updateGUI=True):
-		self.setParent(val, item, updateGUI)
-		if self.obj is None: self.value.set(val)
-		else: self.value[item].set(val)
-	
-	def getSpecific(self, item=None):
-		if item is None and self.obj is not None: return {k:v.get() for k,v in self.value.items()}
-		else: return self.value.get() if self.obj is None else self.value[item].get()
+	def setParent(self, val, item=None, updateGUI=True):
+		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if updateGUI and not isIpy() and hasattr(self, 'element'):
+			sv = self.element if self.obj is None else self.element[item]
+			sv.BooleanVar.set(val) #Saved the BooleanVar here
+		else: super().setParent(val, item, updateGUI)
 	
 	@property
 	def range(self): return [False, True]
-	
-	def addKey(self, key):
-		if super().addkey(key) is None: return
-		self.value[key] = BooleanVar()
 
 class SliderParam(Param):
 	type='slider'

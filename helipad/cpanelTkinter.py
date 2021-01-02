@@ -32,14 +32,15 @@ class Cpanel:
 			def sv(val=None):
 				#Different widgets send different things to the callback…
 				if param.type=='slider': val = float(val)
-				elif param.type!='checkentry': val = param.get(item)
+				elif param.type=='menu': val = {y:x for x,y in param.opts.items()}[val]
+				elif param.type=='check': val = (param.element if item is None else param.element[item]).BooleanVar.get()
 				
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
 				
-				#If it's a slider, the parameter doesn't update automatically
-				if param.type=='slider': param.set(val, item, updateGUI=False)
+				#Parameters that don't update automatically
+				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
 			return sv
 		Param.setVar = setVar
 		
@@ -137,7 +138,9 @@ class Cpanel:
 				#These put the circle beside the widget
 				if param.type in ['check', 'checkentry']:
 					if param.type=='check':
-						el = Checkbutton(wrap, text=title, var=val, onvalue=True, offvalue=False, command=param.setVar(item), bg=bg)
+						v = BooleanVar(value=val)
+						el = Checkbutton(wrap, text=title, var=v, onvalue=True, offvalue=False, command=param.setVar(item), bg=bg)
+						el.BooleanVar = v
 					elif param.type=='checkentry':
 						dflt = param.get(item)
 						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=param.setVar(item))
@@ -153,7 +156,9 @@ class Cpanel:
 				#These need a separate label
 				else:					
 					if param.type == 'menu':
-						el = OptionMenu(wrap, val, *param.opts.values(), command=param.setVar(item))
+						v = StringVar(value=param.opts[val])
+						el = OptionMenu(wrap, v, *param.opts.values(), command=param.setVar(item))
+						el.StringVar = v #Save to set later
 						el.config(bg=bg)
 					elif param.type == 'slider':
 						if isinstance(param.opts, dict): el = Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient=HORIZONTAL, length=150, highlightthickness=0, command=param.setVar(item), bg=bg)
