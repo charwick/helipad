@@ -13,7 +13,7 @@ from math import ceil
 class Cpanel:	
 	def __init__(self, model):
 		self.model = model
-		self.parent = model.root
+		self.parent = Tk()
 		try:
 			import Pmw
 			self.balloon = Pmw.Balloon(self.parent)
@@ -61,11 +61,11 @@ class Cpanel:
 				mode = self.cget('mode')
 				return mode if isinstance(mode, str) else self.cget('mode').string
 			
-			def determinate(self, det, refresh=True):
-				self.config(mode='determinate' if det else 'indeterminate')
+			def determinate(self2, det, refresh=True):
+				self2.config(mode='determinate' if det else 'indeterminate')
 				if det: super().stop()
-				elif self.running: super().start()
-				if refresh: model.root.update()
+				elif self2.running: super().start()
+				if refresh: self.parent.update()
 			def update(self, n): self['value'] = n*100
 			def start(self):
 				if self.mode =='indeterminate': super().start()

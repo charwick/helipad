@@ -12,9 +12,7 @@ from helipad.param import *
 import matplotlib, asyncio
 import time	#For performance testing
 
-if not isIpy():
-	from tkinter import Tk
-	matplotlib.use('TkAgg')
+if not isIpy(): matplotlib.use('TkAgg')
 else: matplotlib.use('nbagg')
 
 from helipad.data import Data
@@ -59,7 +57,6 @@ class Helipad:
 		
 		#A few things that only make sense to do if it's the topmost model
 		if not hasattr(self, 'breed'):
-			if not isIpy(): self.root = Tk() #Got to initialize Tkinter first in order for StringVar() and such to work
 			
 			#Privileged parameters
 			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
@@ -523,7 +520,7 @@ class Helipad:
 				
 				elif getattr(self, 'cpanel', None):
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
-					else: self.root.update() #Make sure we don't hang the interface if plotless
+					else: self.cpanel.parent.update() #Make sure we don't hang the interface if plotless
 			
 				# Performance indicator
 				if self.timer:
@@ -571,7 +568,7 @@ class Helipad:
 		if getattr(self, 'cpanel', False):
 			self.cpanel.progress.done()
 			self.cpanel.runButton.terminate()
-		elif getattr(self, 'visual', False): self.root.destroy() #Quit if we're in cpanel-less mode
+		elif getattr(self, 'visual', False) and getattr(self, 'root', False): self.root.destroy() #Quit if we're in cpanel-less mode
 		
 		#Re-enable parameters
 		for param in self.allParams:
@@ -745,7 +742,7 @@ class Helipad:
 			print(k+': ', v)
 
 	def launchCpanel(self):
-		if not isIpy() and not hasattr(self, 'root'): return
+		if hasattr(self, 'breed'): warnings.warn('Control panel can only be launched on the top-level model.', None, 2)
 		
 		self.doHooks('CpanelPreLaunch', [self])
 		
@@ -766,7 +763,7 @@ class Helipad:
 			self.cpanel = Cpanel(self)
 			self.debugConsole()
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
-			self.root.mainloop()		#Launch the control panel
+			self.cpanel.parent.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit
 			if getattr(self, 'cpanel', False): self.cpanel.invalidate('Control panel was redrawn in another cell.')
@@ -805,7 +802,7 @@ class Helipad:
 					self.visual.fig.canvas.draw()
 		
 				#Pause on spacebar
-				elif event.key == ' ':
+				elif event.key == ' ' and self.hasModel:
 					if self.running: self.stop()
 					else: self.start()
 		
@@ -825,8 +822,10 @@ class Helipad:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 		self.doHooks('visualLaunch', [self, self.visual])
 		
-		#If we're running in cpanel-less mode, hook through mainloop so it doesn't exit on pause
+		#If we're running in cpanel-less mode, hook through a Tkinter loop so it doesn't exit on pause
 		if not hasattr(self, 'cpanel') and not self.visual.isNull and not isIpy():
+			from tkinter import Tk
+			self.root = Tk()
 			self.root.after(1, self.start)
 			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
 			self.debugConsole()
