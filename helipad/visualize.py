@@ -21,6 +21,10 @@ class BaseVisualization:
 	@abstractmethod
 	def update(self, data): pass
 	
+	#Do something when events happen. Mandatory to implement.
+	@abstractmethod
+	def event(self, t, color, **kwargs): pass
+	
 	#Called from model.terminate(). Optional to implement
 	def terminate(self, model): pass
 
@@ -276,7 +280,7 @@ class TimeSeries(BaseVisualization):
 		if name in self.selector.default: self.selector.default.remove(name)
 		return True
 	
-	def addVertical(self, t, color, linestyle, linewidth):
+	def event(self, t, color='#CC0000', linestyle='--', linewidth=1, **kwargs):
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 		
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
@@ -285,6 +289,7 @@ class TimeSeries(BaseVisualization):
 class Charts(BaseVisualization):
 	def __init__(self, model):
 		self.charts = {}
+		self.events = {}
 		
 		class Chart(Item):
 			def __init__(self, **kwargs):
@@ -363,6 +368,7 @@ class Charts(BaseVisualization):
 				bfunc(b.data[i])
 			c.axes.relim()
 			c.axes.autoscale_view(tight=False)
+		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
@@ -380,11 +386,16 @@ class Charts(BaseVisualization):
 		self.timeslider.set_val(t)
 		self.timeslider.ax.set_xlim(0,t) #Refresh
 		
+		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 		plt.pause(0.0001)
 	
 	def addChart(self, name, label, logscale=False, horizontal=False):
 		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale, horizontal=horizontal)
 		return self.charts[name]
+	
+	def event(self, t, color='#FDC', **kwargs):
+		ref = self.refresh.get()
+		self.events[ceil(t/ref)*ref] = color
 	
 def keepEvery(lst, n):
 	i,l = (1, [])

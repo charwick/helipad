@@ -103,6 +103,9 @@ def agentDie(agent):
 		r = random.randrange(len(baby.dominantLap))
 		baby.dominantLap[r] = -baby.dominantLap[r]
 
+# @heli.event(repeat=True)
+# def test(model): return model.t%100==95
+
 #Visualization
 from helipad.visualize import TimeSeries, Charts
 viz = heli.useVisual(Charts)

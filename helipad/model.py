@@ -12,8 +12,7 @@ from helipad.param import *
 import matplotlib, asyncio
 import time	#For performance testing
 
-if not isIpy(): matplotlib.use('TkAgg')
-else: matplotlib.use('nbagg')
+matplotlib.use('nbagg' if isIpy() else 'TkAgg')
 
 from helipad.data import Data
 import helipad.agent as agent
@@ -490,8 +489,8 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if (not e.triggered or e.repeat) and e.check(self) and self.visual is not None and e.linestyle and e.name!=self.param('stopafter'):
-				self.visual.addVertical(self.t, e.color, e.linestyle, e.linewidth)
+			if (not e.triggered or e.repeat) and e.check(self) and self.visual is not None and e.name!=self.param('stopafter'):
+				self.visual.event(self.t, **e.kwargs)
 		self.doHooks('modelPostStep', [self])
 		return self.t
 	
@@ -863,17 +862,17 @@ class MultiLevel(agent.baseAgent, Helipad):
 		super().step(stage)
 
 class Event:
-	def __init__(self, name, trigger, repeat=False, color='#CC0000', linestyle='--', linewidth=1):
+	def __init__(self, name, trigger, repeat=False, **kwargs):
 		self.name = name
 		self.trigger = trigger
-		self.color = color
-		self.linestyle = linestyle
-		self.linewidth = linewidth
 		self.repeat = repeat
+		self.kwargs = kwargs
+		self.data = []
+		self.triggered = []
 		self.reset()
 	
 	def check(self, model):
-		if self.triggered: return False
+		if self.triggered and not self.repeat: return False
 		if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
 			data = {k: v[0] for k,v in model.data.getLast(1).items()}
 			if self.repeat:
