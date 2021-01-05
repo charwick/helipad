@@ -13,7 +13,7 @@ import matplotlib, asyncio
 import time	#For performance testing
 
 if not isIpy():
-	from tkinter import *
+	from tkinter import Tk
 	matplotlib.use('TkAgg')
 else: matplotlib.use('nbagg')
 

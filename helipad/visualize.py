@@ -297,6 +297,8 @@ class Charts(BaseVisualization):
 				else: self.bars.insert(position-1, bar)
 				
 		self.chartclass = Chart
+		model.params['updateEvery'].runtime=False
+		self.refresh = model.params['updateEvery']
 	
 	@property
 	def isNull(self):
@@ -308,6 +310,7 @@ class Charts(BaseVisualization):
 	
 	def launch(self, title):
 		if not len(self.activeCharts): return #Windowless mode
+		from matplotlib.widgets import Slider
 		
 		self.lastUpdate = 0
 		n = len(self.activeCharts)
@@ -315,7 +318,7 @@ class Charts(BaseVisualization):
 		y = ceil(n/x)
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
-		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None, constrained_layout=True)
+		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
 		if not isIpy(): self.fig.canvas.set_window_title(title)
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
@@ -325,12 +328,14 @@ class Charts(BaseVisualization):
 		for cname, chart in self.activeCharts.items():
 			cfunc = chart.axes.barh if chart.horizontal else chart.axes.bar
 			rects = cfunc(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
-			for bar, rect in zip(chart.bars, rects): bar.rect = rect
+			for bar, rect in zip(chart.bars, rects):
+				bar.rect = rect
+				bar.data = []
 			
 			cxfunc = chart.axes.set_yticklabels if chart.horizontal else chart.axes.set_xticklabels
 			cxfunc([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
-			chart.axes.set_title(chart.label)
+			chart.axes.set_title(chart.label, fontdict={'fontsize':10})
 			
 			if chart.logscale:
 				if chart.horizontal:
@@ -340,7 +345,24 @@ class Charts(BaseVisualization):
 					chart.axes.set_yscale('log')
 					chart.axes.set_ylim(1/2, 2, auto=True)
 		
+		#Time slider
+		ref = self.refresh.get()
+		plt.subplots_adjust(bottom=0.12) #Make room for the slider
+		sax = plt.axes([0.1,0.01,.75,0.03], facecolor='#EEF')
+		self.timeslider = Slider(sax, 't=', 0, ref, ref, valstep=ref, closedmin=False)
+		self.timeslider.on_changed(self.scrub)
+		
 		plt.draw()
+	
+	#Update the graph to a particular model time
+	def scrub(self, t):
+		i = int(t/self.refresh.get())-1
+		for c in self.activeCharts.values():
+			for b in c.bars:
+				bfunc = b.rect.set_width if c.horizontal else b.rect.set_height
+				bfunc(b.data[i])
+			c.axes.relim()
+			c.axes.autoscale_view(tight=False)
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
@@ -348,8 +370,15 @@ class Charts(BaseVisualization):
 			for b in c.bars:
 				bfunc = b.rect.set_width if c.horizontal else b.rect.set_height
 				bfunc(data[b.reporter])
+				b.data.append(data[b.reporter]) #Keep track
 			c.axes.relim()
 			c.axes.autoscale_view(tight=False)
+		
+		#Update slider
+		t = len(next(iter(next(iter(self.activeCharts.values())).bars)).data)*self.refresh.get()
+		self.timeslider.valmax = t
+		self.timeslider.set_val(t)
+		self.timeslider.ax.set_xlim(0,t) #Refresh
 		
 		plt.pause(0.0001)
 	
