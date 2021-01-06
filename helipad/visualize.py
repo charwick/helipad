@@ -356,8 +356,9 @@ class Charts(BaseVisualization):
 				bar.errHist = []
 				bar.data = []
 			
-			cxfunc = chart.axes.set_yticklabels if chart.horizontal else chart.axes.set_xticklabels
-			cxfunc([bar.label for bar in chart.bars])
+			cstlfunc, cstfunc = (chart.axes.set_yticklabels, chart.axes.set_yticks) if chart.horizontal else (chart.axes.set_xticklabels, chart.axes.set_xticks)
+			cstfunc(range(len(chart.bars)))
+			cstlfunc([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
 			chart.axes.set_title(chart.label, fontdict={'fontsize':10})
 			

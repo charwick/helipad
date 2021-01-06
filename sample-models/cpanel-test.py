@@ -79,7 +79,7 @@ bar2 = viz.addChart('prop2', 'Horizontal Property', horizontal=True)
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):
 	heli.data.addReporter('prop'+str(i), heli.data.agentReporter('prop'+str(i), std=0.1))
-	(bar1 if i<=10 else bar2).addBar('prop'+str(i), str(i), '#'+gcolors[i%10])
+	(bar1 if i<10 else bar2).addBar('prop'+str(i), str(i), '#'+gcolors[i%10])
 
 #===============
 # LAUNCH
