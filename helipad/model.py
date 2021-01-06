@@ -395,7 +395,7 @@ class Helipad:
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in next(iter(self.primitives.values())).breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
-			if self.visual is not None and hasattr(self.visual, 'plots'):
+			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
 				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
 	
 		if len(self.goods) >= 2:

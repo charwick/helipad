@@ -113,8 +113,8 @@ viz = heli.useVisual(Charts)
 # lplot.addSeries('adultLanguage', 'Adult Language', 'blue')
 
 # gplot = viz.addPlot('geno', 'Genotypes')
-gchart = viz.addChart('geno', 'Capacity by stage (dominant allele)')
-gchart2 = viz.addChart('rec', 'Capacity by stage (recessive allele)', horizontal=True)
+gchart = viz.addPlot('geno', 'Capacity by stage (dominant allele)')
+gchart2 = viz.addPlot('rec', 'Capacity by stage (recessive allele)', horizontal=True)
 
 def genoReporter(age, gene=False):
 	def rep(model):

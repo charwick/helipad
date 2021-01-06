@@ -288,11 +288,14 @@ class TimeSeries(BaseVisualization):
 
 class Charts(BaseVisualization):
 	def __init__(self, model):
-		self.charts = {}
+		self.plots = {}
 		self.events = {}
 		
-		class Chart(Item):
+		class BarChart(Item):
+			type = 'bar'
 			def __init__(self, **kwargs):
+				for arg in ['horizontal', 'logscale']:
+					if not arg in kwargs: kwargs[arg] = False
 				super().__init__(**kwargs)
 				self.bars = []
 			
@@ -308,24 +311,24 @@ class Charts(BaseVisualization):
 				if position is None or position>=len(self.bars): self.bars.append(bar)
 				else: self.bars.insert(position-1, bar)
 				
-		self.chartclass = Chart
+		self.chartclass = {'bar': BarChart}
 		model.params['updateEvery'].runtime=False
 		self.refresh = model.params['updateEvery']
 	
 	@property
 	def isNull(self):
-		return not [chart for chart in self.charts.values() if chart.selected]
+		return not [chart for chart in self.plots.values() if chart.selected]
 	
 	@property
-	def activeCharts(self):
-		return {k:chart for k,chart in self.charts.items() if chart.selected}
+	def activePlots(self):
+		return {k:chart for k,chart in self.plots.items() if chart.selected}
 	
 	def launch(self, title):
-		if not len(self.activeCharts): return #Windowless mode
+		if not len(self.activePlots): return #Windowless mode
 		from matplotlib.widgets import Slider
 		
 		self.lastUpdate = 0
-		n = len(self.activeCharts)
+		n = len(self.activePlots)
 		x = ceil(sqrt(n))
 		y = ceil(n/x)
 		
@@ -334,7 +337,8 @@ class Charts(BaseVisualization):
 		if not isIpy(): self.fig.canvas.set_window_title(title)
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
-		for plot, axes in zip(self.activeCharts.values(), plots): plot.axes = axes
+		if isinstance(plots[0], ndarray): plots = plots.flatten() #The x,y returns a 2D array
+		for plot, axes in zip(self.activePlots.values(), plots): plot.axes = axes
 		
 		#Position graph window
 		fm = plt.get_current_fig_manager()
@@ -345,13 +349,15 @@ class Charts(BaseVisualization):
 			fm.window.wm_geometry("+400+0")
 		
 		#Cycle over charts
-		for cname, chart in self.activeCharts.items():
+		for cname, chart in self.activePlots.items():
+			chart.axes.set_title(chart.label, fontdict={'fontsize':10})
+			
 			cfunc, eax = (chart.axes.barh, 'xerr') if chart.horizontal else (chart.axes.bar, 'yerr')
 			kwa = {eax: [0 for bar in chart.bars]} #Make sure our error bars go the right way
 			rects = cfunc(range(len(chart.bars)), [0 for i in chart.bars], color=[bar.color for bar in chart.bars], **kwa)
 			errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
 			for bar, rect, err in zip(chart.bars, rects, errors):
-				bar.rect = rect
+				bar.element = rect
 				bar.errPath = err.vertices
 				bar.errHist = []
 				bar.data = []
@@ -360,7 +366,6 @@ class Charts(BaseVisualization):
 			cstfunc(range(len(chart.bars)))
 			cstlfunc([bar.label for bar in chart.bars])
 			chart.axes.margins(x=0)
-			chart.axes.set_title(chart.label, fontdict={'fontsize':10})
 			
 			if chart.logscale:
 				if chart.horizontal:
@@ -382,12 +387,11 @@ class Charts(BaseVisualization):
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
 		
-		for c in self.activeCharts.values():
+		for c in self.activePlots.values():
 			getlim, setlim = (c.axes.get_xlim, c.axes.set_xlim) if c.horizontal else (c.axes.get_ylim, c.axes.set_ylim)
 			lims = list(getlim())
-			
 			for b in c.bars:
-				setbar = b.rect.set_width if c.horizontal else b.rect.set_height
+				setbar = b.element.set_width if c.horizontal else b.element.set_height
 				setbar(data[b.reporter])
 				b.data.append(data[b.reporter]) #Keep track
 				
@@ -408,7 +412,7 @@ class Charts(BaseVisualization):
 			c.axes.autoscale_view(tight=False)
 		
 		#Update slider
-		t = len(next(iter(next(iter(self.activeCharts.values())).bars)).data)*self.refresh.get()
+		t = len(next(iter(next(iter(self.activePlots.values())).bars)).data)*self.refresh.get()
 		self.timeslider.valmax = t
 		self.timeslider.set_val(t)
 		self.timeslider.ax.set_xlim(0,t) #Refresh
@@ -419,9 +423,9 @@ class Charts(BaseVisualization):
 	#Update the graph to a particular model time
 	def scrub(self, t):
 		i = int(t/self.refresh.get())-1
-		for c in self.activeCharts.values():
+		for c in self.activePlots.values():
 			for b in c.bars:
-				setbar = b.rect.set_width if c.horizontal else b.rect.set_height
+				setbar = b.element.set_width if c.horizontal else b.element.set_height
 				setbar(b.data[i])
 				
 				if b.err: #Update error bars
@@ -430,9 +434,10 @@ class Charts(BaseVisualization):
 
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
-	def addChart(self, name, label, logscale=False, horizontal=False):
-		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale, horizontal=horizontal)
-		return self.charts[name]
+	def addPlot(self, name, label, **kwargs):
+		if not 'type' in kwargs: kwargs['type'] = 'bar'
+		self.plots[name] = self.chartclass[kwargs['type']](name=name, label=label, selected=True, **kwargs)
+		return self.plots[name]
 	
 	def event(self, t, color='#FDC', **kwargs):
 		ref = self.refresh.get()

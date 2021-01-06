@@ -72,10 +72,11 @@ def agentInit(agent, model):
 def agentStep(agent, model, stage):
 	for i in range(20):
 		v = getattr(agent, 'prop'+str(i))
-		setattr(agent, 'prop'+str(i), v+1 if random.randint(0, 1) else v-1)
+		setattr(agent, 'prop'+str(i), v-1 if random.randint(0, 1) else v+1)
 
-bar1 = viz.addChart('prop', 'My Property')
-bar2 = viz.addChart('prop2', 'Horizontal Property', horizontal=True)
+bar1 = viz.addPlot('prop', 'My Property')
+bar2 = viz.addPlot('prop2', 'Horizontal Property', horizontal=True)
+
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):
 	heli.data.addReporter('prop'+str(i), heli.data.agentReporter('prop'+str(i), std=0.1))
