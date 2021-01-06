@@ -296,8 +296,15 @@ class Charts(BaseVisualization):
 				super().__init__(**kwargs)
 				self.bars = []
 			
-			def addBar(self, reporter, label, color='blue', error=None, position=None):
-				bar = Item(reporter=reporter, label=label, color=color, error=error)
+			def addBar(self, reporter, label, color='blue', position=None):
+				bar = Item(reporter=reporter, label=label, color=color)
+				
+				#Add subsidiary series (e.g. percentile bars)
+				bar.err = []
+				if reporter in model.data.reporters and isinstance(model.data.reporters[reporter].func, tuple):
+					for p, f in model.data.reporters[reporter].func[1].items():
+						bar.err.append(reporter+'-'+str(p)+'-pctile')
+				
 				if position is None or position>=len(self.bars): self.bars.append(bar)
 				else: self.bars.insert(position-1, bar)
 				
@@ -331,10 +338,14 @@ class Charts(BaseVisualization):
 		
 		#Cycle over charts
 		for cname, chart in self.activeCharts.items():
-			cfunc = chart.axes.barh if chart.horizontal else chart.axes.bar
-			rects = cfunc(range(len(chart.bars)), [0 for i in range(len(chart.bars))], color=[bar.color for bar in chart.bars])
-			for bar, rect in zip(chart.bars, rects):
+			cfunc, eax = (chart.axes.barh, 'xerr') if chart.horizontal else (chart.axes.bar, 'yerr')
+			kwa = {eax: [0 for bar in chart.bars]} #Make sure our error bars go the right way
+			rects = cfunc(range(len(chart.bars)), [0 for i in chart.bars], color=[bar.color for bar in chart.bars], **kwa)
+			errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
+			for bar, rect, err in zip(chart.bars, rects, errors):
 				bar.rect = rect
+				bar.errPath = err.vertices
+				bar.errHist = []
 				bar.data = []
 			
 			cxfunc = chart.axes.set_yticklabels if chart.horizontal else chart.axes.set_xticklabels
@@ -359,25 +370,32 @@ class Charts(BaseVisualization):
 		
 		plt.draw()
 	
-	#Update the graph to a particular model time
-	def scrub(self, t):
-		i = int(t/self.refresh.get())-1
-		for c in self.activeCharts.values():
-			for b in c.bars:
-				bfunc = b.rect.set_width if c.horizontal else b.rect.set_height
-				bfunc(b.data[i])
-			c.axes.relim()
-			c.axes.autoscale_view(tight=False)
-		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
-	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
+		
 		for c in self.activeCharts.values():
+			getlim, setlim = (c.axes.get_xlim, c.axes.set_xlim) if c.horizontal else (c.axes.get_ylim, c.axes.set_ylim)
+			lims = list(getlim())
+			
 			for b in c.bars:
-				bfunc = b.rect.set_width if c.horizontal else b.rect.set_height
-				bfunc(data[b.reporter])
+				setbar = b.rect.set_width if c.horizontal else b.rect.set_height
+				setbar(data[b.reporter])
 				b.data.append(data[b.reporter]) #Keep track
-			c.axes.relim()
+				
+				if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
+				if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
+				
+				#Update error bars
+				if b.err:
+					errs = [data[e] for e in b.err]
+					errs.sort()
+					for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
+						if len(errs) >= i+1: cap[0 if c.horizontal else 1] = errs[i]
+						if errs[i] < lims[0]: lims[0] = errs[i]
+						if errs[i] > lims[1]: lims[1] = errs[i]
+					b.errHist.append(errs)
+				
+			setlim(lims)
 			c.axes.autoscale_view(tight=False)
 		
 		#Update slider
@@ -388,6 +406,20 @@ class Charts(BaseVisualization):
 		
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 		plt.pause(0.0001)
+	
+	#Update the graph to a particular model time
+	def scrub(self, t):
+		i = int(t/self.refresh.get())-1
+		for c in self.activeCharts.values():
+			for b in c.bars:
+				setbar = b.rect.set_width if c.horizontal else b.rect.set_height
+				setbar(b.data[i])
+				
+				if b.err: #Update error bars
+					for j,cap in enumerate(b.errPath):
+						if len(b.errHist[i]) >= j+1: cap[0 if c.horizontal else 1] = b.errHist[i][j]
+
+		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
 	def addChart(self, name, label, logscale=False, horizontal=False):
 		self.charts[name] = self.chartclass(name=name, label=label, selected=True, logscale=logscale, horizontal=horizontal)

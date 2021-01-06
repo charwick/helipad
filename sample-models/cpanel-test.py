@@ -57,6 +57,30 @@ heli.addParameter('gcheckgrid', 'Global Checkgrid', 'checkgrid',
 )
 
 #===============
+# A DUMMY MODEL
+#===============
+
+import random
+from helipad.visualize import Charts
+viz = heli.useVisual(Charts)
+
+@heli.hook
+def agentInit(agent, model):
+	for i in range(10): setattr(agent, 'prop'+str(i), 0)
+
+@heli.hook
+def agentStep(agent, model, stage):
+	for i in range(10):
+		v = getattr(agent, 'prop'+str(i))
+		setattr(agent, 'prop'+str(i), v+1 if random.randint(0, 1) else v-1)
+
+bar1 = viz.addChart('prop', 'Property', horizontal=True)
+gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
+for i in range(10):
+	heli.data.addReporter('prop'+str(i), heli.data.agentReporter('prop'+str(i), percentiles=[40,60]))
+	bar1.addBar('prop'+str(i), str(i), '#'+gcolors[i])
+
+#===============
 # LAUNCH
 #===============
 
