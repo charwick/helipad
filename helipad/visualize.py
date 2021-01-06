@@ -303,7 +303,7 @@ class Charts(BaseVisualization):
 				bar.err = []
 				if reporter in model.data.reporters and isinstance(model.data.reporters[reporter].func, tuple):
 					for p, f in model.data.reporters[reporter].func[1].items():
-						bar.err.append(reporter+'-'+str(p)+'-pctile')
+						bar.err.append(p)
 				
 				if position is None or position>=len(self.bars): self.bars.append(bar)
 				else: self.bars.insert(position-1, bar)

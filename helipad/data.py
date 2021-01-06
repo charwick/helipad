@@ -27,9 +27,8 @@ class Data:
 		if isinstance(func, tuple):
 			mainfunc, subplots = func
 			for p in subplots.keys():
-				n = key+'-'+str(p)+'-pctile'
-				self[n] = []
-				cols.append(n)
+				self[p] = []
+				cols.append(p)
 		else: mainfunc = func
 		
 		#If smoothing, shunt original reporter to -unsmooth and create a new series under the original name
@@ -63,8 +62,7 @@ class Data:
 			reporter = v.func
 			if isinstance(reporter, tuple):
 				reporter, subplots = reporter
-				for p, s in subplots.items():
-					self[var+'-'+str(p)+'-pctile'].append(s(model))
+				for p, s in subplots.items(): self[p].append(s(model))
 			self[var].append(reporter(model))
 	
 	def reset(self):
@@ -88,7 +86,9 @@ class Data:
 	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
 		if prim is None: prim = next(iter(self.model.primitives))
 		if 'percentiles' in kwargs:
-			subplots = {p:self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
+			subplots = {key+'-'+str(p)+'-pctile':self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
+		if 'std' in kwargs:
+			subplots = {key+'+'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-p-'+str(kwargs['std'])), key+'-'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-m-'+str(kwargs['std']))}
 		else: subplots = None
 		
 		def reporter(model):
@@ -115,6 +115,11 @@ class Data:
 					u.sort()
 					idx = round(len(u)*pctile/100)
 					return u[idx] if len(u)>=idx+1 else u[0]
+			elif 'mstd-' in stat: #Don't use directly; use the std kwarg
+				s, op, coef = stat.split('-')
+				coef = float(coef)
+				if op=='p': return mean(u) + coef * std(u)
+				else: return mean(u) - coef * std(u)
 			else: raise ValueError('Invalid statistic '+stat)
 		return (reporter, subplots) if subplots is not None else reporter
 	
