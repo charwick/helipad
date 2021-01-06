@@ -336,6 +336,14 @@ class Charts(BaseVisualization):
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		for plot, axes in zip(self.activeCharts.values(), plots): plot.axes = axes
 		
+		#Position graph window
+		fm = plt.get_current_fig_manager()
+		if hasattr(fm, 'window'):
+			x_px = fm.window.winfo_screenwidth()*2/3
+			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
+			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
+			fm.window.wm_geometry("+400+0")
+		
 		#Cycle over charts
 		for cname, chart in self.activeCharts.items():
 			cfunc, eax = (chart.axes.barh, 'xerr') if chart.horizontal else (chart.axes.bar, 'yerr')
