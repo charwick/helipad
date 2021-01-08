@@ -411,8 +411,17 @@ class Helipad:
 		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
 		for ags in self.agents.values(): ags.clear()														#Clear any surviving agents from last run
 		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
-		self.hasModel = True
 		
+		#Start progress bar
+		#Put this here and not in .start() because it'll flash on unpause otherwise
+		if getattr(self, 'cpanel', None):
+			st = self.param('stopafter')
+			self.cpanel.progress.determinate(st and isinstance(st, int))
+		
+		for param in self.allParams:
+			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
+		
+		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
 				
 	def step(self, stage=1):
@@ -533,9 +542,12 @@ class Helipad:
 	
 	#The *args allows it to be used as an Ipywidgets callback
 	def start(self, *args):
+		
+		#Start the progress bar
 		if getattr(self, 'cpanel', None):
 			self.cpanel.progress.start()
 			self.cpanel.runButton.run()
+		
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
@@ -781,17 +793,10 @@ class Helipad:
 				print('Running from the control panel with no visualization requires stop period and CSV export to be enabled.')
 				return
 		
-		self.doHooks('visualPreLaunch', [self])
-		
-		#Start the progress bar
-		if getattr(self, 'cpanel', None):
-			st = self.param('stopafter')
-			self.cpanel.progress.determinate(st and isinstance(st, int))
-			self.cpanel.runButton.run()
-		
+		self.doHooks('visualPreLaunch', [self])		
 		self.setup()
 		
-		if self.visual is not None:
+		if self.visual is not None and not self.visual.isNull:
 			def catchKeypress(event):
 				#Toggle legend boxes
 				if event.key == 't':
@@ -810,15 +815,12 @@ class Helipad:
 			
 			self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
 		
-			if not self.visual.isNull:
-				self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
-				self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
-			else:
-				self.params['stopafter'].disable()
-				self.params['csv'].disable()
+			self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
+			self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
+		else:
+			self.params['stopafter'].disable()
+			self.params['csv'].disable()
 		
-		for param in self.allParams:
-			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 		self.doHooks('visualLaunch', [self, self.visual])
 		
 		#If we're running in cpanel-less mode, hook through a Tkinter loop so it doesn't exit on pause
