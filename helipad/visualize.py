@@ -57,8 +57,9 @@ class TimeSeries(BaseVisualization):
 		
 				#Add subsidiary series (e.g. percentile bars)
 				subseries = []
-				if reporter in self.model.data.reporters and isinstance(self.model.data.reporters[reporter].func, tuple):
-					for p, f in self.model.data.reporters[reporter].func[1].items():
+				if reporter in self.model.data.reporters and self.model.data.reporters[reporter].children:
+					for p in self.model.data.reporters[reporter].children:
+						if '-unsmooth' in p: continue #Don't plot the unsmoothed series
 						subseries.append(self.addSeries(p, '', color.lighten(), style='--'))
 
 				#Since many series are added at setup time, we have to de-dupe
@@ -302,8 +303,9 @@ class Charts(BaseVisualization):
 				
 				#Add subsidiary series (e.g. percentile bars)
 				bar.err = []
-				if reporter in model.data.reporters and isinstance(model.data.reporters[reporter].func, tuple):
-					for p, f in model.data.reporters[reporter].func[1].items():
+				if reporter in model.data.reporters and model.data.reporters[reporter].children:
+					for p in model.data.reporters[reporter].children:
+						if '-unsmooth' in p: continue
 						bar.err.append(p)
 				
 				if position is None or position>=len(self.bars): self.bars.append(bar)

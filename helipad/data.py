@@ -14,23 +14,17 @@ class Data:
 	
 	def __getitem__(self, index):
 		r = self.columns[index]
-		return r.data if index==r.name else r.children[index]
+		return r.data if index==r.name else r.children[index][1]
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
 	#or a string, either 'model' or the name of a primitive.
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
-		cols = []
+		func, children = func if isinstance(func, tuple) else (func, {})
 		
-		#Create column space for percentile marks
-		if isinstance(func, tuple):
-			mainfunc, subplots = func
-			for p in subplots.keys(): cols.append(p)
-		else: mainfunc = func
-		
-		if not callable(mainfunc): raise TypeError('Second argument of addReporter must be callable')
-		self.reporters[key] = Reporter(name=key, func=func, children=cols, **kwargs)
+		if not callable(func): raise TypeError('Second argument of addReporter must be callable')
+		self.reporters[key] = Reporter(name=key, func=func, children=children, **kwargs)
 		return self.reporters[key]
 	
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
@@ -52,8 +46,7 @@ class Data:
 		data = {}
 		for k,r in self.reporters.items():
 			data[k] = r.data
-			for s,d in r.children.items(): data[s] = d
-		# print({k:len(v) for k,v in data.items()})
+			for s,d in r.children.items(): data[s] = d[1]
 		return data
 	
 	@property
@@ -61,7 +54,7 @@ class Data:
 		cols = {}
 		for k,r in self.reporters.items():
 			cols[k] = r
-			for s,d in r.children.items(): cols[s] = r
+			for s in r.children: cols[s] = r
 		return cols
 	
 	@property
@@ -146,23 +139,21 @@ class Reporter(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		self.data = []
-		self.children = {k:[] for k in self.children} if self.children else {}
+		self.children = {k:(fn, []) for k, fn in self.children.items()}
 		if not 'smooth' in kwargs: self.smooth = False
-		else: self.children[self.name+'-unsmooth'] = []
+		else: self.children[self.name+'-unsmooth'] = (None, [])
 	
 	def collect(self, model):
-		reporter = self.func
-		if isinstance(reporter, tuple):
-			reporter, subplots = reporter
-			for p, s in subplots.items(): self.children[p].append(s(model))
+		for p, s in self.children.items():
+			if callable(s[0]): s[1].append(s[0](model))
 		
-		if not self.smooth: self.data.append(reporter(model))
+		if not self.smooth: self.data.append(self.func(model))
 		else:
-			us = self.children[self.name+'-unsmooth']
-			us.append(reporter(model))
+			us = self.children[self.name+'-unsmooth'][1]
+			us.append(self.func(model))
 			#					  Old data 					   New data point
 			self.data.append(self.smooth*self.data[-1] + (1-self.smooth)*us[-1] if model.t>1 else us[-1])
 	
 	def clear(self):
 		self.data.clear()
-		for c in self.children.values(): c.clear()
+		for c in self.children.values(): c[1].clear()
