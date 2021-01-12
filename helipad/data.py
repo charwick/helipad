@@ -47,6 +47,7 @@ class Data:
 		if not callable(mainfunc): raise TypeError('Second argument of addReporter must be callable')
 		self.reporters[key] = Item(func=func, children=cols, series=[])
 		self[key] = []
+		return self.reporters[key]
 	
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
 	def removeReporter(self, key):
@@ -85,10 +86,11 @@ class Data:
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
 		if prim is None: prim = next(iter(self.model.primitives))
+		if breed and isinstance(breed, bool): return [self.agentReporter(key+'-'+br, prim, br, good, stat, **kwargs) for br in self.model.primitives[prim].breeds]
 		if 'percentiles' in kwargs:
-			subplots = {key+'-'+str(p)+'-pctile':self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
-		if 'std' in kwargs:
-			subplots = {key+'+'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-p-'+str(kwargs['std'])), key+'-'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-m-'+str(kwargs['std']))}
+			subplots = {('' if not breed else breed)+key+'-'+str(p)+'-pctile':self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
+		elif 'std' in kwargs:
+			subplots = {('' if not breed else breed)+key+'+'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-p-'+str(kwargs['std'])), key+'-'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-m-'+str(kwargs['std']))}
 		else: subplots = None
 		
 		def reporter(model):

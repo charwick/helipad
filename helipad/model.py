@@ -793,7 +793,6 @@ class Helipad:
 				print('Running from the control panel with no visualization requires stop period and CSV export to be enabled.')
 				return
 		
-		self.doHooks('visualPreLaunch', [self])		
 		self.setup()
 		
 		if self.visual is not None and not self.visual.isNull:

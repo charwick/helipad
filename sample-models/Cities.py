@@ -18,7 +18,7 @@ heli.addGood('consumption', '#000000')
 
 heli.addParameter('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city')
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
-heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=5, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
+heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=15, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.05, opts={'low':0, 'high': 0.25, 'step': 0.01})
 heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.2, opts={'low':0.1, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital')
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.2, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living')

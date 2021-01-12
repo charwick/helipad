@@ -59,8 +59,7 @@ class TimeSeries(BaseVisualization):
 				subseries = []
 				if reporter in self.model.data.reporters and isinstance(self.model.data.reporters[reporter].func, tuple):
 					for p, f in self.model.data.reporters[reporter].func[1].items():
-						subkey = reporter+'-'+str(p)+'-pctile'
-						subseries.append(self.addSeries(subkey, '', color.lighten(), style='--'))
+						subseries.append(self.addSeries(p, '', color.lighten(), style='--'))
 
 				#Since many series are added at setup time, we have to de-dupe
 				for s in self.series:
