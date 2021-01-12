@@ -9,69 +9,63 @@ from helipad.model import Item
 
 class Data:
 	def __init__(self, model):
-		self.all = {}			#Data
 		self.reporters = {}
 		self.model = model
 	
-	def __getitem__(self, index): return self.all[index]
-	def __setitem__(self, index, value): self.all[index] = value
+	def __getitem__(self, index):
+		r = self.columns[index]
+		return r.data if index==r.name else r.children[index]
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
 	#or a string, either 'model' or the name of a primitive.
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
-		cols = [key]
+		cols = []
 		
 		#Create column space for percentile marks
 		if isinstance(func, tuple):
 			mainfunc, subplots = func
-			for p in subplots.keys():
-				self[p] = []
-				cols.append(p)
+			for p in subplots.keys(): cols.append(p)
 		else: mainfunc = func
 		
-		#If smoothing, shunt original reporter to -unsmooth and create a new series under the original name
-		if 'smooth' in kwargs:
-			def smooth(weight, k):
-				def movingAvg(model):
-					#					  Old data 					   New data point
-					model.data[k].append(weight*model.data[k][-1] + (1-weight)*model.data[k+'-unsmooth'][-1] if model.t>1 else model.data[k+'-unsmooth'][-1])
-				return movingAvg
-				
-			self.model.addHook('modelPostStep', smooth(kwargs['smooth'], key)) #Have to hook it *after* the data gets collected
-			self[key] = []
-			key += '-unsmooth'
-			cols.append(key)
-		
 		if not callable(mainfunc): raise TypeError('Second argument of addReporter must be callable')
-		self.reporters[key] = Item(func=func, children=cols, series=[])
-		self[key] = []
+		self.reporters[key] = Reporter(name=key, func=func, children=cols, **kwargs)
 		return self.reporters[key]
 	
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
 	def removeReporter(self, key):
 		if self.model.hasModel:
 			raise RuntimeError('removeReporter cannot be called while a model is active.')
-		for c in self.reporters[key].children: del self.all[c]
 		self.model.doHooks('removeReporter', [self, key])
 		del self.reporters[key]
 
 	def collect(self, model):
 		model.doHooks('dataCollect', [self, model.t])
-		for var, v in self.reporters.items():
-			reporter = v.func
-			if isinstance(reporter, tuple):
-				reporter, subplots = reporter
-				for p, s in subplots.items(): self[p].append(s(model))
-			self[var].append(reporter(model))
+		for v in self.reporters.values(): v.collect(model)
 	
 	def reset(self):
-		for c in self.all.values(): c.clear()
+		for v in self.reporters.values(): v.clear()
 	
 	@property
-	def dataframe(self):
-		return pandas.DataFrame(self.all)
+	def all(self):
+		data = {}
+		for k,r in self.reporters.items():
+			data[k] = r.data
+			for s,d in r.children.items(): data[s] = d
+		# print({k:len(v) for k,v in data.items()})
+		return data
+	
+	@property
+	def columns(self):
+		cols = {}
+		for k,r in self.reporters.items():
+			cols[k] = r
+			for s,d in r.children.items(): cols[s] = r
+		return cols
+	
+	@property
+	def dataframe(self): return pandas.DataFrame(self.all)
 	
 	#
 	# REPORTERS
@@ -86,7 +80,7 @@ class Data:
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
 		if prim is None: prim = next(iter(self.model.primitives))
-		if breed and isinstance(breed, bool): return [self.agentReporter(key+'-'+br, prim, br, good, stat, **kwargs) for br in self.model.primitives[prim].breeds]
+		# if breed and isinstance(breed, bool): return [self.agentReporter(key+'-'+br, prim, br, good, stat, **kwargs) for br in self.model.primitives[prim].breeds]
 		if 'percentiles' in kwargs:
 			subplots = {('' if not breed else breed)+key+'-'+str(p)+'-pctile':self.agentReporter(key, prim, breed=breed, good=good, stat='percentile-'+str(p)) for p in kwargs['percentiles']}
 		elif 'std' in kwargs:
@@ -147,3 +141,28 @@ class Data:
 			i += 1
 			file = filename+'-'+str(i)+'.csv'
 		self.dataframe.to_csv(file)
+
+class Reporter(Item):
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+		self.data = []
+		self.children = {k:[] for k in self.children} if self.children else {}
+		if not 'smooth' in kwargs: self.smooth = False
+		else: self.children[self.name+'-unsmooth'] = []
+	
+	def collect(self, model):
+		reporter = self.func
+		if isinstance(reporter, tuple):
+			reporter, subplots = reporter
+			for p, s in subplots.items(): self.children[p].append(s(model))
+		
+		if not self.smooth: self.data.append(reporter(model))
+		else:
+			us = self.children[self.name+'-unsmooth']
+			us.append(reporter(model))
+			#					  Old data 					   New data point
+			self.data.append(self.smooth*self.data[-1] + (1-self.smooth)*us[-1] if model.t>1 else us[-1])
+	
+	def clear(self):
+		self.data.clear()
+		for c in self.children.values(): c.clear()

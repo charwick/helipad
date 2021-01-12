@@ -51,8 +51,8 @@ class TimeSeries(BaseVisualization):
 			def addSeries(self, reporter, label, color, style='-'):
 				if not isinstance(color, Color): color = Color(color)
 
-				#Check against columns and not reporters so percentiles work
-				if not callable(reporter) and not reporter in self.model.data.all:
+				#Check against columns and not reporters so subseries work
+				if not callable(reporter) and not reporter in self.model.data.columns:
 					raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
 		
 				#Add subsidiary series (e.g. percentile bars)
@@ -68,7 +68,6 @@ class TimeSeries(BaseVisualization):
 		
 				series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
 				self.series.append(series)
-				if reporter in self.model.data.reporters: self.model.data.reporters[reporter].series.append(series)
 				return series
 		self.plotclass = Plot
 		
