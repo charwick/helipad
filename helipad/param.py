@@ -394,7 +394,7 @@ class Shocks:
 		
 	def step(self):
 		for name, shock in self.shocks.items():
-			if shock.active and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
+			if shock.selected and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
 				shock.do(self.model)
 	
 	@property
