@@ -95,8 +95,8 @@ def agentStep(agent, model, stage):
 		upop = model.data.getLast('urbanPop')
 		#Account for the effect of you moving on the mean, otherwise you get divide by zero for the first mover.
 		agent.prod = {
-			'rural': agent.H * (150),
-			'urban': agent.H * (
+			'rural': agent.H * sqrt(150),
+			'urban': agent.H * sqrt(
 				# (model.data.getLast('hsum')+agent.H)/sqrt(model.data.getLast('urbanPop')+1) if agent.breed=='rural'
 				# else (model.data.getLast('hsum'))/sqrt(model.data.getLast('urbanPop'))
 				model.data.getLast('urbanH')*log(model.data.getLast('hsum')) if agent.breed =='urban'

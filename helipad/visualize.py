@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from helipad.helpers import *
 mlpstyle.use('fast')
 
+#Used for creating an entirely new visualization window. May or may not use Matplotlib.
 class BaseVisualization:
 	
 	#Create the window. Mandatory to implement
@@ -27,6 +28,22 @@ class BaseVisualization:
 	
 	#Called from model.terminate(). Optional to implement
 	def terminate(self, model): pass
+
+#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
+class ChartPlot(Item):
+	
+	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
+	@abstractmethod
+	def launch(self, axes): self.axes = axes
+	
+	#Receives a 1-dimensional dict with only the most recent value of each column
+	#The subclass is responsible for storing the relevant data internally
+	@abstractmethod
+	def update(self, data, t): pass
+	
+	#Receives the time to scrub to
+	@abstractmethod
+	def scrub(self, t): pass
 
 class TimeSeries(BaseVisualization):
 	def __init__(self, model):
@@ -289,8 +306,9 @@ class Charts(BaseVisualization):
 	def __init__(self, model):
 		self.plots = {}
 		self.events = {}
+		self.plotTypes = {}
 		
-		class BarChart(Item):
+		class BarChart(ChartPlot):
 			type = 'bar'
 			def __init__(self, **kwargs):
 				for arg in ['horizontal', 'logscale']:
@@ -310,8 +328,69 @@ class Charts(BaseVisualization):
 				
 				if position is None or position>=len(self.bars): self.bars.append(bar)
 				else: self.bars.insert(position-1, bar)
+			
+			def launch(self, axes):
+				super().launch(axes)
+				axes.set_title(self.label, fontdict={'fontsize':10})
 				
-		self.chartclass = {'bar': BarChart}
+				cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
+				kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
+				rects = cfunc(range(len(self.bars)), [0 for i in self.bars], color=[bar.color for bar in self.bars], **kwa)
+				errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
+				for bar, rect, err in zip(self.bars, rects, errors):
+					bar.element = rect
+					bar.errPath = err.vertices
+					bar.errHist = []
+					bar.data = []
+			
+				cstlfunc, cstfunc = (axes.set_yticklabels, axes.set_yticks) if self.horizontal else (axes.set_xticklabels, axes.set_xticks)
+				cstfunc(range(len(self.bars)))
+				cstlfunc([bar.label for bar in self.bars])
+				axes.margins(x=0)
+			
+				if self.logscale:
+					if self.horizontal:
+						axes.set_xscale('log')
+						axes.set_xlim(1/2, 2, auto=True)
+					else:
+						axes.set_yscale('log')
+						axes.set_ylim(1/2, 2, auto=True)
+			
+			def update(self, data, t):
+				getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
+				lims = list(getlim())
+				for b in self.bars:
+					setbar = b.element.set_width if self.horizontal else b.element.set_height
+					setbar(data[b.reporter])
+					b.data.append(data[b.reporter]) #Keep track
+				
+					if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
+					if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
+				
+					#Update error bars
+					if b.err:
+						errs = [data[e] for e in b.err]
+						errs.sort()
+						for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
+							if len(errs) >= i+1: cap[0 if self.horizontal else 1] = errs[i]
+							if errs[i] < lims[0]: lims[0] = errs[i]
+							if errs[i] > lims[1]: lims[1] = errs[i]
+						b.errHist.append(errs)
+				
+				setlim(lims)
+				self.axes.autoscale_view(tight=False)
+			
+			def scrub(self, t):
+				i = int(t/self.viz.refresh.get())-1
+				for b in self.bars:
+					setbar = b.element.set_width if self.horizontal else b.element.set_height
+					setbar(b.data[i])
+				
+					if b.err: #Update error bars
+						for j,cap in enumerate(b.errPath):
+							if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
+				
+		self.addPlotType(BarChart)
 		model.params['updateEvery'].runtime=False
 		self.refresh = model.params['updateEvery']
 	
@@ -338,7 +417,7 @@ class Charts(BaseVisualization):
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		if isinstance(plots[0], ndarray): plots = plots.flatten() #The x,y returns a 2D array
-		for plot, axes in zip(self.activePlots.values(), plots): plot.axes = axes
+		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
 		
 		#Position graph window
 		fm = plt.get_current_fig_manager()
@@ -347,33 +426,6 @@ class Charts(BaseVisualization):
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
 			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
 			fm.window.wm_geometry("+400+0")
-		
-		#Cycle over charts
-		for cname, chart in self.activePlots.items():
-			chart.axes.set_title(chart.label, fontdict={'fontsize':10})
-			
-			cfunc, eax = (chart.axes.barh, 'xerr') if chart.horizontal else (chart.axes.bar, 'yerr')
-			kwa = {eax: [0 for bar in chart.bars]} #Make sure our error bars go the right way
-			rects = cfunc(range(len(chart.bars)), [0 for i in chart.bars], color=[bar.color for bar in chart.bars], **kwa)
-			errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
-			for bar, rect, err in zip(chart.bars, rects, errors):
-				bar.element = rect
-				bar.errPath = err.vertices
-				bar.errHist = []
-				bar.data = []
-			
-			cstlfunc, cstfunc = (chart.axes.set_yticklabels, chart.axes.set_yticks) if chart.horizontal else (chart.axes.set_xticklabels, chart.axes.set_xticks)
-			cstfunc(range(len(chart.bars)))
-			cstlfunc([bar.label for bar in chart.bars])
-			chart.axes.margins(x=0)
-			
-			if chart.logscale:
-				if chart.horizontal:
-					chart.axes.set_xscale('log')
-					chart.axes.set_xlim(1/2, 2, auto=True)
-				else:
-					chart.axes.set_yscale('log')
-					chart.axes.set_ylim(1/2, 2, auto=True)
 		
 		#Time slider
 		ref = self.refresh.get()
@@ -386,33 +438,10 @@ class Charts(BaseVisualization):
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
-		
-		for c in self.activePlots.values():
-			getlim, setlim = (c.axes.get_xlim, c.axes.set_xlim) if c.horizontal else (c.axes.get_ylim, c.axes.set_ylim)
-			lims = list(getlim())
-			for b in c.bars:
-				setbar = b.element.set_width if c.horizontal else b.element.set_height
-				setbar(data[b.reporter])
-				b.data.append(data[b.reporter]) #Keep track
-				
-				if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
-				if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
-				
-				#Update error bars
-				if b.err:
-					errs = [data[e] for e in b.err]
-					errs.sort()
-					for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
-						if len(errs) >= i+1: cap[0 if c.horizontal else 1] = errs[i]
-						if errs[i] < lims[0]: lims[0] = errs[i]
-						if errs[i] > lims[1]: lims[1] = errs[i]
-					b.errHist.append(errs)
-				
-			setlim(lims)
-			c.axes.autoscale_view(tight=False)
+		t = len(next(iter(next(iter(self.activePlots.values())).bars)).data)*self.refresh.get()
+		for c in self.activePlots.values(): c.update(data, t)
 		
 		#Update slider
-		t = len(next(iter(next(iter(self.activePlots.values())).bars)).data)*self.refresh.get()
 		self.timeslider.valmax = t
 		self.timeslider.set_val(t)
 		self.timeslider.ax.set_xlim(0,t) #Refresh
@@ -422,22 +451,18 @@ class Charts(BaseVisualization):
 	
 	#Update the graph to a particular model time
 	def scrub(self, t):
-		i = int(t/self.refresh.get())-1
-		for c in self.activePlots.values():
-			for b in c.bars:
-				setbar = b.element.set_width if c.horizontal else b.element.set_height
-				setbar(b.data[i])
-				
-				if b.err: #Update error bars
-					for j,cap in enumerate(b.errPath):
-						if len(b.errHist[i]) >= j+1: cap[0 if c.horizontal else 1] = b.errHist[i][j]
-
+		for c in self.activePlots.values(): c.scrub(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
 	def addPlot(self, name, label, **kwargs):
 		if not 'type' in kwargs: kwargs['type'] = 'bar'
-		self.plots[name] = self.chartclass[kwargs['type']](name=name, label=label, selected=True, **kwargs)
+		if not kwargs['type'] in self.plotTypes: raise KeyError('\''+kwargs['type']+'\' is not a registered plot visualizer.')
+		self.plots[name] = self.plotTypes[kwargs['type']](name=name, label=label, selected=True, viz=self, **kwargs)
 		return self.plots[name]
+	
+	def addPlotType(self, clss):
+		if not issubclass(clss, ChartPlot): raise TypeError('New plot types must subclass ChartPlot.')
+		self.plotTypes[clss.type] = clss
 	
 	def event(self, t, color='#FDC', **kwargs):
 		ref = self.refresh.get()
