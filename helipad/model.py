@@ -12,7 +12,10 @@ from helipad.param import *
 import matplotlib, asyncio
 import time	#For performance testing
 
-matplotlib.use('nbagg' if isIpy() else 'TkAgg')
+if isIpy():
+	from IPython import get_ipython
+	get_ipython().magic('matplotlib widget')
+else: matplotlib.use('TkAgg')
 
 from helipad.data import Data
 import helipad.agent as agent
@@ -351,6 +354,7 @@ class Helipad:
 	
 	#Get ready to actually run the model
 	def setup(self):
+		if self.hasModel: self.terminate()
 		self.doHooks('modelPreSetup', [self])
 		self.t = 0
 		

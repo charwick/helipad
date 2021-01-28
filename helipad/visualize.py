@@ -30,6 +30,7 @@ class BaseVisualization:
 	def terminate(self, model): pass
 
 #Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
+#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
 class ChartPlot(Item):
 	
 	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
@@ -134,8 +135,8 @@ class TimeSeries(BaseVisualization):
 		self.resolution = 1
 		self.verticals = []
 		if isIpy():
-			plt.ioff() #Can't re-launch plots without manually closing otherwise
-			plt.rcParams['figure.figsize'] = [12, 8]
+			plt.close() #Clean up after any previous runs
+			plt.rcParams['figure.figsize'] = [9, 7]
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		#The Tkinter way of setting the title doesn't work in Jupyter
@@ -146,7 +147,7 @@ class TimeSeries(BaseVisualization):
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		for plot, axes in zip(self.activePlots.values(), plots): plot.axes = axes
 		
-		#Position graph window
+		#Resize and position graph window
 		fm = plt.get_current_fig_manager()
 		if hasattr(fm, 'window'):
 			x_px = fm.window.winfo_screenwidth()*2/3
@@ -195,6 +196,7 @@ class TimeSeries(BaseVisualization):
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
 		plt.draw()
+		if isIpy(): plt.show()	#Necessary for ipympl
 	
 	def terminate(self, model):
 		if self.isNull:
@@ -410,6 +412,9 @@ class Charts(BaseVisualization):
 		n = len(self.activePlots)
 		x = ceil(sqrt(n))
 		y = ceil(n/x)
+		if isIpy():
+			plt.close() #Clean up after any previous runs
+			plt.rcParams['figure.figsize'] = [9, 7]
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
@@ -435,6 +440,7 @@ class Charts(BaseVisualization):
 		self.timeslider.on_changed(self.scrub)
 		
 		plt.draw()
+		if isIpy(): plt.show()	#Necessary for ipympl
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}

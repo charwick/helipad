@@ -52,6 +52,7 @@
   from	{ background-position: 40px 0; }
   to	{ background-position: 0 0; }
 }
+.helipad_progress_area button { width: 90px; }
 
 /* Misc */
 

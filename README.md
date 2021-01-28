@@ -30,8 +30,7 @@ Helipad requires Python 3.6 or higher. The following libraries are also required
 
 The following libraries are optional but recommended:
 
-* [Jupyter](https://jupyter.org/) and [Ipywidgets](https://pypi.org/project/ipywidgets/) (to run Helipad in Jupyter notebooks)
-    * It is recommended to run models in Jupyter Notebook rather than Jupyterlab. If you use the latter, you will also need to install the [widgets](https://ipywidgets.readthedocs.io/en/latest/user_install.html#installing-the-jupyterlab-extension) and jupyter-matplotlib extensions.
+* [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) (to run Helipad in Jupyter notebooks)
 * [PMW](https://pypi.org/project/Pmw/) (for tooltips)
 * [NetworkX](http://networkx.github.io/) (for network analysis)
 * [Readline](https://pypi.org/project/readline/) and Code (for the debug console)
@@ -39,7 +38,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
-* [1.2](https://helipad.dev/2020/12/helipad-1-2/): Extensible visualization API, events, performance profiling
+* [1.2](https://helipad.dev/2020/12/helipad-1-2/): Extensible visualization API, events, performance profiling, Jupyterlab support
 * [1.1](https://helipad.dev/2020/10/helipad-1-1/): Virtual parameters, improved Jupyter flexibility, spatial pre-alpha, misc improvements
 * [1.0](https://helipad.dev/2020/08/helipad-1-0/): Jupyter integration, hook decorators, and separated control panel from plotting
 * [0.7](https://helipad.dev/2020/06/helipad-0-7/): Ability to output stackplots, parameter sweeps, and an updated parameter identification pattern

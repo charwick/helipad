@@ -216,21 +216,27 @@ class Cpanel(VBox):
 					self.layout.visibility = 'hidden'
 			
 			#Remove previous hooks so we don't double up when re-running launchCpanel()
-			model.removeHook('visualPreLaunch', 'cpanel_visualPreLaunch')
+			model.removeHook('modelPreSetup', 'cpanel_visualPreLaunch')
 			model.removeHook('terminate', 'cpanel_terminate')
 		
 			#Model flow control: pause/run button and progress bar
-			@model.hook('visualPreLaunch', prioritize=True)
+			@model.hook('modelPreSetup', prioritize=True)
 			def cpanel_visualPreLaunch(model):
 				self.runButton = runButton(description='Pause', icon='pause')
 				self.progress = progressBar()
 				self.postinstruct.layout = Layout(display='none')
-			
-				display(HBox([self.runButton, self.progress]))
+				
+				self.stopbutton = Button(description='Stop', icon='stop')
+				self.stopbutton.click = self.model.terminate
+				
+				pbararea = HBox([self.runButton, self.stopbutton, self.progress])
+				pbararea.add_class('helipad_progress_area')
+				display(pbararea)
 		
 			@model.hook('terminate')
 			def cpanel_terminate(model, data):
 				self.postinstruct.layout = Layout(display='inline-block')
+				self.stopbutton.layout.visibility = 'hidden'
 
 	def displayAlert(self, text, inCpanel=True):
 		element = Label(value=text)
