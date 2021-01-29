@@ -395,6 +395,7 @@ class Charts(BaseVisualization):
 		self.addPlotType(BarChart)
 		model.params['updateEvery'].runtime=False
 		self.refresh = model.params['updateEvery']
+		self.model = model # :(
 	
 	@property
 	def isNull(self):
@@ -444,7 +445,7 @@ class Charts(BaseVisualization):
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
-		t = len(next(iter(next(iter(self.activePlots.values())).bars)).data)*self.refresh.get()
+		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
 		
 		#Update slider

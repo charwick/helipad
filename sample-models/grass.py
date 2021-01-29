@@ -17,7 +17,7 @@ heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
 heli.addParameter('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})
-heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=3, opts={'low': 1, 'high': 100, 'step': 1})
+heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=5, opts={'low': 1, 'high': 100, 'step': 1})
 
 heli.params['num_agent'].opts = {'low': 1, 'high': 200, 'step': 1}
 heli.param('num_agent', 200)
@@ -26,7 +26,6 @@ heli.addBreed('male', 'blue')
 heli.addBreed('female', 'pink')
 heli.addGood('energy', 'red', 5)
 
-heli.spatial(x=16, diag=True)
 from random import choice, randint
 from numpy import mean
 
@@ -93,30 +92,35 @@ def modelPostSetup(model):
 @heli.event
 def nofemales(model): return len(model.agent('female')) <= 1
 heli.param('stopafter', 'nofemales')
+heli.param('updateEvery', 1)
 
 #===============
 # DATA AND VISUALIZATION
 #===============
 
-from helipad.visualize import TimeSeries
-viz = heli.useVisual(TimeSeries)
+# from helipad.visualize import TimeSeries
+# viz = heli.useVisual(TimeSeries)
 
-viz.addPlot('pop', 'Population', logscale=True)
-viz.addPlot('sexratio', 'Sex Ratio', logscale=True)
-viz.addPlot('age', 'Age')
-viz.addPlot('energy', 'Energy')
+# viz.addPlot('pop', 'Population', logscale=True)
+# viz.addPlot('sexratio', 'Sex Ratio', logscale=True)
+# viz.addPlot('age', 'Age')
+# viz.addPlot('energy', 'Energy')
 heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
 heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
 heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
 heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
-viz.plots['pop'].addSeries('num_agent', 'Population', 'black')
-viz.plots['pop'].addSeries('grass', 'Grass', 'green')
-viz.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
-viz.plots['age'].addSeries('age', 'Average Age', 'blue')
-viz.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
-viz.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
+# viz.plots['pop'].addSeries('num_agent', 'Population', 'black')
+# viz.plots['pop'].addSeries('grass', 'Grass', 'green')
+# viz.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
+# viz.plots['age'].addSeries('age', 'Average Age', 'blue')
+# viz.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
+# viz.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
+
+mapPlot = heli.spatial(x=16, diag=True)
+mapPlot.config('patchProperty', 'good:energy')
+mapPlot.config('patchColormap', 'Greens')
 
 #===============
 # LAUNCH THE GUI

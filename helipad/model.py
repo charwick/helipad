@@ -667,7 +667,7 @@ class Helipad:
 	
 	def spatial(self, *args, **kwargs):
 		from helipad.spatial import spatialSetup
-		spatialSetup(self, *args, **kwargs)
+		return spatialSetup(self, *args, **kwargs)
 	
 	@property
 	def allagents(self):

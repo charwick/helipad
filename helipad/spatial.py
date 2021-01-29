@@ -6,6 +6,7 @@
 
 from random import randint
 from math import sqrt
+import pandas
 
 #===============
 # THE PATCH PRIMITIVE
@@ -43,6 +44,81 @@ class Patch(baseAgent):
 		for prim, lst in self.model.agents.items():
 			if prim=='patch': continue
 			yield from [a for a in lst if a.x==self.x and a.y==self.y]
+
+#===============
+# THE VISUALIZER
+#===============
+
+from helipad.visualize import ChartPlot
+import matplotlib.pyplot as plt
+class SpatialPlot(ChartPlot):
+	type='spatial'
+	
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+		self.agentHistory = {} #For coloring 
+		self.params = {
+			'patchColormap': 'Blues',
+			'patchProperty': 'mapcolor',
+			'agentMarker': 'o',
+			'agentSize': 3
+		}
+	
+	#Helper function
+	def getPatchParamValue(self, patch, t=None):
+		if t is not None: return patch.colorData[t]
+		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
+		else: return getattr(patch, self.params['patchProperty'])
+	
+	def patchData(self, t=None):
+		if not hasattr(self.viz.model, 'patches'): return
+		return pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches])
+	
+	def agentLoc(self, update=False):
+		agents = [a for a in self.viz.model.allagents.values() if a.primitive!='patch']
+		if not agents: return
+		
+		#Matplotlib wants the coordinates in two x and y lists to create the plot, but one list of x,y tuples to update it 😡
+		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents])
+		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents])
+	
+	def launch(self, axes):
+		super().launch(axes)
+		patchData = self.patchData()
+		self.normal = plt.cm.colors.Normalize(patchData.min().min(), patchData.max().max())
+		self.patchmap = axes.imshow(patchData, norm=self.normal, cmap=self.params['patchColormap'])
+		
+		al = self.agentLoc()
+		self.agentmap = axes.scatter(al[0], al[1], marker=self.params['agentMarker'], c=al[2], s=self.params['agentSize']*10)
+		self.agentHistory[0] = self.agentLoc(update=True)
+	
+	def update(self, data, t):
+		pd = self.patchData()
+		al = self.agentLoc(update=1)
+		self.patchmap.set_data(pd)
+		self.agentmap.set_offsets(al[0])
+		self.agentmap.set_facecolor(al[1])
+		
+		#Renormalize color scale
+		nmin, nmax = pd.min().min(), pd.max().max()
+		self.normal = plt.cm.colors.Normalize(nmin if nmin<self.normal.vmin else self.normal.vmin, nmax if nmax>self.normal.vmax else self.normal.vmax)
+		self.patchmap.set_norm(self.normal)
+		
+		#Store data
+		self.agentHistory[t] = al
+		for col in self.viz.model.patches:
+			for p in col:
+				p.colorData[t] = pd[p.x][p.y]
+	
+	def scrub(self, t):
+		pd = self.patchData(t)
+		self.patchmap.set_data(pd)
+		self.agentmap.set_offsets(self.agentHistory[t][0])
+		self.agentmap.set_facecolor(self.agentHistory[t][1])
+	
+	def config(self, param, val=None):
+		if val is None: return self.params[param]
+		else: self.params[param] = val
 
 #===============
 # SETUP
@@ -133,6 +209,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		while len(model.patches[x]) >= model.param('y'): x+=1	#Find a column that's not full yet
 		agent.position = (x, len(model.patches[x]))				#Note the position
 		model.patches[x].append(agent)							#Append the agent
+		agent.colorData = {}
 
 	@model.hook(prioritize=True)
 	def modelPreSetup(model):
@@ -153,3 +230,9 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 				for d in [patch.up.left, patch.right.up, patch.down.right, patch.left.down]:
 					if d and not d in connections:
 						patch.newEdge(d, 'space', weight=float(diag))
+	
+	from helipad.visualize import Charts
+	viz = model.useVisual(Charts)
+	viz.addPlotType(SpatialPlot)
+	mapPlot = viz.addPlot('map', 'Map', type='spatial')
+	return mapPlot
