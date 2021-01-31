@@ -35,7 +35,9 @@ class ChartPlot(Item):
 	
 	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
 	@abstractmethod
-	def launch(self, axes): self.axes = axes
+	def launch(self, axes):
+		self.axes = axes
+		axes.set_title(self.label, fontdict={'fontsize':10})
 	
 	#Receives a 1-dimensional dict with only the most recent value of each column
 	#The subclass is responsible for storing the relevant data internally
@@ -333,7 +335,6 @@ class Charts(BaseVisualization):
 			
 			def launch(self, axes):
 				super().launch(axes)
-				axes.set_title(self.label, fontdict={'fontsize':10})
 				
 				cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
 				kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
@@ -391,8 +392,33 @@ class Charts(BaseVisualization):
 					if b.err: #Update error bars
 						for j,cap in enumerate(b.errPath):
 							if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
+		
+		class NetworkPlot(ChartPlot):
+			type = 'network'
+			def __init__(self, **kwargs):
+				if not 'prim' in kwargs: kwargs['prim'] = None
+				if not 'kind' in kwargs: kwargs['kind'] = 'edge'
+				super().__init__(**kwargs)
+				self.ndata = {}
+			
+			def launch(self, axes):
+				import networkx as nx
+				self.nx = nx
+				super().launch(axes)
+
+			def update(self, data, t):
+				G = self.viz.model.network(self.kind, self.prim)
+				self.axes.clear()
+				self.axes.set_title(self.label, fontdict={'fontsize':10})
+				self.nx.draw_networkx(G, ax=self.axes)
+				self.ndata[t] = G
+	
+			def scrub(self, t):
+				self.axes.clear()
+				self.axes.set_title(self.label, fontdict={'fontsize':10})
+				self.nx.draw_networkx(self.ndata[t], ax=self.axes)
 				
-		self.addPlotType(BarChart)
+		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
 		model.params['updateEvery'].runtime=False
 		self.refresh = model.params['updateEvery']
 		self.model = model # :(

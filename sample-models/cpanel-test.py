@@ -58,6 +58,7 @@ heli.addParameter('gcheckgrid', 'Global Checkgrid', 'checkgrid',
 
 #===============
 # A DUMMY MODEL
+# Testing the bar chart and network visualizers
 #===============
 
 import random
@@ -74,6 +75,20 @@ def agentStep(agent, model, stage):
 		v = getattr(agent, 'prop'+str(i))
 		setattr(agent, 'prop'+str(i), v-1 if random.randint(0, 1) else v+1)
 
+@heli.hook
+def modelPostSetup(model):
+	model.createNetwork(0.2)
+
+#Cut one edge and create one edge
+@heli.hook
+def modelPostStep(model):
+	random.choice(model.allEdges['edge']).cut()
+	
+	a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
+	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
+	a1.newEdge(a2)
+
+viz.addPlot('net', 'Network Structure', type='network')
 bar1 = viz.addPlot('prop', 'My Property')
 bar2 = viz.addPlot('prop2', 'Horizontal Property', horizontal=True)
 

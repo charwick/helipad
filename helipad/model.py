@@ -40,7 +40,6 @@ class Helipad:
 		self.order = 'linear'
 		self.hasModel = False	#Have we initialized?
 		self.moneyGood = None
-		self.allEdges = {}
 		self.timer = False
 		self.visual = None
 		
@@ -657,13 +656,15 @@ class Helipad:
 		
 			return G
 		except: warnings.warn('Network export requires Networkx.', None, 2)
-		
-	def showNetwork(self, kind='edge', prim=None):
-		import matplotlib.pyplot as plt, networkx as nx
-		G = self.network(kind, prim)
-		plt.figure() #New window
-		nx.draw(G)
-		plt.show()
+	
+	@property
+	def allEdges(self):
+		es = {}
+		for a in self.allagents.values():
+			for e in a.alledges:
+				if not e.kind in es: es[e.kind] = []
+				if not e in es[e.kind]: es[e.kind].append(e)
+		return es
 	
 	def spatial(self, *args, **kwargs):
 		from helipad.spatial import spatialSetup
