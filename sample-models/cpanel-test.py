@@ -5,8 +5,6 @@
 #===============
 
 from helipad import Helipad
-# from utility import CobbDouglas
-
 heli = Helipad()
 heli.name = 'Test'
 

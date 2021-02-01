@@ -3,20 +3,13 @@
 # Do not run this file; import it and run your file.
 # ==========
 
-import sys, warnings, pandas
+import sys, warnings, pandas, asyncio, time
 from random import shuffle, choice
 from numpy import random
+
 from helipad.visualize import BaseVisualization
 from helipad.helpers import *
 from helipad.param import *
-import matplotlib, asyncio
-import time	#For performance testing
-
-if isIpy():
-	from IPython import get_ipython
-	get_ipython().magic('matplotlib widget')
-else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
-
 from helipad.data import Data
 import helipad.agent as agent
 
@@ -806,26 +799,7 @@ class Helipad:
 		self.setup()
 		
 		if self.visual is not None and not self.visual.isNull:
-			def catchKeypress(event):
-				#Toggle legend boxes
-				if event.key == 't':
-					for plot in self.visual.activePlots.values():
-						leg = plot.axes.get_legend()
-						leg.set_visible(not leg.get_visible())
-					self.visual.fig.canvas.draw()
-		
-				#Pause on spacebar
-				elif event.key == ' ' and self.hasModel:
-					if self.running: self.stop()
-					else: self.start()
-		
-				#User functions
-				self.doHooks('graphKeypress', [event.key, self])
-			
 			self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
-		
-			self.visual.fig.canvas.mpl_connect('close_event', self.terminate)
-			self.visual.fig.canvas.mpl_connect('key_press_event', catchKeypress)
 		else:
 			self.params['stopafter'].disable()
 			self.params['csv'].disable()

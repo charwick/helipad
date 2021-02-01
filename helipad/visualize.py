@@ -5,7 +5,7 @@
 
 from numpy import ndarray, asanyarray, log10
 from math import sqrt, ceil
-import matplotlib.pyplot as plt, matplotlib.style as mlpstyle
+import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from abc import ABC, abstractmethod
 from helipad.helpers import *
 mlpstyle.use('fast')
@@ -15,7 +15,7 @@ mlpstyle.use('fast')
 # These two use Matplotlib, but subclasses of BaseVisualization don't necessarily have to.
 #======================
 
-#Used for creating an entirely new visualization window. May or may not use Matplotlib.
+#Used for creating an entirely new visualization window.
 class BaseVisualization:
 	
 	#Create the window. Mandatory to implement
@@ -34,10 +34,39 @@ class BaseVisualization:
 	#Called from model.terminate(). Optional to implement
 	def terminate(self, model): pass
 
-class TimeSeries(BaseVisualization):
+class MPLVisualization(BaseVisualization):
+	keys = {}
+	
 	def __init__(self, model):
-		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.model = model #Unhappy with this
+		def pause(model):
+			if model.hasModel:
+				if model.running: model.stop()
+				else: model.start()
+		self.addKeypress(' ', pause)
+		
+		if isIpy():
+			from IPython import get_ipython
+			get_ipython().magic('matplotlib widget')
+		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
+	
+	#Subclasses should call super().launch **after** the figure is created.
+	@abstractmethod
+	def launch(self, title):
+		if not isIpy(): self.fig.canvas.set_window_title(title)
+		self.fig.tight_layout()
+		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
+		self.fig.canvas.mpl_connect('key_press_event', self.catchKeypress)
+	
+	def addKeypress(self, key, fn): self.keys[key] = fn
+	
+	def catchKeypress(self, event):
+		if event.key in self.keys: self.keys[event.key](self.model)
+
+class TimeSeries(MPLVisualization):
+	def __init__(self, model):
+		super().__init__(model)
+		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		
 		#Plot categories
 		self.plots = {}
@@ -48,6 +77,14 @@ class TimeSeries(BaseVisualization):
 			self.addPlot('shortage', 'Shortages', selected=False)
 		if model.moneyGood is not None:
 			self.addPlot('money', 'Money', selected=False)
+		
+		#Toggle legend boxes
+		def toggle(model):
+			for plot in self.activePlots.values():
+				leg = plot.axes.get_legend()
+				leg.set_visible(not leg.get_visible())
+			self.fig.canvas.draw()
+		self.addKeypress('t', toggle)
 		
 		#Delete the corresponding series when a reporter is removed
 		@model.hook('removeReporter')
@@ -91,7 +128,7 @@ class TimeSeries(BaseVisualization):
 		#The Tkinter way of setting the title doesn't work in Jupyter
 		#The Jupyter way works in Tkinter, but also serves as the figure id, so new graphs draw on top of old ones
 		self.fig, plots = plt.subplots(len(self.activePlots), sharex=True, num=title if isIpy() else None)
-		if not isIpy(): self.fig.canvas.set_window_title(title)
+		super().launch(title)
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
@@ -105,7 +142,6 @@ class TimeSeries(BaseVisualization):
 			fm.window.wm_geometry("+400+0")
 		
 		#Style plots
-		self.fig.tight_layout()
 		self.fig.subplots_adjust(hspace=0, bottom=0.05, right=1, top=0.97, left=0.1)
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
@@ -219,8 +255,9 @@ class TimeSeries(BaseVisualization):
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
-class Charts(BaseVisualization):
+class Charts(MPLVisualization):
 	def __init__(self, model):
+		super().__init__(model)
 		self.plots = {}
 		self.events = {}
 		self.plotTypes = {}
@@ -252,12 +289,13 @@ class Charts(BaseVisualization):
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
-		if not isIpy(): self.fig.canvas.set_window_title(title)
-		self.fig.tight_layout()
+		super().launch(title)
 		
-		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
-		if isinstance(plots[0], ndarray): plots = plots.flatten() #The x,y returns a 2D array
+		if not isinstance(plots, ndarray): plots = asanyarray([plots])	#.subplots() tries to be clever & returns a different data type if len(plots)==1
+		if isinstance(plots[0], ndarray): plots = plots.flatten()		#The x,y returns a 2D array
 		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
+		for a in plots:
+			if not a in [p.axes for p in self.activePlots.values()]: a.remove()	#Don't draw axes in a space where nothing is registered
 		
 		#Position graph window
 		fm = plt.get_current_fig_manager()
