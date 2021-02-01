@@ -26,6 +26,9 @@ class dictLike(dict):
 		if 'agents_' in index:
 			index = index.replace('agents_', 'num_')
 			warnings.warn('The use of the \'agents_\' prefix to access the primitive population parameter is deprecated and will be removed in a future version. Use the \'num_\' prefix instead.', None, 3)
+		elif index=='updateEvery':
+			index = 'refresh'
+			warnings.warn('The \'updateEvery\' parameter has been renamed to \'refresh\'. The ability to refer to \'updateEvery\' is deprecated and will be removed in a future version.', None, 3)
 		return index
 
 import colorsys, matplotlib.colors as mplcolor

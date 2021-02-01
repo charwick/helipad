@@ -92,7 +92,7 @@ def modelPostSetup(model):
 @heli.event
 def nofemales(model): return len(model.agent('female')) <= 1
 heli.param('stopafter', 'nofemales')
-heli.param('updateEvery', 1)
+heli.param('refresh', 1)
 
 #===============
 # DATA AND VISUALIZATION

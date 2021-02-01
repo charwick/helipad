@@ -10,6 +10,11 @@ from abc import ABC, abstractmethod
 from helipad.helpers import *
 mlpstyle.use('fast')
 
+#======================
+# TOP-LEVEL VISUALIZERS
+# These two use Matplotlib, but subclasses of BaseVisualization don't necessarily have to.
+#======================
+
 #Used for creating an entirely new visualization window. May or may not use Matplotlib.
 class BaseVisualization:
 	
@@ -29,68 +34,10 @@ class BaseVisualization:
 	#Called from model.terminate(). Optional to implement
 	def terminate(self, model): pass
 
-#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
-#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
-class ChartPlot(Item):
-	
-	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
-	@abstractmethod
-	def launch(self, axes):
-		self.axes = axes
-		axes.set_title(self.label, fontdict={'fontsize':10})
-	
-	#Receives a 1-dimensional dict with only the most recent value of each column
-	#The subclass is responsible for storing the relevant data internally
-	@abstractmethod
-	def update(self, data, t): pass
-	
-	#Receives the time to scrub to
-	@abstractmethod
-	def draw(self, t): pass
-
 class TimeSeries(BaseVisualization):
 	def __init__(self, model):
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.model = model #Unhappy with this
-		
-		class Plot(Item):
-			@property
-			def selected(self): return self.model.params['plots'].get(self.name)
-	
-			@selected.setter
-			def selected(self, val): self.active(val)
-	
-			def active(self, val, updateGUI=True):
-				self.model.params['plots'].set(self.name, bool(val))
-				if updateGUI and not isIpy() and hasattr(self, 'check'):
-					self.check.set(val)
-	
-			#First arg is a reporter name registered in DataCollector, or a lambda function
-			#Second arg is the series name. Use '' to not show in the legend.
-			#Third arg is the plot's hex color, or a Color object
-			def addSeries(self, reporter, label, color, style='-'):
-				if not isinstance(color, Color): color = Color(color)
-
-				#Check against columns and not reporters so subseries work
-				if not callable(reporter) and not reporter in self.model.data.columns:
-					raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
-		
-				#Add subsidiary series (e.g. percentile bars)
-				subseries = []
-				if reporter in self.model.data.reporters and self.model.data.reporters[reporter].children:
-					for p in self.model.data.reporters[reporter].children:
-						if '-unsmooth' in p: continue #Don't plot the unsmoothed series
-						subseries.append(self.addSeries(p, '', color.lighten(), style='--'))
-
-				#Since many series are added at setup time, we have to de-dupe
-				for s in self.series:
-					if s.reporter == reporter:
-						self.series.remove(s)
-		
-				series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
-				self.series.append(series)
-				return series
-		self.plotclass = Plot
 		
 		#Plot categories
 		self.plots = {}
@@ -147,7 +94,7 @@ class TimeSeries(BaseVisualization):
 		if not isIpy(): self.fig.canvas.set_window_title(title)
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
-		for plot, axes in zip(self.activePlots.values(), plots): plot.axes = axes
+		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
 		
 		#Resize and position graph window
 		fm = plt.get_current_fig_manager()
@@ -157,41 +104,7 @@ class TimeSeries(BaseVisualization):
 			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
 			fm.window.wm_geometry("+400+0")
 		
-		#Cycle over plots
-		for pname, plot in self.activePlots.items():
-			plot.axes.margins(x=0)
-			if plot.stack:
-				lines = plot.axes.stackplot([], *[[] for s in plot.series], color=[s.color.hex for s in plot.series])
-				for series, poly in zip(plot.series, lines): series.poly = poly
-				plot.axes.margins(y=0)
-			
-			if plot.logscale:
-				plot.axes.set_yscale('log')
-				plot.axes.set_ylim(1/2, 2, auto=True)
-				
-			#Create a line for each series
-			#Do this even for stackplots because the line object is necessary to create the legend
-			for series in plot.series:
-				series.line, = plot.axes.plot([], label=series.label, color=series.color.hex, linestyle=series.style)
-				series.fdata = []
-				series.line.subseries = series.subseries
-				series.line.label = series.label
-			
-			#Set up the legend for click events on both the line and the legend
-			leg = plot.axes.legend(loc='upper right')
-			for legline, label in zip(leg.get_lines(), leg.get_texts()):
-				legline.set_picker(True)	#Listen for mouse events on the legend line
-				legline.set_pickradius(5)	#Set margin of valid events in pixels
-				label.set_picker(5)			#Do both on the legend text
-				for s in plot.series:
-					if s.label==label.get_text():
-						label.series = s.line
-						legline.series = s.line
-						legline.otherComponent = label
-						label.otherComponent = legline
-						break
-		
-		#Style graphs
+		#Style plots
 		self.fig.tight_layout()
 		self.fig.subplots_adjust(hspace=0, bottom=0.05, right=1, top=0.97, left=0.1)
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
@@ -243,7 +156,7 @@ class TimeSeries(BaseVisualization):
 			ylim = plot.axes.get_ylim()
 			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
 		
-		if self.resolution > self.model.param('updateEvery'): self.model.param('updateEvery', self.resolution)
+		if self.resolution > self.model.param('refresh'): self.model.param('refresh', self.resolution)
 		if isIpy(): self.fig.canvas.draw()
 		plt.pause(0.0001)
 	
@@ -267,7 +180,7 @@ class TimeSeries(BaseVisualization):
 	
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		plot = self.plotclass(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
+		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
 		
 		self.selector.addItem(name, label, position, selected)
 		if position is None or position > len(self.plots): self.plots[name] = plot
@@ -311,118 +224,10 @@ class Charts(BaseVisualization):
 		self.plots = {}
 		self.events = {}
 		self.plotTypes = {}
-		
-		class BarChart(ChartPlot):
-			type = 'bar'
-			def __init__(self, **kwargs):
-				for arg in ['horizontal', 'logscale']:
-					if not arg in kwargs: kwargs[arg] = False
-				super().__init__(**kwargs)
-				self.bars = []
-			
-			def addBar(self, reporter, label, color='blue', position=None):
-				bar = Item(reporter=reporter, label=label, color=color)
-				
-				#Add subsidiary series (e.g. percentile bars)
-				bar.err = []
-				if reporter in model.data.reporters and model.data.reporters[reporter].children:
-					for p in model.data.reporters[reporter].children:
-						if '-unsmooth' in p: continue
-						bar.err.append(p)
-				
-				if position is None or position>=len(self.bars): self.bars.append(bar)
-				else: self.bars.insert(position-1, bar)
-			
-			def launch(self, axes):
-				super().launch(axes)
-				
-				cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
-				kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
-				rects = cfunc(range(len(self.bars)), [0 for i in self.bars], color=[bar.color for bar in self.bars], **kwa)
-				errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
-				for bar, rect, err in zip(self.bars, rects, errors):
-					bar.element = rect
-					bar.errPath = err.vertices
-					bar.errHist = []
-					bar.data = []
-			
-				cstlfunc, cstfunc = (axes.set_yticklabels, axes.set_yticks) if self.horizontal else (axes.set_xticklabels, axes.set_xticks)
-				cstfunc(range(len(self.bars)))
-				cstlfunc([bar.label for bar in self.bars])
-				axes.margins(x=0)
-			
-				if self.logscale:
-					if self.horizontal:
-						axes.set_xscale('log')
-						axes.set_xlim(1/2, 2, auto=True)
-					else:
-						axes.set_yscale('log')
-						axes.set_ylim(1/2, 2, auto=True)
-			
-			def update(self, data, t):
-				getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
-				lims = list(getlim())
-				for b in self.bars:
-					b.data.append(data[b.reporter])
-					if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
-					if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
-				
-					if b.err:
-						errs = [data[e] for e in b.err]
-						errs.sort()
-						for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
-							if errs[i] < lims[0]: lims[0] = errs[i]
-							if errs[i] > lims[1]: lims[1] = errs[i]
-						b.errHist.append(errs)
-				
-				setlim(lims)
-				self.axes.autoscale_view(tight=False)
-			
-			def draw(self, t):
-				i = int(t/self.viz.refresh.get())-1
-				for b in self.bars:
-					setbar = b.element.set_width if self.horizontal else b.element.set_height
-					setbar(b.data[i])
-				
-					if b.err: #Update error bars
-						for j,cap in enumerate(b.errPath):
-							if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
-		
-		class NetworkPlot(ChartPlot):
-			type = 'network'
-			def __init__(self, **kwargs):
-				if not 'prim' in kwargs: kwargs['prim'] = None
-				if not 'kind' in kwargs: kwargs['kind'] = 'edge'
-				if not 'layout' in kwargs: kwargs['layout'] = 'spring'
-				super().__init__(**kwargs)
-				self.ndata = {}
-			
-			def launch(self, axes):
-				import networkx as nx, networkx.drawing.layout as lay
-				self.nx = nx
-				self.lay = getattr(lay, self.layout+'_layout')
-				super().launch(axes)
-
-			def update(self, data, t):
-				G = self.viz.model.network(self.kind, self.prim)
-				self.ndata[t] = G
-	
-			def draw(self, t):
-				self.axes.clear()
-				self.axes.set_title(self.label, fontdict={'fontsize':10})
-				
-				#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
-				pos = self.lay(self.ndata[t])
-				self.nx.draw_networkx_nodes(self.ndata[t], pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
-				e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
-				e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
-				self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
-				self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
-				self.nx.draw_networkx_labels(self.ndata[t], pos, ax=self.axes)
 				
 		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
-		model.params['updateEvery'].runtime=False
-		self.refresh = model.params['updateEvery']
+		model.params['refresh'].runtime=False
+		self.refresh = model.params['refresh']
 		self.model = model # :(
 	
 	@property
@@ -448,6 +253,7 @@ class Charts(BaseVisualization):
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
 		if not isIpy(): self.fig.canvas.set_window_title(title)
+		self.fig.tight_layout()
 		
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		if isinstance(plots[0], ndarray): plots = plots.flatten() #The x,y returns a 2D array
@@ -463,7 +269,7 @@ class Charts(BaseVisualization):
 		
 		#Time slider
 		ref = self.refresh.get()
-		plt.subplots_adjust(bottom=0.12) #Make room for the slider
+		self.fig.subplots_adjust(bottom=0.12) #Make room for the slider
 		sax = plt.axes([0.1,0.01,.75,0.03], facecolor='#EEF')
 		self.timeslider = Slider(sax, 't=', 0, ref, ref, valstep=ref, closedmin=False)
 		self.timeslider.on_changed(self.scrub)
@@ -502,6 +308,214 @@ class Charts(BaseVisualization):
 	def event(self, t, color='#FDC', **kwargs):
 		ref = self.refresh.get()
 		self.events[ceil(t/ref)*ref] = color
+
+#======================
+# PLOT-LEVEL VISUALIZERS
+# Plug into either TimeSeries or Charts as one of the subplots
+#======================
+
+class Plot(Item):
+	@property
+	def selected(self): return self.model.params['plots'].get(self.name)
+
+	@selected.setter
+	def selected(self, val): self.active(val)
+
+	def active(self, val, updateGUI=True):
+		self.model.params['plots'].set(self.name, bool(val))
+		if updateGUI and not isIpy() and hasattr(self, 'check'):
+			self.check.set(val)
+
+	#First arg is a reporter name registered in DataCollector, or a lambda function
+	#Second arg is the series name. Use '' to not show in the legend.
+	#Third arg is the plot's hex color, or a Color object
+	def addSeries(self, reporter, label, color, style='-'):
+		if not isinstance(color, Color): color = Color(color)
+
+		#Check against columns and not reporters so subseries work
+		if not callable(reporter) and not reporter in self.model.data.columns:
+			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
+
+		#Add subsidiary series (e.g. percentile bars)
+		subseries = []
+		if reporter in self.model.data.reporters and self.model.data.reporters[reporter].children:
+			for p in self.model.data.reporters[reporter].children:
+				if '-unsmooth' in p: continue #Don't plot the unsmoothed series
+				subseries.append(self.addSeries(p, '', color.lighten(), style='--'))
+
+		#Since many series are added at setup time, we have to de-dupe
+		for s in self.series:
+			if s.reporter == reporter:
+				self.series.remove(s)
+
+		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
+		self.series.append(series)
+		return series
+	
+	def launch(self, axes):
+		self.axes = axes
+		axes.margins(x=0)
+		if self.stack:
+			lines = axes.stackplot([], *[[] for s in self.series], color=[s.color.hex for s in self.series])
+			for series, poly in zip(self.series, lines): series.poly = poly
+			axes.margins(y=0)
+	
+		if self.logscale:
+			axes.set_yscale('log')
+			axes.set_ylim(1/2, 2, auto=True)
+		
+		#Create a line for each series
+		#Do this even for stackplots because the line object is necessary to create the legend
+		for series in self.series:
+			series.line, = axes.plot([], label=series.label, color=series.color.hex, linestyle=series.style)
+			series.fdata = []
+			series.line.subseries = series.subseries
+			series.line.label = series.label
+	
+		#Set up the legend for click events on both the line and the legend
+		leg = axes.legend(loc='upper right')
+		for legline, label in zip(leg.get_lines(), leg.get_texts()):
+			legline.set_picker(True)	#Listen for mouse events on the legend line
+			legline.set_pickradius(5)	#Set margin of valid events in pixels
+			label.set_picker(5)			#Do both on the legend text
+			for s in self.series:
+				if s.label==label.get_text():
+					label.series = s.line
+					legline.series = s.line
+					legline.otherComponent = label
+					label.otherComponent = legline
+					break
+
+#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
+#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
+class ChartPlot(Item):
+	
+	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
+	@abstractmethod
+	def launch(self, axes):
+		self.axes = axes
+		axes.set_title(self.label, fontdict={'fontsize':10})
+	
+	#Receives a 1-dimensional dict with only the most recent value of each column
+	#The subclass is responsible for storing the relevant data internally
+	@abstractmethod
+	def update(self, data, t): pass
+	
+	#Receives the time to scrub to
+	@abstractmethod
+	def draw(self, t): pass
+
+class BarChart(ChartPlot):
+	type = 'bar'
+	def __init__(self, **kwargs):
+		for arg in ['horizontal', 'logscale']:
+			if not arg in kwargs: kwargs[arg] = False
+		super().__init__(**kwargs)
+		self.bars = []
+	
+	def addBar(self, reporter, label, color='blue', position=None):
+		bar = Item(reporter=reporter, label=label, color=color)
+		
+		#Add subsidiary series (e.g. percentile bars)
+		bar.err = []
+		if reporter in self.viz.model.data.reporters and self.viz.model.data.reporters[reporter].children:
+			for p in self.viz.model.data.reporters[reporter].children:
+				if '-unsmooth' in p: continue
+				bar.err.append(p)
+		
+		if position is None or position>=len(self.bars): self.bars.append(bar)
+		else: self.bars.insert(position-1, bar)
+	
+	def launch(self, axes):
+		super().launch(axes)
+		
+		cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
+		kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
+		rects = cfunc(range(len(self.bars)), [0 for i in self.bars], color=[bar.color for bar in self.bars], **kwa)
+		errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
+		for bar, rect, err in zip(self.bars, rects, errors):
+			bar.element = rect
+			bar.errPath = err.vertices
+			bar.errHist = []
+			bar.data = []
+	
+		cstlfunc, cstfunc = (axes.set_yticklabels, axes.set_yticks) if self.horizontal else (axes.set_xticklabels, axes.set_xticks)
+		cstfunc(range(len(self.bars)))
+		cstlfunc([bar.label for bar in self.bars])
+		axes.margins(x=0)
+	
+		if self.logscale:
+			if self.horizontal:
+				axes.set_xscale('log')
+				axes.set_xlim(1/2, 2, auto=True)
+			else:
+				axes.set_yscale('log')
+				axes.set_ylim(1/2, 2, auto=True)
+	
+	def update(self, data, t):
+		getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
+		lims = list(getlim())
+		for b in self.bars:
+			b.data.append(data[b.reporter])
+			if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
+			if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
+		
+			if b.err:
+				errs = [data[e] for e in b.err]
+				errs.sort()
+				for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
+					if errs[i] < lims[0]: lims[0] = errs[i]
+					if errs[i] > lims[1]: lims[1] = errs[i]
+				b.errHist.append(errs)
+		
+		setlim(lims)
+		self.axes.autoscale_view(tight=False)
+	
+	def draw(self, t):
+		i = int(t/self.viz.refresh.get())-1
+		for b in self.bars:
+			setbar = b.element.set_width if self.horizontal else b.element.set_height
+			setbar(b.data[i])
+		
+			if b.err: #Update error bars
+				for j,cap in enumerate(b.errPath):
+					if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
+
+class NetworkPlot(ChartPlot):
+	type = 'network'
+	def __init__(self, **kwargs):
+		if not 'prim' in kwargs: kwargs['prim'] = None
+		if not 'kind' in kwargs: kwargs['kind'] = 'edge'
+		if not 'layout' in kwargs: kwargs['layout'] = 'spring'
+		super().__init__(**kwargs)
+		self.ndata = {}
+	
+	def launch(self, axes):
+		import networkx as nx, networkx.drawing.layout as lay
+		self.nx = nx
+		self.lay = getattr(lay, self.layout+'_layout')
+		super().launch(axes)
+
+	def update(self, data, t):
+		G = self.viz.model.network(self.kind, self.prim)
+		self.ndata[t] = G
+
+	def draw(self, t):
+		self.axes.clear()
+		self.axes.set_title(self.label, fontdict={'fontsize':10})
+		
+		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
+		pos = self.lay(self.ndata[t])
+		self.nx.draw_networkx_nodes(self.ndata[t], pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
+		e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
+		e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
+		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
+		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
+		self.nx.draw_networkx_labels(self.ndata[t], pos, ax=self.axes)
+
+#======================
+# HELPER FUNCTIONS
+#======================
 	
 def keepEvery(lst, n):
 	i,l = (1, [])

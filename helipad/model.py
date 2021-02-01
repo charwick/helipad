@@ -15,7 +15,7 @@ import time	#For performance testing
 if isIpy():
 	from IPython import get_ipython
 	get_ipython().magic('matplotlib widget')
-else: matplotlib.use('TkAgg')
+else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
 
 from helipad.data import Data
 import helipad.agent as agent
@@ -69,7 +69,7 @@ class Helipad:
 					self.cpanel.progress.update(model.t/val)
 			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
-			self.addParameter('updateEvery', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
+			self.addParameter('refresh', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 			self.addParameter('shocks', 'Shocks', 'checkgrid', opts={}, dflt={}, runtime=True, config=True)
 		
 			#Check for updates
@@ -514,7 +514,7 @@ class Helipad:
 			t = self.step()
 			st = self.param('stopafter')
 			
-			if t%self.param('updateEvery')==0:
+			if t%self.param('refresh')==0:
 				if self.timer: t2 = time.time()
 				
 				if getattr(self, 'cpanel', False) and st and isinstance(st, int): self.cpanel.progress.update(t/st)
@@ -536,7 +536,7 @@ class Helipad:
 				# Performance indicator
 				if self.timer:
 					newtime = time.time()
-					print('Period', t, ':', round(self.param('updateEvery')/(newtime-begin),2), 'periods/second (',round((t2-begin)/(newtime-begin)*100,2),'% model, ',round((newtime-t2)/(newtime-begin)*100,2),'% visuals)')
+					print('Period', t, ':', round(self.param('refresh')/(newtime-begin),2), 'periods/second (',round((t2-begin)/(newtime-begin)*100,2),'% model, ',round((newtime-t2)/(newtime-begin)*100,2),'% visuals)')
 					begin = newtime
 	
 			if st:
@@ -575,7 +575,7 @@ class Helipad:
 		self.hasModel = False
 		if self.visual is not None: self.visual.terminate(self) #Clean up visualizations
 		
-		remainder = int(self.t % self.param('updateEvery')) #For some reason this returns a float sometimes?
+		remainder = int(self.t % self.param('refresh')) #For some reason this returns a float sometimes?
 		if remainder > 0 and self.visual is not None: self.visual.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))

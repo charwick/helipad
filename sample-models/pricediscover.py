@@ -75,6 +75,6 @@ pricePlot = viz.addPlot('price', 'Price', logscale=True, selected=True)
 pricePlot.addSeries('ssprice', 'Soma/Shmoo Price', '#119900')
 
 for p in ['demand', 'utility']: viz.plots[p].active(True)
-heli.param('updateEvery', 1)
+heli.param('refresh', 1)
 
 heli.launchCpanel()

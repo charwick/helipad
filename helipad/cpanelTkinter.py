@@ -197,7 +197,7 @@ class Cpanel:
 		
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
 		
-		renderParam(frame1, self.model.params['updateEvery'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
+		renderParam(frame1, self.model.params['refresh'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = runButton(frame1, bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 		
