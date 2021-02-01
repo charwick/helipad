@@ -651,8 +651,9 @@ class Helipad:
 			G = nx.Graph()
 			agents = self.allagents.values() if prim is None else self.agents[prim]
 			G.add_nodes_from([a.id for a in agents])
-			if kind in self.allEdges:
-				G.add_edges_from([(e.vertices[0].id, e.vertices[1].id) for e in self.allEdges[kind]])
+			ae = self.allEdges
+			if kind in ae:
+				G.add_weighted_edges_from([(e.vertices[0].id, e.vertices[1].id, e.weight) for e in ae[kind]])
 		
 			return G
 		except: warnings.warn('Network export requires Networkx.', None, 2)

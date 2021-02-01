@@ -46,7 +46,7 @@ class ChartPlot(Item):
 	
 	#Receives the time to scrub to
 	@abstractmethod
-	def scrub(self, t): pass
+	def draw(self, t): pass
 
 class TimeSeries(BaseVisualization):
 	def __init__(self, model):
@@ -363,19 +363,14 @@ class Charts(BaseVisualization):
 				getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
 				lims = list(getlim())
 				for b in self.bars:
-					setbar = b.element.set_width if self.horizontal else b.element.set_height
-					setbar(data[b.reporter])
-					b.data.append(data[b.reporter]) #Keep track
-				
+					b.data.append(data[b.reporter])
 					if data[b.reporter] < lims[0]: lims[0] = data[b.reporter]
 					if data[b.reporter] > lims[1]: lims[1] = data[b.reporter]
 				
-					#Update error bars
 					if b.err:
 						errs = [data[e] for e in b.err]
 						errs.sort()
 						for i,cap in enumerate(b.errPath): #Should only be 2 of these, but errs could be any length
-							if len(errs) >= i+1: cap[0 if self.horizontal else 1] = errs[i]
 							if errs[i] < lims[0]: lims[0] = errs[i]
 							if errs[i] > lims[1]: lims[1] = errs[i]
 						b.errHist.append(errs)
@@ -383,7 +378,7 @@ class Charts(BaseVisualization):
 				setlim(lims)
 				self.axes.autoscale_view(tight=False)
 			
-			def scrub(self, t):
+			def draw(self, t):
 				i = int(t/self.viz.refresh.get())-1
 				for b in self.bars:
 					setbar = b.element.set_width if self.horizontal else b.element.set_height
@@ -408,15 +403,12 @@ class Charts(BaseVisualization):
 
 			def update(self, data, t):
 				G = self.viz.model.network(self.kind, self.prim)
-				self.axes.clear()
-				self.axes.set_title(self.label, fontdict={'fontsize':10})
-				self.nx.draw_networkx(G, ax=self.axes)
 				self.ndata[t] = G
 	
-			def scrub(self, t):
+			def draw(self, t):
 				self.axes.clear()
 				self.axes.set_title(self.label, fontdict={'fontsize':10})
-				self.nx.draw_networkx(self.ndata[t], ax=self.axes)
+				self.nx.draw_networkx(self.ndata[t], ax=self.axes, width=list(self.nx.get_edge_attributes(self.ndata[t],'weight').values()))
 				
 		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
 		model.params['updateEvery'].runtime=False
@@ -484,7 +476,7 @@ class Charts(BaseVisualization):
 	
 	#Update the graph to a particular model time
 	def scrub(self, t):
-		for c in self.activePlots.values(): c.scrub(t)
+		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
 	def addPlot(self, name, label, **kwargs):
