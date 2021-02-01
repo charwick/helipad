@@ -55,6 +55,7 @@ heli.addParameter('gcheckgrid', 'Global Checkgrid', 'checkgrid',
 	opts={'gondor':('Gondor', 'Currently calling for aid'), 'isengard':'Isengard', 'rohan':'Rohan', 'rivendell':'Rivendell', 'khazad':('Khazad-dûm', 'Nice diacritic')},
 	dflt=['gondor', 'rohan', 'khazad'], callback=gcallback
 )
+heli.param('num_agent', 18)
 
 #===============
 # A DUMMY MODEL
@@ -88,7 +89,7 @@ def modelPostStep(model):
 	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
 	a1.newEdge(a2, direction=random.choice([True, False]), weight=random.choice([0.5,1,2,3]))
 
-viz.addPlot('net', 'Network Structure', type='network')
+viz.addPlot('net', 'Network Structure', type='network', layout='spring')
 bar1 = viz.addPlot('prop', 'My Property')
 bar2 = viz.addPlot('prop2', 'Horizontal Property', horizontal=True)
 

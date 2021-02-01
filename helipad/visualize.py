@@ -393,12 +393,14 @@ class Charts(BaseVisualization):
 			def __init__(self, **kwargs):
 				if not 'prim' in kwargs: kwargs['prim'] = None
 				if not 'kind' in kwargs: kwargs['kind'] = 'edge'
+				if not 'layout' in kwargs: kwargs['layout'] = 'spring'
 				super().__init__(**kwargs)
 				self.ndata = {}
 			
 			def launch(self, axes):
-				import networkx as nx
+				import networkx as nx, networkx.drawing.layout as lay
 				self.nx = nx
+				self.lay = getattr(lay, self.layout+'_layout')
 				super().launch(axes)
 
 			def update(self, data, t):
@@ -408,11 +410,15 @@ class Charts(BaseVisualization):
 			def draw(self, t):
 				self.axes.clear()
 				self.axes.set_title(self.label, fontdict={'fontsize':10})
-				self.nx.draw_networkx(
-					self.ndata[t], ax=self.axes,
-					width=list(self.nx.get_edge_attributes(self.ndata[t],'weight').values()),
-					node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)]
-				)
+				
+				#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
+				pos = self.lay(self.ndata[t])
+				self.nx.draw_networkx_nodes(self.ndata[t], pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
+				e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
+				e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
+				self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
+				self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
+				self.nx.draw_networkx_labels(self.ndata[t], pos, ax=self.axes)
 				
 		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
 		model.params['updateEvery'].runtime=False
