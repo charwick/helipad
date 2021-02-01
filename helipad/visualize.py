@@ -408,7 +408,11 @@ class Charts(BaseVisualization):
 			def draw(self, t):
 				self.axes.clear()
 				self.axes.set_title(self.label, fontdict={'fontsize':10})
-				self.nx.draw_networkx(self.ndata[t], ax=self.axes, width=list(self.nx.get_edge_attributes(self.ndata[t],'weight').values()))
+				self.nx.draw_networkx(
+					self.ndata[t], ax=self.axes,
+					width=list(self.nx.get_edge_attributes(self.ndata[t],'weight').values()),
+					node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)]
+				)
 				
 		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
 		model.params['updateEvery'].runtime=False

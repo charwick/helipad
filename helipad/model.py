@@ -648,9 +648,9 @@ class Helipad:
 	def network(self, kind='edge', prim=None):
 		try:
 			import networkx as nx
-			G = nx.Graph()
+			G = nx.Graph(name=kind)
 			agents = self.allagents.values() if prim is None else self.agents[prim]
-			G.add_nodes_from([a.id for a in agents])
+			G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive}) for a in agents])
 			ae = self.allEdges
 			if kind in ae:
 				G.add_weighted_edges_from([(e.vertices[0].id, e.vertices[1].id, e.weight) for e in ae[kind]])
