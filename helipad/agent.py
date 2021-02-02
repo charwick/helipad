@@ -253,12 +253,13 @@ class Edge:
 		#Add object to each agent, and to the model
 		for agent in self.vertices:
 			if not kind in agent.edges: agent.edges[kind] = []
-			agent.edges[kind].append(self)
+			if not self in agent.edges[kind]: agent.edges[kind].append(self) #Don't add self-links twice
 		
 		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
 	
 	def cut(self):
-		for agent in self.vertices: agent.edges[self.kind].remove(self) #Remove from agents
+		for agent in self.vertices:
+			if self in agent.edges[self.kind]: agent.edges[self.kind].remove(self) #Remove from agents
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
 	

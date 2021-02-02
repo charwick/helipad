@@ -1,8 +1,15 @@
 # Helipad
 
-Helipad is an agent-based modeling framework for Python. It differs from other frameworks in that it focuses on time series output rather than spatial models.
+Helipad is a powerful agent-based modeling framework for Python with a shallow learning curve. Documentation and API reference can be found at https://helipad.dev
 
-Documentation and API reference can be found at https://helipad.dev
+##Features
+
+* ⚓️ A simple [hook-based API](https://helipad.dev/hooks/) makes it easy to build a model without worrying about the features you don’t need
+* 📈 Interactive and live-updating visualizations, including time series, bar charts, networks, spatial, and an API for writing custom visualizations
+* 👋🏻 Flexible parameter API allows parameter values to be set programmatically, adjusted manually from the control panel while the model is running, or shocked stochastically
+* 🪐 Cross-platform and multimodal. Models can be written and run with a Tkinter GUI, in Jupyter notebooks, or without a GUI at all
+* 🤹🏻‍♂️ Agents can barter, buy and sell with money, reproduce both haploid and polyploid, and more
+* 🕺🏻 A variety of model types: sequential or random-activation models, matching models, multi-level models, network models, spatial models, and more
 
 ## How to use
 
@@ -25,14 +32,14 @@ The included [bootstrap model](https://github.com/charwick/helipad/blob/master/s
 
 Helipad requires Python 3.6 or higher. The following libraries are also required:
 
-* [Matplotlib](https://matplotlib.org/) (for plotting the time series output)
+* [Matplotlib](https://matplotlib.org/) (for visualization)
 * [Pandas](https://pandas.pydata.org/) (for data collection)
 
 The following libraries are optional but recommended:
 
 * [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) (to run Helipad in Jupyter notebooks)
-* [PMW](https://pypi.org/project/Pmw/) (for tooltips)
-* [NetworkX](http://networkx.github.io/) (for network analysis)
+* [NetworkX](http://networkx.github.io/) (for network analysis and visualization)
+* [PMW](https://pypi.org/project/Pmw/) (for tooltips in the Tkinter GUI)
 * [Readline](https://pypi.org/project/readline/) and Code (for the debug console)
 * [Pyobjc](https://pypi.org/project/pyobjc/) (for Mac interface niceties)
 

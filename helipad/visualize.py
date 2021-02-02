@@ -39,7 +39,7 @@ class MPLVisualization(BaseVisualization):
 	
 	def __init__(self, model):
 		self.model = model #Unhappy with this
-		def pause(model):
+		def pause(model, event):
 			if model.hasModel:
 				if model.running: model.stop()
 				else: model.start()
@@ -61,7 +61,7 @@ class MPLVisualization(BaseVisualization):
 	def addKeypress(self, key, fn): self.keys[key] = fn
 	
 	def catchKeypress(self, event):
-		if event.key in self.keys: self.keys[event.key](self.model)
+		if event.key in self.keys: self.keys[event.key](self.model, event)
 
 class TimeSeries(MPLVisualization):
 	def __init__(self, model):
@@ -79,7 +79,7 @@ class TimeSeries(MPLVisualization):
 			self.addPlot('money', 'Money', selected=False)
 		
 		#Toggle legend boxes
-		def toggle(model):
+		def toggle(model, event):
 			for plot in self.activePlots.values():
 				leg = plot.axes.get_legend()
 				leg.set_visible(not leg.get_visible())
@@ -266,6 +266,13 @@ class Charts(MPLVisualization):
 		model.params['refresh'].runtime=False
 		self.refresh = model.params['refresh']
 		self.model = model # :(
+		
+		def rotateNetworkLayout(model, event):
+			axes = [p for p in self.activePlots.values() if p.axes is event.inaxes and p.type=='network']
+			if not axes: return
+			axes[0].rotateLayout()
+			
+		self.addKeypress('l', rotateNetworkLayout)
 	
 	@property
 	def isNull(self):
@@ -330,6 +337,7 @@ class Charts(MPLVisualization):
 	
 	#Update the graph to a particular model time
 	def scrub(self, t):
+		self.scrubval = t
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
@@ -550,6 +558,16 @@ class NetworkPlot(ChartPlot):
 		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
 		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
 		self.nx.draw_networkx_labels(self.ndata[t], pos, ax=self.axes)
+	
+	def rotateLayout(self):
+		self.axes.set_yscale('linear')
+		import networkx.drawing.layout as lay
+		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
+		li = layouts.index(self.layout)+1
+		while li>=len(layouts): li -= len(layouts)
+		self.layout = layouts[li]
+		self.lay = getattr(lay, self.layout+'_layout')
+		self.draw(self.viz.scrubval)
 
 #======================
 # HELPER FUNCTIONS
