@@ -78,14 +78,16 @@ def agentStep(agent, model, stage):
 def modelPostSetup(model):
 	model.createNetwork(0.2)
 
+def newedge(model):
+	a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
+	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
+	a1.newEdge(a2, direction=random.choice([True, False]), weight=random.choice([0.5,1,2,3]))
+
 #Cut one edge and create one edge
 @heli.hook
 def modelPostStep(model):
 	random.choice(model.allEdges['edge']).cut()
-	
-	a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
-	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
-	a1.newEdge(a2, direction=random.choice([True, False]), weight=random.choice([0.5,1,2,3]))
+	newedge(model)
 
 viz.addPlot('net', 'Network Structure', type='network', layout='spring')
 bar1 = viz.addPlot('prop', 'My Property')
@@ -95,6 +97,19 @@ gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):
 	heli.data.addReporter('prop'+str(i), heli.data.agentReporter('prop'+str(i), std=0.1))
 	(bar1 if i<10 else bar2).addBar('prop'+str(i), str(i), '#'+gcolors[i%10])
+
+#Replace an agent, but only if we click during the current model time
+@heli.hook
+def networkVisualClick(agent, plot, t):
+	if t != heli.t: return
+	
+	new = agent.reproduce()
+	enum = len(agent.edges['edge']) if 'edge' in agent.edges else 0
+	agent.die()
+	for e in range(enum): newedge(heli)
+	print('Killing agent',agent.id,'and creating agent',new.id)
+	plot.update(None, t)
+	plot.draw(t, forceUpdate=True)
 
 #===============
 # LAUNCH

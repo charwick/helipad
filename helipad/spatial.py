@@ -110,7 +110,8 @@ class SpatialPlot(ChartPlot):
 			for p in col:
 				p.colorData[t] = pd[p.x][p.y]
 	
-	def draw(self, t):
+	def draw(self, t=None):
+		if t is None: t=self.viz.scrubval
 		pd = self.patchData(t)
 		self.patchmap.set_data(pd)
 		self.agentmap.set_offsets(self.agentHistory[t][0])

@@ -519,7 +519,8 @@ class BarChart(ChartPlot):
 		setlim(lims)
 		self.axes.autoscale_view(tight=False)
 	
-	def draw(self, t):
+	def draw(self, t=None):
+		if t is None: t=self.viz.scrubval
 		i = int(t/self.viz.refresh.get())-1
 		for b in self.bars:
 			setbar = b.element.set_width if self.horizontal else b.element.set_height
@@ -541,26 +542,36 @@ class NetworkPlot(ChartPlot):
 	def launch(self, axes):
 		import networkx as nx, networkx.drawing.layout as lay
 		self.nx = nx
-		self.lay = getattr(lay, self.layout+'_layout')
+		self.layClass = getattr(lay, self.layout+'_layout')
 		super().launch(axes)
+		
+		def agentEvent(event):
+			aid = list(self.pos.keys())[event.ind[0]]
+			self.viz.model.doHooks('networkVisualClick', [self.viz.model.agent(aid), self, self.viz.scrubval])
+		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
 
 	def update(self, data, t):
 		G = self.viz.model.network(self.kind, self.prim)
 		self.ndata[t] = G
 
-	def draw(self, t):
+	def draw(self, t=None, forceUpdate=False):
+		if t is None: t=self.viz.scrubval
 		self.axes.clear()
 		self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
 		
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
-		pos = self.lay(self.ndata[t])
-		self.nx.draw_networkx_nodes(self.ndata[t], pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
+		self.pos = self.layClass(self.ndata[t])
+		nodes = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
 		e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
 		e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
-		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
-		self.nx.draw_networkx_edges(self.ndata[t], pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
-		self.nx.draw_networkx_labels(self.ndata[t], pos, ax=self.axes)
+		self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
+		self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
+		self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes)
+		
+		nodes.set_picker(True)	#Listen for mouse events on nodes
+		nodes.set_pickradius(5)	#Set margin of valid events in pixels
+		if forceUpdate: self.viz.fig.canvas.draw_idle()
 	
 	def rotateLayout(self):
 		self.axes.set_yscale('linear')
@@ -569,7 +580,7 @@ class NetworkPlot(ChartPlot):
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
-		self.lay = getattr(lay, self.layout+'_layout')
+		self.layClass = getattr(lay, self.layout+'_layout')
 		self.draw(self.viz.scrubval)
 
 #======================
