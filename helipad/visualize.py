@@ -40,7 +40,7 @@ class MPLVisualization(BaseVisualization):
 	def __init__(self, model):
 		self.model = model #Unhappy with this
 		def pause(model, event):
-			if model.hasModel:
+			if model.hasModel and event.canvas is self.fig.canvas:
 				if model.running: model.stop()
 				else: model.start()
 		self.addKeypress(' ', pause)
@@ -79,11 +79,12 @@ class TimeSeries(MPLVisualization):
 			self.addPlot('money', 'Money', selected=False)
 		
 		#Toggle legend boxes
+		#Use event.canvas.figure and not self.fig so it pertains to the current window
 		def toggle(model, event):
-			for plot in self.activePlots.values():
-				leg = plot.axes.get_legend()
+			for axes in event.canvas.figure.axes:
+				leg = axes.get_legend()
 				leg.set_visible(not leg.get_visible())
-			self.fig.canvas.draw()
+			event.canvas.draw()
 		self.addKeypress('t', toggle)
 		
 		#Delete the corresponding series when a reporter is removed
@@ -122,7 +123,7 @@ class TimeSeries(MPLVisualization):
 		self.verticals = []
 		if isIpy():
 			plt.close() #Clean up after any previous runs
-			plt.rcParams['figure.figsize'] = [9, 7]
+			matplotlib.rcParams['figure.figsize'] = [9, 7]
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		#The Tkinter way of setting the title doesn't work in Jupyter
@@ -134,7 +135,7 @@ class TimeSeries(MPLVisualization):
 		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
 		
 		#Resize and position graph window
-		fm = plt.get_current_fig_manager()
+		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
@@ -146,8 +147,8 @@ class TimeSeries(MPLVisualization):
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
 		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
-		plt.draw()
-		if isIpy(): plt.show()	#Necessary for ipympl
+		self.fig.canvas.draw_idle()
+		plt.show(block=False)
 	
 	def terminate(self, model):
 		if self.isNull:
@@ -193,8 +194,8 @@ class TimeSeries(MPLVisualization):
 			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
 		
 		if self.resolution > self.model.param('refresh'): self.model.param('refresh', self.resolution)
-		if isIpy(): self.fig.canvas.draw()
-		plt.pause(0.0001)
+		if self.fig.stale: self.fig.canvas.draw_idle()
+		self.fig.canvas.start_event_loop(0.0001) #Listen for user input
 	
 	def toggleLine(self, event):
 		c1 = event.artist					#The label or line that was clicked
@@ -269,9 +270,7 @@ class Charts(MPLVisualization):
 		
 		def rotateNetworkLayout(model, event):
 			axes = [p for p in self.activePlots.values() if p.axes is event.inaxes and p.type=='network']
-			if not axes: return
-			axes[0].rotateLayout()
-			
+			if axes: axes[0].rotateLayout()
 		self.addKeypress('l', rotateNetworkLayout)
 	
 	@property
@@ -292,7 +291,7 @@ class Charts(MPLVisualization):
 		y = ceil(n/x)
 		if isIpy():
 			plt.close() #Clean up after any previous runs
-			plt.rcParams['figure.figsize'] = [9, 7]
+			matplotlib.rcParams['figure.figsize'] = [9, 7]
 		
 		#fig is the figure, plots is a list of AxesSubplot objects
 		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
@@ -305,7 +304,7 @@ class Charts(MPLVisualization):
 			if not a in [p.axes for p in self.activePlots.values()]: a.remove()	#Don't draw axes in a space where nothing is registered
 		
 		#Position graph window
-		fm = plt.get_current_fig_manager()
+		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
@@ -315,25 +314,26 @@ class Charts(MPLVisualization):
 		#Time slider
 		ref = self.refresh.get()
 		self.fig.subplots_adjust(bottom=0.12) #Make room for the slider
-		sax = plt.axes([0.1,0.01,.75,0.03], facecolor='#EEF')
+		sax = self.fig.add_axes([0.1,0.01,.75,0.03], facecolor='#EEF')
 		self.timeslider = Slider(sax, 't=', 0, ref, ref, valstep=ref, closedmin=False)
 		self.timeslider.on_changed(self.scrub)
 		
-		plt.draw()
-		if isIpy(): plt.show()	#Necessary for ipympl
+		self.fig.canvas.draw_idle()
+		plt.show(block=False)
 	
 	def update(self, data):
 		data = {k:v[-1] for k,v in data.items()}
 		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
 		
-		#Update slider
+		#Update slider. This calls self.scrub()
 		self.timeslider.valmax = t
 		self.timeslider.set_val(t)
 		self.timeslider.ax.set_xlim(0,t) #Refresh
 		
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
-		plt.pause(0.0001)
+		if self.fig.stale: self.fig.canvas.draw_idle()
+		self.fig.canvas.start_event_loop(0.0001) #Listen for user input
 	
 	#Update the graph to a particular model time
 	def scrub(self, t):
@@ -474,6 +474,8 @@ class BarChart(ChartPlot):
 	
 	def launch(self, axes):
 		super().launch(axes)
+		axes.spines['top'].set_visible(False)
+		axes.spines['right'].set_visible(False)
 		
 		cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
 		kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
@@ -548,6 +550,7 @@ class NetworkPlot(ChartPlot):
 
 	def draw(self, t):
 		self.axes.clear()
+		self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
 		
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
