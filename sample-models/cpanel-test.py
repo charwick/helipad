@@ -90,8 +90,8 @@ def modelPostStep(model):
 	newedge(model)
 
 viz.addPlot('net', 'Network Structure', type='network', layout='spring')
-bar1 = viz.addPlot('prop', 'My Property')
-bar2 = viz.addPlot('prop2', 'Horizontal Property', horizontal=True)
+bar1 = viz.addPlot('prop', 'Bar Chart')
+bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
 
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):

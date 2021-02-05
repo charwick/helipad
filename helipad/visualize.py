@@ -17,6 +17,7 @@ mlpstyle.use('fast')
 
 #Used for creating an entirely new visualization window.
 class BaseVisualization:
+	isNull = True
 	
 	#Create the window. Mandatory to implement
 	@abstractmethod
@@ -39,6 +40,8 @@ class MPLVisualization(BaseVisualization):
 	
 	def __init__(self, model):
 		self.model = model #Unhappy with this
+		self.plots = {}
+		
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
 				if model.running: model.stop()
@@ -57,11 +60,20 @@ class MPLVisualization(BaseVisualization):
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
 		self.fig.canvas.mpl_connect('key_press_event', self.catchKeypress)
+		self.lastUpdate = 0
 	
 	def addKeypress(self, key, fn): self.keys[key] = fn
 	
 	def catchKeypress(self, event):
 		if event.key in self.keys: self.keys[event.key](self.model, event)
+	
+	@property
+	def activePlots(self):
+		return {k:plot for k,plot in self.plots.items() if plot.selected}
+	
+	@property
+	def isNull(self):
+		return not [plot for plot in self.plots.values() if plot.selected]
 
 class TimeSeries(MPLVisualization):
 	def __init__(self, model):
@@ -69,7 +81,6 @@ class TimeSeries(MPLVisualization):
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		
 		#Plot categories
-		self.plots = {}
 		self.addPlot('utility', 'Utility', selected=False)
 		
 		if len(model.goods) >= 2:
@@ -106,19 +117,10 @@ class TimeSeries(MPLVisualization):
 		def movePlotParam(model):
 			model.params['plots'] = model.params.pop('plots')
 	
-	@property
-	def isNull(self):
-		return not [plot for plot in self.plots.values() if plot.selected]
-	
-	@property
-	def activePlots(self):
-		return {k:plot for k,plot in self.plots.items() if plot.selected}
-	
 	#listOfPlots is the trimmed model.plots list
 	def launch(self, title):
 		if not len(self.activePlots): return #Windowless mode
 		
-		self.lastUpdate = 0
 		self.resolution = 1
 		self.verticals = []
 		if isIpy():
@@ -259,7 +261,6 @@ class TimeSeries(MPLVisualization):
 class Charts(MPLVisualization):
 	def __init__(self, model):
 		super().__init__(model)
-		self.plots = {}
 		self.events = {}
 		self.plotTypes = {}
 				
@@ -273,19 +274,10 @@ class Charts(MPLVisualization):
 			if axes: axes[0].rotateLayout()
 		self.addKeypress('l', rotateNetworkLayout)
 	
-	@property
-	def isNull(self):
-		return not [chart for chart in self.plots.values() if chart.selected]
-	
-	@property
-	def activePlots(self):
-		return {k:chart for k,chart in self.plots.items() if chart.selected}
-	
 	def launch(self, title):
 		if not len(self.activePlots): return #Windowless mode
 		from matplotlib.widgets import Slider
 		
-		self.lastUpdate = 0
 		n = len(self.activePlots)
 		x = ceil(sqrt(n))
 		y = ceil(n/x)

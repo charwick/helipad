@@ -13,7 +13,7 @@ class Utility:
 	#i.e. you can have an abstract good like real balances
 	def __init__(self, goods):
 		self.goods = goods
-		self.utils = 0
+		self.utility = 0
 		
 	def consume(self, quantities):
 		self.utility = self.calculate(quantities)
