@@ -145,6 +145,10 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	model.addParameter('square', 'Square', 'hidden', dflt=square)
 	model.addParameter('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
 	
+	def npsetter(val, item): raise RuntimeError('Patch number cannot be set directly. Set the x and y parameters instead.')
+	model.params['num_patch'].getter = lambda item: model.param('x')*model.param('y')
+	model.params['num_patch'].setter = npsetter
+	
 	#Hook a positioning function or randomly position our agents
 	@model.hook(prioritize=True)
 	def baseAgentInit(agent, model):
@@ -215,7 +219,6 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	@model.hook(prioritize=True)
 	def modelPreSetup(model):
 		model.patches = [[] for i in range(model.param('x'))]
-		model.param('num_patch', model.param('x')*model.param('y'))
 	
 	#Establish grid links
 	@model.hook(prioritize=True)

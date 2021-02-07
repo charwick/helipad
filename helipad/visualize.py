@@ -285,15 +285,12 @@ class Charts(MPLVisualization):
 			plt.close() #Clean up after any previous runs
 			matplotlib.rcParams['figure.figsize'] = [9, 7]
 		
-		#fig is the figure, plots is a list of AxesSubplot objects
-		self.fig, plots = plt.subplots(y, x, num=title if isIpy() else None)
+		#Add the subplots individually rather than using plt.subplots() so we can mix and match projections
+		self.fig = plt.figure()
+		plots = list(self.activePlots.values())
+		for i in range(n):
+			plots[i].launch(self.fig.add_subplot(x,y,i+1, projection=plots[i].projection))
 		super().launch(title)
-		
-		if not isinstance(plots, ndarray): plots = asanyarray([plots])	#.subplots() tries to be clever & returns a different data type if len(plots)==1
-		if isinstance(plots[0], ndarray): plots = plots.flatten()		#The x,y returns a 2D array
-		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
-		for a in plots:
-			if not a in [p.axes for p in self.activePlots.values()]: a.remove()	#Don't draw axes in a space where nothing is registered
 		
 		#Position graph window
 		fm = self.fig.canvas.manager
@@ -333,15 +330,28 @@ class Charts(MPLVisualization):
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
-	def addPlot(self, name, label, **kwargs):
-		if not 'type' in kwargs: kwargs['type'] = 'bar'
-		if not kwargs['type'] in self.plotTypes: raise KeyError('\''+kwargs['type']+'\' is not a registered plot visualizer.')
-		self.plots[name] = self.plotTypes[kwargs['type']](name=name, label=label, selected=True, viz=self, **kwargs)
+	def addPlot(self, name, label, type=None, **kwargs):
+		self.type = type if type is not None else 'bar'
+		if not self.type in self.plotTypes: raise KeyError('\''+self.type+'\' is not a registered plot visualizer.')
+		self.plots[name] = self.plotTypes[self.type](name=name, label=label, selected=True, viz=self, **kwargs)
 		return self.plots[name]
 	
 	def addPlotType(self, clss):
 		if not issubclass(clss, ChartPlot): raise TypeError('New plot types must subclass ChartPlot.')
 		self.plotTypes[clss.type] = clss
+	
+	def removePlot(self, name):
+		if getattr(self.model, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if isinstance(name, list):
+			for p in name: self.removePlot(p, reassign)
+			return
+		
+		if not name in self.plots:
+			warnings.warn('No plot \''+name+'\' to remove', None, 2)
+			return False
+				
+		del self.plots[name]
+		return True
 	
 	def event(self, t, color='#FDC', **kwargs):
 		ref = self.refresh.get()
@@ -427,6 +437,9 @@ class Plot(Item):
 #Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
 #Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
 class ChartPlot(Item):
+	def __init__(self, **kwargs):
+		if not 'projection' in kwargs and not hasattr(self, 'projection'): self.projection = None
+		super().__init__(**kwargs)
 	
 	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
 	@abstractmethod
@@ -442,6 +455,9 @@ class ChartPlot(Item):
 	#Receives the time to scrub to
 	@abstractmethod
 	def draw(self, t): pass
+	
+	def remove(self):
+		self.viz.removePlot(self.name)
 
 class BarChart(ChartPlot):
 	type = 'bar'
