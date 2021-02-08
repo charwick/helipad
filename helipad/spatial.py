@@ -5,7 +5,7 @@
 #===============
 
 from random import randint
-from math import sqrt
+from math import sqrt, degrees, radians, sin, cos, atan2, pi
 import pandas
 
 #===============
@@ -43,7 +43,7 @@ class Patch(baseAgent):
 	def agentsOn(self):
 		for prim, lst in self.model.agents.items():
 			if prim=='patch': continue
-			yield from [a for a in lst if a.x==self.x and a.y==self.y]
+			yield from [a for a in lst if self.x-0.5<=a.x<self.x+0.5 and self.y-0.5<=a.y<self.y+0.5]
 
 #===============
 # THE VISUALIZER
@@ -155,25 +155,29 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		if agent.primitive == 'patch': return #Patch position is fixed
 		p = model.doHooks(['baseAgentPosition', agent.primitive+'Position'], [agent, agent.model])
 		agent.position = list(p) if p and len(p) >= 2 else [randint(0, model.param('x')-1), randint(0, model.param('y')-1)]
-	
-	#Both agents and patches to have x and y properties
-	baseAgent.x = property(lambda self: self.position[0])
-	baseAgent.y = property(lambda self: self.position[1])
-	
-	def distanceFrom(self, agent2):
-		return sqrt((self.x-agent2.x)**2 + (self.y-agent2.y)**2)
-	baseAgent.distanceFrom = distanceFrom
+		agent.angle = 0
 	
 	#MOVEMENT AND POSITION
 	
 	#Functions for all primitives except patches, which are spatially fixed
 	def NotPatches(function):
 		def np2(self, *args, **kwargs):
-			if self.primitive != 'patch': function(self, *args, **kwargs)
+			if self.primitive != 'patch': return function(self, *args, **kwargs)
 			else: raise RuntimeError('Patches cannot move.')
 		return np2
 	
-	baseAgent.patch = property(lambda self: self.model.patches[self.x][self.y])
+	def setx(self, val): self.position[0] = val
+	def sety(self, val): self.position[1] = val
+	
+	#Both agents and patches to have x and y properties
+	baseAgent.x = property(lambda self: self.position[0], setx)
+	baseAgent.y = property(lambda self: self.position[1], sety)
+	
+	def distanceFrom(self, agent2):
+		return sqrt((self.x-agent2.x)**2 + (self.y-agent2.y)**2)
+	baseAgent.distanceFrom = distanceFrom
+	
+	baseAgent.patch = property(lambda self: self.model.patches[round(self.x)][round(self.y)])
 	def moveUp(self): self.position = list(self.patch.up.position)
 	baseAgent.moveUp = NotPatches(moveUp)
 	def moveRight(self): self.position = list(self.patch.right.position)
@@ -187,25 +191,53 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		self.position[0] += x
 		self.position[1] += y
 		if not wrap:
-			if self.position[0] > mapx-1: self.position[0] = mapx-1
-			elif self.position[0] < 0: self.position[0] = 0
-			if self.position[1] > mapy-1: self.position[1]=mapy-1
-			elif self.position[1] < 0: self.position[1] = 0
+			if self.position[0] > mapx-0.5: self.position[0] = mapx-0.5
+			elif self.position[0] < -0.5: self.position[0] = -0.5
+			if self.position[1] > mapy-0.5: self.position[1]=mapy-0.5
+			elif self.position[1] < -0.5: self.position[1] = -0.5
 		else:
-			if self.position[0] > mapx-1:
-				while self.position[0] > mapx-1: self.position[0] -= mapx
-			elif self.position[0] < 0:
-				while self.position[0] < 0: self.position[0] += mapx
-			if self.position[1] > mapy-1:
-				while self.position[1] > mapy-1: self.position[1] -= mapy
-			elif self.position[1] < 0:
-				while self.position[1] < 0: self.position[1] += mapy
-
+			while self.position[0] >= mapx-0.5: self.position[0] -= mapx
+			while self.position[0] < -0.5: self.position[0] += mapx
+			while self.position[1] >= mapy-0.5: self.position[1] -= mapy
+			while self.position[1] < -0.5: self.position[1] += mapy
 	baseAgent.move = NotPatches(move)
-	def moveTo(self, x, y):
+	
+	#Can also take an agent or patch as a single argument
+	def moveTo(self, x, y=None):
+		if type(x) is not int: x,y = x.position
 		if x>=self.model.param('x') or y>=self.model.param('y'): raise IndexError('Dimension is out of range.')
 		self.position = [x,y]
 	baseAgent.moveTo = NotPatches(moveTo)
+	
+	#ANGLE FUNCTIONS
+	
+	def orientation(self): return self.angle
+	def setOrientation(self, val):
+		self.angle = val
+		while self.angle >= 360: self.angle -= 360
+		while self.angle < 0: self.angle += 360
+	baseAgent.orientation = property(NotPatches(orientation), NotPatches(setOrientation))
+	
+	def rotate(self, angle): self.orientation += angle
+	baseAgent.rotate = NotPatches(rotate)
+	
+	def orientTo(self, x, y=None):
+		if type(x) is not int: x,y = x.position
+		difx, dify = x-self.x, y-self.y
+		if self.model.param('wrap'):
+			dimx, dimy = self.model.param('x'), self.model.param('y')
+			if difx>dimx/2: difx -= dimx
+			elif difx<-dimx/2: difx += dimx
+			if dify>dimy/2: dify -= dimy
+			elif dify<-dimy/2: dify += dimy
+		
+		rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
+		self.orientation = degrees(rads)
+	baseAgent.orientTo = NotPatches(orientTo)
+	
+	def forward(self, steps=1):
+		self.move(steps * cos(radians(self.orientation-90)), steps * sin(radians(self.orientation-90)))
+	baseAgent.forward = NotPatches(forward)
 	
 	#Position our patches so we can get them with model.patches[x][y]
 	@model.hook(prioritize=True)

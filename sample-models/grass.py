@@ -17,7 +17,7 @@ heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
 heli.addParameter('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})
-heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=5, opts={'low': 1, 'high': 100, 'step': 1})
+heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=10, opts={'low': 1, 'high': 100, 'step': 1})
 
 heli.params['num_agent'].opts = {'low': 1, 'high': 200, 'step': 1}
 heli.param('num_agent', 200)
@@ -46,8 +46,8 @@ def agentStep(agent, model, stage):
 			maxenergy = max([n.stocks['energy'] for n in agent.patch.neighbors])
 			prospects = [n for n in agent.patch.neighbors if n.stocks['energy'] == maxenergy]
 		else: prospects = agent.patch.neighbors
-		destination = choice(prospects).position
-		agent.moveTo(*destination)
+		agent.orientTo(choice(prospects))
+		agent.forward()
 		agent.stocks['energy'] -= 1
 	
 	#Eat grass
