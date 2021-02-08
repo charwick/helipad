@@ -734,7 +734,8 @@ class Helipad:
 		if isinstance(var, str):
 			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
-			return self.allagents[var]
+			aa = self.allagents
+			return aa[var] if var in aa else None
 		
 		return None #If nobody matched
 		

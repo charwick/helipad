@@ -268,11 +268,6 @@ class Charts(MPLVisualization):
 		model.params['refresh'].runtime=False
 		self.refresh = model.params['refresh']
 		self.model = model # :(
-		
-		def rotateNetworkLayout(model, event):
-			axes = [p for p in self.activePlots.values() if p.axes is event.inaxes and p.type=='network']
-			if axes: axes[0].rotateLayout()
-		self.addKeypress('l', rotateNetworkLayout)
 	
 	def launch(self, title):
 		if not len(self.activePlots): return #Windowless mode
@@ -554,9 +549,14 @@ class NetworkPlot(ChartPlot):
 		super().launch(axes)
 		
 		def agentEvent(event):
-			aid = list(self.pos.keys())[event.ind[0]]
-			self.viz.model.doHooks('networkVisualClick', [self.viz.model.agent(aid), self, self.viz.scrubval])
+			pk = list(self.pos.keys())
+			agents = [self.viz.model.agent(pk[i]) for i in event.ind]
+			self.viz.model.doHooks('networkNodeClick', [agents, self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
+		
+		def rotateNetworkLayout(model, event):
+			if self.axes is event.inaxes: self.rotateLayout()
+		self.viz.addKeypress('l', rotateNetworkLayout)
 
 	def update(self, data, t):
 		G = self.viz.model.network(self.kind, self.prim)

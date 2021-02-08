@@ -85,8 +85,8 @@ class SpatialPlot(ChartPlot):
 			#Normalize size here?
 		
 		#Matplotlib wants the coordinates in two x and y lists to create the plot, but one list of x,y tuples to update it 😡
-		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size)
-		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size)
+		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size, [a.id for a in agents])
+		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size, [a.id for a in agents])
 	
 	def launch(self, axes):
 		super().launch(axes)
@@ -98,6 +98,18 @@ class SpatialPlot(ChartPlot):
 		size = al[3] or self.params['agentSize']*10
 		self.agentmap = axes.scatter(al[0], al[1], marker=self.params['agentMarker'], c=al[2], s=size)
 		self.agentHistory[0] = self.agentLoc(update=True)
+		
+		#Route clicks
+		self.agentmap.set_picker(True)	#Listen for mouse events on nodes
+		self.agentmap.set_pickradius(5)	#Set margin of valid events in pixels
+		def agentEvent(event):
+			agents = [self.viz.model.agent(self.agentHistory[self.viz.scrubval][3][a]) for a in event.ind]
+			self.viz.model.doHooks('spatialAgentClick', [agents, self, self.viz.scrubval])
+		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
+		def patchEvent(event):
+			if self.axes is not event.inaxes: return
+			self.viz.model.doHooks('spatialPatchClick', [self.viz.model.patches[round(event.xdata)][round(event.ydata)], self, self.viz.scrubval])
+		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
 	
 	def update(self, data, t):
 		pd = self.patchData()

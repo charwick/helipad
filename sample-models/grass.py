@@ -123,6 +123,14 @@ mapPlot.config('patchProperty', 'good:energy')
 mapPlot.config('patchColormap', 'Greens')
 mapPlot.config('agentSize', 'good:energy')
 
+@heli.hook
+def spatialAgentClick(agent, plot, t):
+	print([a.position for a in agent if a is not None])
+
+@heli.hook
+def spatialPatchClick(patch, plot, t):
+	print('Patch at',patch.position)
+
 #===============
 # LAUNCH THE GUI
 #===============

@@ -100,14 +100,15 @@ for i in range(20):
 
 #Replace an agent, but only if we click during the current model time
 @heli.hook
-def networkVisualClick(agent, plot, t):
+def networkNodeClick(agents, plot, t):
 	if t != heli.t: return
 	
-	new = agent.reproduce()
-	enum = len(agent.edges['edge']) if 'edge' in agent.edges else 0
-	agent.die()
-	for e in range(enum): newedge(heli)
-	print('Killing agent',agent.id,'and creating agent',new.id)
+	for agent in agents:
+		new = agent.reproduce()
+		enum = len(agent.edges['edge']) if 'edge' in agent.edges else 0
+		agent.die()
+		for e in range(enum): newedge(heli)
+		print('Killing agent',agent.id,'and creating agent',new.id)
 	plot.update(None, t)
 	plot.draw(t, forceUpdate=True)
 
