@@ -61,7 +61,7 @@ class SpatialPlot(ChartPlot):
 			'patchColormap': 'Blues',
 			'patchProperty': 'mapcolor',
 			'agentMarker': 'o',
-			'agentSize': 3
+			'agentSize': 5
 		}
 	
 	#Helper function
@@ -78,9 +78,15 @@ class SpatialPlot(ChartPlot):
 		agents = [a for a in self.viz.model.allagents.values() if a.primitive!='patch']
 		if not agents: return
 		
+		if type(self.params['agentSize']) is int: size = None
+		else:
+			if 'good:' in self.params['agentSize']: size = [a.stocks[self.params['patchProperty'].split(':')[1]]*10 for a in self.viz.model.allagents.values() if a.primitive!='patch']
+			else: size = [getattr(a, self.params['agentSize']) for a in self.viz.model.allagents.values() if a.primitive!='patch']
+			#Normalize size here?
+		
 		#Matplotlib wants the coordinates in two x and y lists to create the plot, but one list of x,y tuples to update it 😡
-		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents])
-		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents])
+		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size)
+		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size)
 	
 	def launch(self, axes):
 		super().launch(axes)
@@ -89,7 +95,8 @@ class SpatialPlot(ChartPlot):
 		self.patchmap = axes.imshow(patchData, norm=self.normal, cmap=self.params['patchColormap'])
 		
 		al = self.agentLoc()
-		self.agentmap = axes.scatter(al[0], al[1], marker=self.params['agentMarker'], c=al[2], s=self.params['agentSize']*10)
+		size = al[3] or self.params['agentSize']*10
+		self.agentmap = axes.scatter(al[0], al[1], marker=self.params['agentMarker'], c=al[2], s=size)
 		self.agentHistory[0] = self.agentLoc(update=True)
 	
 	def update(self, data, t):
@@ -116,6 +123,7 @@ class SpatialPlot(ChartPlot):
 		self.patchmap.set_data(pd)
 		self.agentmap.set_offsets(self.agentHistory[t][0])
 		self.agentmap.set_facecolor(self.agentHistory[t][1])
+		if self.agentHistory[t][2] is not None: self.agentmap.set_sizes(self.agentHistory[t][2])
 	
 	def config(self, param, val=None):
 		if val is None: return self.params[param]

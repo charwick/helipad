@@ -121,6 +121,7 @@ heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', 
 mapPlot = heli.spatial(x=16, diag=True)
 mapPlot.config('patchProperty', 'good:energy')
 mapPlot.config('patchColormap', 'Greens')
+mapPlot.config('agentSize', 'good:energy')
 
 #===============
 # LAUNCH THE GUI
