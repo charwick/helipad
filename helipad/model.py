@@ -318,6 +318,11 @@ class Helipad:
 				if r is not None: return r
 			return None
 		
+		#Deprecated in Helipad 1.2. Can be removed in Helipad 1.4.
+		if place=='graphUpdate':
+			warnings.warn('The graphUpdate hook is deprecated and will be removed in a future version. Please use the visualRefresh hook instead.', None, 2)
+			place = 'visualRefresh'
+		
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
 		return r
@@ -520,7 +525,7 @@ class Helipad:
 					self.visual.update(data)
 					self.visual.lastUpdate = t
 				
-					self.doHooks('visualUpdate', [self, self.visual])
+					self.doHooks('visualRefresh', [self, self.visual]) 
 				
 				elif getattr(self, 'cpanel', None):
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input

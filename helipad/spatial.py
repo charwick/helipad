@@ -129,13 +129,14 @@ class SpatialPlot(ChartPlot):
 			for p in col:
 				p.colorData[t] = pd[p.x][p.y]
 	
-	def draw(self, t=None):
+	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		pd = self.patchData(t)
 		self.patchmap.set_data(pd)
 		self.agentmap.set_offsets(self.agentHistory[t][0])
 		self.agentmap.set_facecolor(self.agentHistory[t][1])
 		if self.agentHistory[t][2] is not None: self.agentmap.set_sizes(self.agentHistory[t][2])
+		super().draw(t, forceUpdate)
 	
 	def config(self, param, val=None):
 		if val is None: return self.params[param]

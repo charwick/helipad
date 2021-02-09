@@ -105,7 +105,7 @@ def networkNodeClick(agents, plot, t):
 	
 	for agent in agents:
 		new = agent.reproduce()
-		enum = len(agent.edges['edge']) if 'edge' in agent.edges else 0
+		enum = len(agent.edges[plot.kind]) if plot.kind in agent.edges else 0
 		agent.die()
 		for e in range(enum): newedge(heli)
 		print('Killing agent',agent.id,'and creating agent',new.id)

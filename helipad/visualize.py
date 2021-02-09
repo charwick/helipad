@@ -62,10 +62,13 @@ class MPLVisualization(BaseVisualization):
 		self.fig.canvas.mpl_connect('key_press_event', self.catchKeypress)
 		self.lastUpdate = 0
 	
-	def addKeypress(self, key, fn): self.keys[key] = fn
+	def addKeypress(self, key, fn):
+		if not key in self.keys: self.keys[key] = []
+		self.keys[key].append(fn)
 	
 	def catchKeypress(self, event):
-		if event.key in self.keys: self.keys[event.key](self.model, event)
+		if event.key in self.keys:
+			for f in self.keys[event.key]: f(self.model, event)
 	
 	@property
 	def activePlots(self):
@@ -284,7 +287,7 @@ class Charts(MPLVisualization):
 		self.fig = plt.figure()
 		plots = list(self.activePlots.values())
 		for i in range(n):
-			plots[i].launch(self.fig.add_subplot(x,y,i+1, projection=plots[i].projection))
+			plots[i].launch(self.fig.add_subplot(y,x,i+1, projection=plots[i].projection))
 		super().launch(title)
 		
 		#Position graph window
@@ -449,7 +452,8 @@ class ChartPlot(Item):
 	
 	#Receives the time to scrub to
 	@abstractmethod
-	def draw(self, t): pass
+	def draw(self, t, forceUpdate=False):
+		if forceUpdate: self.viz.fig.canvas.draw_idle()
 	
 	def remove(self):
 		self.viz.removePlot(self.name)
@@ -463,6 +467,7 @@ class BarChart(ChartPlot):
 		self.bars = []
 	
 	def addBar(self, reporter, label, color='blue', position=None):
+		if not isinstance(color, Color): color = Color(color)
 		bar = Item(reporter=reporter, label=label, color=color)
 		
 		#Add subsidiary series (e.g. percentile bars)
@@ -482,7 +487,7 @@ class BarChart(ChartPlot):
 		
 		cfunc, eax = (axes.barh, 'xerr') if self.horizontal else (axes.bar, 'yerr')
 		kwa = {eax: [0 for bar in self.bars]} #Make sure our error bars go the right way
-		rects = cfunc(range(len(self.bars)), [0 for i in self.bars], color=[bar.color for bar in self.bars], **kwa)
+		rects = cfunc(range(len(self.bars)), [0 for i in self.bars], color=[bar.color.hex for bar in self.bars], **kwa)
 		errors = rects.errorbar.lines[2][0].properties()['paths'] #Hope MPL's API doesn't ever move this…!
 		for bar, rect, err in zip(self.bars, rects, errors):
 			bar.element = rect
@@ -522,7 +527,7 @@ class BarChart(ChartPlot):
 		setlim(lims)
 		self.axes.autoscale_view(tight=False)
 	
-	def draw(self, t=None):
+	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		i = int(t/self.viz.refresh.get())-1
 		for b in self.bars:
@@ -532,6 +537,7 @@ class BarChart(ChartPlot):
 			if b.err: #Update error bars
 				for j,cap in enumerate(b.errPath):
 					if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
+		super().draw(t, forceUpdate)
 
 class NetworkPlot(ChartPlot):
 	type = 'network'
@@ -579,7 +585,7 @@ class NetworkPlot(ChartPlot):
 		
 		nodes.set_picker(True)	#Listen for mouse events on nodes
 		nodes.set_pickradius(5)	#Set margin of valid events in pixels
-		if forceUpdate: self.viz.fig.canvas.draw_idle()
+		super().draw(t, forceUpdate)
 	
 	def rotateLayout(self):
 		self.axes.set_yscale('linear')
