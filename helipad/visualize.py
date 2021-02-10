@@ -9,6 +9,7 @@ import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from abc import ABC, abstractmethod
 from helipad.helpers import *
 mlpstyle.use('fast')
+import sys
 
 #======================
 # TOP-LEVEL VISUALIZERS
@@ -142,9 +143,17 @@ class TimeSeries(MPLVisualization):
 		#Resize and position graph window
 		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
+			#This should be the window height, but MPL only allows us to set the figure height.
+			#MacOS doesn't let us create a window taller than the screen, but we have to account for
+			#the height of the window frame crudely in Windows.
+			if sys.platform=='win32': #Respect the taskbar
+				import win32api
+				for monitor in win32api.EnumDisplayMonitors(): height = .92 * win32api.GetMonitorInfo(monitor[0])['Work'][3]
+			else: height = fm.window.winfo_screenheight()
+			
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
-			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
+			self.fig.set_size_inches(x_px/self.fig.dpi, height/self.fig.dpi)
 			fm.window.wm_geometry("+400+0")
 		
 		#Style plots
@@ -290,12 +299,20 @@ class Charts(MPLVisualization):
 			plots[i].launch(self.fig.add_subplot(y,x,i+1, projection=plots[i].projection))
 		super().launch(title)
 		
-		#Position graph window
+		#Resize and position graph window
 		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
+			#This should be the window height, but MPL only allows us to set the figure height.
+			#MacOS doesn't let us create a window taller than the screen, but we have to account for
+			#the height of the window frame crudely in Windows.
+			if sys.platform=='win32': #Respect the taskbar
+				import win32api
+				for monitor in win32api.EnumDisplayMonitors(): height = .92 * win32api.GetMonitorInfo(monitor[0])['Work'][3]
+			else: height = fm.window.winfo_screenheight()
+			
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
-			self.fig.set_size_inches(x_px/self.fig.dpi, fm.window.winfo_screenheight()/self.fig.dpi)
+			self.fig.set_size_inches(x_px/self.fig.dpi, height/self.fig.dpi)
 			fm.window.wm_geometry("+400+0")
 		
 		#Time slider
@@ -595,7 +612,10 @@ class NetworkPlot(ChartPlot):
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
 		self.layClass = getattr(lay, self.layout+'_layout')
-		self.draw(self.viz.scrubval)
+		
+		#kamada_kawai requires scipy
+		try: self.draw(self.viz.scrubval)
+		except: self.rotateLayout()
 
 #======================
 # HELPER FUNCTIONS

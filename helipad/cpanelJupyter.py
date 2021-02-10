@@ -177,7 +177,7 @@ class Cpanel(VBox):
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += (cbot,)
 		
-		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisuals() or start() to start the model.')
+		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisual() or start() to start the model.')
 		if not redraw:
 			display(self)
 		
