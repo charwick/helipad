@@ -318,10 +318,13 @@ class Helipad:
 				if r is not None: return r
 			return None
 		
-		#Deprecated in Helipad 1.2. Can be removed in Helipad 1.4.
-		if place=='graphUpdate':
-			warnings.warn('The graphUpdate hook is deprecated and will be removed in a future version. Please use the visualRefresh hook instead.', None, 2)
-			place = 'visualRefresh'
+		deprec = {
+			'graphUpdate':'visualRefresh',	#1.2; can be removed in 1.4
+			'plotsLaunch':'visualLaunch'	#1.2; can be removed in 1.4
+		}
+		if place in deprec:
+			warnings.warn('The '+place+' hook is deprecated and will be removed in a future version. Please use the '+deprec[place]+' hook instead.', None, 2)
+			place = deprec[place]
 		
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
