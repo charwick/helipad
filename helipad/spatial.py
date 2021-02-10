@@ -22,22 +22,22 @@ class Patch(baseAgent):
 	@property
 	def up(self):
 		if self.y==0 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x][self.y-1 if self.y > 0 else self.model.param('y')-1]
+		return self.model.patches[self.x, self.y-1 if self.y > 0 else self.model.param('y')-1]
 	
 	@property
 	def right(self):
 		if self.x>=self.model.param('x')-1 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x+1 if self.x < self.model.param('x')-1 else 0][self.y]
+		return self.model.patches[self.x+1 if self.x < self.model.param('x')-1 else 0, self.y]
 	
 	@property
 	def down(self):
 		if self.y>=self.model.param('y')-1 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x][self.y+1 if self.y < self.model.param('y')-1 else 0]
+		return self.model.patches[self.x, self.y+1 if self.y < self.model.param('y')-1 else 0]
 	
 	@property
 	def left(self):
 		if self.x==0 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('x')-1][self.y]
+		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('x')-1, self.y]
 	
 	@property
 	def agentsOn(self):
@@ -108,7 +108,7 @@ class SpatialPlot(ChartPlot):
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
 		def patchEvent(event):
 			if self.axes is not event.inaxes: return
-			self.viz.model.doHooks('spatialPatchClick', [self.viz.model.patches[round(event.xdata)][round(event.ydata)], self, self.viz.scrubval])
+			self.viz.model.doHooks('spatialPatchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
 	
 	def update(self, data, t):
@@ -198,7 +198,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		return sqrt((self.x-agent2.x)**2 + (self.y-agent2.y)**2)
 	baseAgent.distanceFrom = distanceFrom
 	
-	baseAgent.patch = property(lambda self: self.model.patches[round(self.x)][round(self.y)])
+	baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
 	def moveUp(self): self.position = list(self.patch.up.position)
 	baseAgent.moveUp = NotPatches(moveUp)
 	def moveRight(self): self.position = list(self.patch.right.position)
@@ -260,7 +260,17 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		self.move(steps * cos(radians(self.orientation-90)), steps * sin(radians(self.orientation-90)))
 	baseAgent.forward = NotPatches(forward)
 	
-	#Position our patches so we can get them with model.patches[x][y]
+	#A 2D list that lets us use [x,y] indices
+	class Patches(list):
+		def __getitem__(self, key):
+			if type(key) is int: return super().__getitem__(key)
+			else: return super().__getitem__(key[0])[key[1]]
+	
+		def __setitem__(self, key, val):
+			if type(key) is int: return super().__setitem__(key, val)
+			else: super().__getitem__(key[0])[key[1]] = val
+	
+	#Position our patches in a 2D array
 	@model.hook(prioritize=True)
 	def patchInit(agent, model):
 		x=0
@@ -271,7 +281,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 
 	@model.hook(prioritize=True)
 	def modelPreSetup(model):
-		model.patches = [[] for i in range(model.param('x'))]
+		model.patches = Patches([[] for i in range(model.param('x'))])
 	
 	#Establish grid links
 	@model.hook(prioritize=True)
