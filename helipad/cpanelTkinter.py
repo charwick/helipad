@@ -35,12 +35,12 @@ class Cpanel:
 				elif param.type=='menu': val = {y:x for x,y in param.opts.items()}[val]
 				elif param.type=='check': val = (param.element if item is None else param.element[item]).BooleanVar.get()
 				
+				#Parameters that don't update automatically
+				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
+				
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
-				
-				#Parameters that don't update automatically
-				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
 			return sv
 		Param.setVar = setVar
 		
