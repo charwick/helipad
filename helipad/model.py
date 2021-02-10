@@ -793,7 +793,7 @@ class Helipad:
 		
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 	
-	def launchVisuals(self):
+	def launchVisual(self):
 		if self.visual is None or self.visual.isNull:
 			if not getattr(self, 'cpanel', False):
 				print('No visualizations available. To run the model with no GUI, use model.start() instead.')
@@ -823,8 +823,8 @@ class Helipad:
 		else: self.start() #As long as we haven't already started
 	
 	def launchPlots(self):
-		warnings.warn('model.launchPlots() is deprecated. Use model.launchVisuals() instead.', None, 2)
-		self.launchVisuals()
+		warnings.warn('model.launchPlots() is deprecated. Use model.launchVisual() instead.', None, 2)
+		self.launchVisual()
 	
 	# Generates function decorators for hooks, reporters, etc.
 	def genDecorator(self, todo):
