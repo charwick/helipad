@@ -656,11 +656,12 @@ class Helipad:
 		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive}) for a in agents])
 		ae = self.allEdges
 		if kind in ae:
-			for e in ae[kind]: G.add_edge(
-				e.startpoint.id if e.directed else e.vertices[0].id,
-				e.endpoint.id if e.directed else e.vertices[1].id,
-				weight=e.weight, directed=e.directed
-			)
+			for e in ae[kind]:
+				if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
+					e.startpoint.id if e.directed else e.vertices[0].id,
+					e.endpoint.id if e.directed else e.vertices[1].id,
+					weight=e.weight, directed=e.directed
+				)
 		return G
 	
 	@property

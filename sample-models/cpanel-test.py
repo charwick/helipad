@@ -79,8 +79,8 @@ def modelPostSetup(model):
 	model.createNetwork(0.2)
 
 def newedge(model):
-	a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
-	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.allagents.values())), random.choice(list(model.allagents.values()))
+	a1, a2 = random.choice(list(model.agents['agent'])), random.choice(list(model.agents['agent']))
+	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.agents['agent'])), random.choice(list(model.agents['agent']))
 	a1.newEdge(a2, direction=random.choice([True, False]), weight=random.choice([0.5,1,2,3]))
 
 #Cut one edge and create one edge

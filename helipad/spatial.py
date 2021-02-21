@@ -298,8 +298,11 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 					if d and not d in connections:
 						patch.newEdge(d, 'space', weight=float(diag))
 	
+	#Don't reset the visualizer if charts is already registered
 	from helipad.visualize import Charts
-	viz = model.useVisual(Charts)
-	viz.addPlotType(SpatialPlot)
-	mapPlot = viz.addPlot('map', 'Map', type='spatial')
+	if not hasattr(model, 'visual') or type(model.visual) is not Charts:
+		model.useVisual(Charts)
+	
+	model.visual.addPlotType(SpatialPlot)
+	mapPlot = model.visual.addPlot('map', 'Map', type='spatial')
 	return mapPlot
