@@ -10,6 +10,8 @@ from numpy import *
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
 class baseAgent:
+	fixed = False
+	
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		self.id = int(id)
@@ -101,6 +103,8 @@ class baseAgent:
 		return amount
 	
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
+		if self.fixed: raise NotImplementedError('Fixed primitives cannot reproduce.')
+		
 		maxid = 0
 		for a in self.model.allagents.values():
 			if a.id > maxid:
@@ -160,6 +164,7 @@ class baseAgent:
 		return newagent
 	
 	def die(self, updateGUI=True):
+		if self.fixed: raise NotImplementedError('Fixed primitives cannot die.')
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.alledges: edge.cut()
 		self.dead = True

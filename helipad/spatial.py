@@ -15,6 +15,8 @@ import pandas
 
 from helipad.agent import baseAgent
 class Patch(baseAgent):
+	fixed = True
+	
 	@property
 	def neighbors(self):
 		return self.outbound('space', True, obj='agent')
