@@ -57,7 +57,7 @@ class MPLVisualization(BaseVisualization):
 	#Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
 	def launch(self, title):
-		if not isIpy(): self.fig.canvas.set_window_title(title)
+		if not isIpy(): self.fig.canvas.manager.set_window_title(title)
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
 		self.fig.canvas.mpl_connect('key_press_event', self.catchKeypress)
@@ -209,7 +209,7 @@ class TimeSeries(MPLVisualization):
 		
 		if self.resolution > self.model.param('refresh'): self.model.param('refresh', self.resolution)
 		if self.fig.stale: self.fig.canvas.draw_idle()
-		self.fig.canvas.start_event_loop(0.0001) #Listen for user input
+		self.fig.canvas.start_event_loop(0.001) #Listen for user input
 	
 	def toggleLine(self, event):
 		c1 = event.artist					#The label or line that was clicked
@@ -337,7 +337,7 @@ class Charts(MPLVisualization):
 		
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 		if self.fig.stale: self.fig.canvas.draw_idle()
-		self.fig.canvas.start_event_loop(0.0001) #Listen for user input
+		self.fig.canvas.start_event_loop(0.001) #Listen for user input
 	
 	#Update the graph to a particular model time
 	def scrub(self, t):

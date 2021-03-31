@@ -826,6 +826,7 @@ class Helipad:
 			self.root.mainloop()
 		else: self.start() #As long as we haven't already started
 	
+	#Remove in Helipad 1.4
 	def launchPlots(self):
 		warnings.warn('model.launchPlots() is deprecated. Use model.launchVisual() instead.', None, 2)
 		self.launchVisual()

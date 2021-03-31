@@ -1,4 +1,4 @@
-#This is not a model and will not run. It does, however, register parameters of every available type in order to test the rendering of the control panel.
+#Registers parameters of every available type in order to test the rendering of the control panel, and runs a dummy model to test the Charts visualizer.
 
 #===============
 # PREAMBLE
