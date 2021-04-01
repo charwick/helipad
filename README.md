@@ -1,6 +1,6 @@
 # Helipad
 
-Helipad is a powerful agent-based modeling framework for Python with a shallow learning curve. Documentation and API reference can be found at https://helipad.dev
+Helipad is a powerful agent-based modeling framework for Python with powerful visualization capabilities and a shallow learning curve. Documentation and API reference can be found at https://helipad.dev
 
 ## Features
 
