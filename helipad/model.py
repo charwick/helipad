@@ -462,43 +462,46 @@ class Helipad:
 				ordhooks = (self.hooks['order'] if 'order' in self.hooks else []) + (self.hooks[prim+'Order'] if prim+'Order' in self.hooks else [])
 				for o in ordhooks: lst.sort(key=sortFunc(self, self.stage, o))
 				
+				#Keep the agent list constant for a given loop because modifying it while looping
+				#(e.g. if an agent dies or reproduces) will screw up the looping
+				agentpool = self.agents[prim].copy()
+				
 				#Matching model
 				if 'match' in order:
 					matchN = order.split('-')
 					matchN = int(matchN[1]) if len(matchN) > 1 else 2
-					pool = self.agents[prim].copy()
-					while len(pool) > len(self.agents[prim]) % matchN:
+					matchpool = self.agents[prim].copy()
+					while len(matchpool) > len(agentpool) % matchN:
 						agents = []
 						for a in range(matchN):
-							agent = choice(pool)
-							pool.remove(agent)
+							agent = choice(matchpool)
+							matchpool.remove(agent)
 							agents.append(agent)
 							
 							#Allow selection of matches, but only on the first agent
 							if a==0:
-								others = self.doHooks('matchSelect', [agent, pool, self, self.stage])
+								others = self.doHooks('matchSelect', [agent, matchpool, self, self.stage])
 								if others is not None:
 									if (isinstance(others, agent.baseAgent) and matchN==2): others = [others]
 									if (isinstance(others, list) and len(others)==matchN-1):
-										for other in others: pool.remove(other)
+										for other in others: matchpool.remove(other)
 										agents += others
 										break
 									else: raise ValueError('matchSelect did not return the correct number of agents.')
 									
 						accept = self.doHooks('matchAccept', agents)
 						if accept is not None and not accept:
-							pool = agents + pool #Prepend agents to decrease the likelihood of a repeat matching
+							matchpool = agents + matchpool #Prepend agents to decrease the likelihood of a repeat matching
 							continue
 						for a in agents: agent.step(self.stage)
 						self.doHooks([prim+'Match', 'match'], [agents, prim, self, self.stage])
 					
 					#Step any remainder agents
-					for agent in pool: agent.step(self.stage)
+					for agent in matchpool: agent.step(self.stage)
 				
 				#Activation model
 				else:
-					for a in self.agents[prim]:
-						a.step(self.stage)
+					for a in agentpool: a.step(self.stage)
 		
 		self.data.collect(self)
 		for e in self.events.values():

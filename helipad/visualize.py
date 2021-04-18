@@ -330,7 +330,7 @@ class Charts(MPLVisualization):
 		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
 		
-		#Update slider. This calls self.scrub()
+		#Update slider. This calls self.scrub(), which in turn calls chart.draw()
 		self.timeslider.valmax = t
 		self.timeslider.set_val(t)
 		self.timeslider.ax.set_xlim(0,t) #Refresh
