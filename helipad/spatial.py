@@ -105,6 +105,7 @@ class SpatialPlot(ChartPlot):
 		self.agentmap.set_picker(True)	#Listen for mouse events on nodes
 		self.agentmap.set_pickradius(5)	#Set margin of valid events in pixels
 		def agentEvent(event):
+			if self.axes is not event.mouseevent.inaxes: return
 			agents = [self.viz.model.agent(self.agentHistory[self.viz.scrubval][3][a]) for a in event.ind]
 			self.viz.model.doHooks('spatialAgentClick', [agents, self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)

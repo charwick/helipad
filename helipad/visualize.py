@@ -42,6 +42,7 @@ class MPLVisualization(BaseVisualization):
 	def __init__(self, model):
 		self.model = model #Unhappy with this
 		self.plots = {}
+		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
@@ -82,7 +83,6 @@ class MPLVisualization(BaseVisualization):
 class TimeSeries(MPLVisualization):
 	def __init__(self, model):
 		super().__init__(model)
-		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		
 		#Plot categories
 		self.addPlot('utility', 'Utility', selected=False)
@@ -172,15 +172,7 @@ class TimeSeries(MPLVisualization):
 		newlen = len(next(data[x] for x in data))
 		if (self.resolution > 1): data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
-		
-		#Append new data to cumulative series
-		for plot in self.activePlots.values():
-			for serie in plot.series:
-				if callable(serie.reporter):						#Lambda functions
-					for i in range(int(newlen/self.resolution)):
-						serie.fdata.append(serie.reporter(time-newlen+(1+i)*self.resolution))
-				elif serie.reporter in data: serie.fdata += data[serie.reporter] #Actual data
-				else: continue									#No data
+		for plot in self.activePlots.values(): plot.update(data, time) #Append new data to series
 		
 		#Redo resolution at 2500, 25000, etc
 		if 10**(log10(time/2.5)-3) >= self.resolution:
@@ -188,26 +180,9 @@ class TimeSeries(MPLVisualization):
 			for plot in self.activePlots.values():
 				for serie in plot.series:
 					serie.fdata = keepEvery(serie.fdata, 10)
+			if self.resolution > self.model.param('refresh'): self.model.param('refresh', self.resolution)
 		
-		#Update the actual graphs. Has to be after the new resolution is set
-		tseries = range(0, time, self.resolution)
-		for plot in self.activePlots.values():
-			#No way to update the stack (?) so redraw it from scratch
-			if plot.stack:
-				lines = plot.axes.stackplot(tseries, *[s.fdata for s in plot.series], colors=[s.color.hex for s in plot.series])
-				for series, poly in zip(plot.series, lines): series.poly = poly
-			else:
-				for serie in plot.series:
-					serie.line.set_ydata(serie.fdata)
-					serie.line.set_xdata(tseries)
-				plot.axes.relim()
-				plot.axes.autoscale_view(tight=False)
-			
-			#Prevent decaying averages on logscale graphs from compressing the entire view
-			ylim = plot.axes.get_ylim()
-			if plot.axes.get_yscale() == 'log' and ylim[0] < 10**-6: plot.axes.set_ylim(bottom=10**-6)
-		
-		if self.resolution > self.model.param('refresh'): self.model.param('refresh', self.resolution)
+		for plot in self.activePlots.values(): plot.draw(time) #Update the actual plots. Has to be after the new resolution is set
 		if self.fig.stale: self.fig.canvas.draw_idle()
 		self.fig.canvas.flush_events() #Listen for user input
 	
@@ -231,7 +206,7 @@ class TimeSeries(MPLVisualization):
 	
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		plot = Plot(model=self.model, name=name, label=label, series=[], logscale=logscale, stack=stack)
+		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
 		
 		self.selector.addItem(name, label, position, selected)
 		if position is None or position > len(self.plots): self.plots[name] = plot
@@ -275,8 +250,8 @@ class Charts(MPLVisualization):
 		super().__init__(model)
 		self.events = {}
 		self.plotTypes = {}
-				
-		for p in [BarChart, NetworkPlot]: self.addPlotType(p)
+		
+		for p in [BarChart, NetworkPlot, TimeSeriesPlot]: self.addPlotType(p)
 		model.params['refresh'].runtime=False
 		self.refresh = model.params['refresh']
 		self.model = model # :(
@@ -345,10 +320,11 @@ class Charts(MPLVisualization):
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 	
-	def addPlot(self, name, label, type=None, **kwargs):
+	def addPlot(self, name, label, type=None, selected=True, **kwargs):
+		self.selector.addItem(name, label, selected)
 		self.type = type if type is not None else 'bar'
 		if not self.type in self.plotTypes: raise KeyError('\''+self.type+'\' is not a registered plot visualizer.')
-		self.plots[name] = self.plotTypes[self.type](name=name, label=label, selected=True, viz=self, **kwargs)
+		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
 		return self.plots[name]
 	
 	def addPlotType(self, clss):
@@ -358,7 +334,7 @@ class Charts(MPLVisualization):
 	def removePlot(self, name):
 		if getattr(self.model, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
-			for p in name: self.removePlot(p, reassign)
+			for p in name: self.removePlot(p)
 			return
 		
 		if not name in self.plots:
@@ -377,17 +353,51 @@ class Charts(MPLVisualization):
 # Plug into either TimeSeries or Charts as one of the subplots
 #======================
 
-class Plot(Item):
+#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
+#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
+class ChartPlot(Item):
+	def __init__(self, **kwargs):
+		if not 'projection' in kwargs and not hasattr(self, 'projection'): self.projection = None
+		super().__init__(**kwargs)
+	
 	@property
-	def selected(self): return self.model.params['plots'].get(self.name)
+	def selected(self): return self.viz.model.params['plots'].get(self.name)
 
 	@selected.setter
 	def selected(self, val): self.active(val)
 
 	def active(self, val, updateGUI=True):
-		self.model.params['plots'].set(self.name, bool(val))
+		self.viz.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isIpy() and hasattr(self, 'check'):
 			self.check.set(val)
+	
+	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
+	@abstractmethod
+	def launch(self, axes):
+		self.axes = axes
+		axes.set_title(self.label, fontdict={'fontsize':10})
+	
+	#Receives a 1-dimensional dict with only the most recent value of each column
+	#The subclass is responsible for storing the relevant data internally
+	@abstractmethod
+	def update(self, data, t): pass
+	
+	#Receives the time to scrub to
+	@abstractmethod
+	def draw(self, t, forceUpdate=False):
+		if forceUpdate: self.viz.fig.canvas.draw_idle()
+	
+	def remove(self):
+		self.viz.removePlot(self.name)
+
+class TimeSeriesPlot(ChartPlot):
+	type = 'timeseries'
+	def __init__(self, **kwargs):
+		self.series = []
+		self.scrubline = None
+		for p in ['logscale', 'stack']:
+			if p not in kwargs: kwargs[p] = False
+		super().__init__(**kwargs)
 
 	#First arg is a reporter name registered in DataCollector, or a lambda function
 	#Second arg is the series name. Use '' to not show in the legend.
@@ -396,13 +406,13 @@ class Plot(Item):
 		if not isinstance(color, Color): color = Color(color)
 
 		#Check against columns and not reporters so subseries work
-		if not callable(reporter) and not reporter in self.model.data.columns:
+		if not callable(reporter) and not reporter in self.viz.model.data.columns:
 			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
 
 		#Add subsidiary series (e.g. percentile bars)
 		subseries = []
-		if reporter in self.model.data.reporters and self.model.data.reporters[reporter].children:
-			for p in self.model.data.reporters[reporter].children:
+		if reporter in self.viz.model.data.reporters and self.viz.model.data.reporters[reporter].children:
+			for p in self.viz.model.data.reporters[reporter].children:
 				if '-unsmooth' in p: continue #Don't plot the unsmoothed series
 				subseries.append(self.addSeries(p, '', color.lighten(), style='--'))
 
@@ -448,32 +458,54 @@ class Plot(Item):
 					legline.otherComponent = label
 					label.otherComponent = legline
 					break
-
-#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
-#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
-class ChartPlot(Item):
-	def __init__(self, **kwargs):
-		if not 'projection' in kwargs and not hasattr(self, 'projection'): self.projection = None
-		super().__init__(**kwargs)
+		
+	def update(self, data, t):
+		firstdata = next(iter(data.values()))
+		if isinstance(firstdata, list): newlen, res = len(firstdata), self.resolution
+		else:
+			newlen = 1
+			res = self.viz.model.param('refresh')
+			data = {k: [v] for k,v in data.items()}
+		for serie in self.series:
+			if callable(serie.reporter):						#Lambda functions
+				for i in range(newlen):
+					serie.fdata.append(serie.reporter(t-(newlen-1-i)*res))
+			elif serie.reporter in data: serie.fdata += data[serie.reporter] #Actual data
+			else: continue									#No data
 	
-	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
-	@abstractmethod
-	def launch(self, axes):
-		self.axes = axes
-		axes.set_title(self.label, fontdict={'fontsize':10})
-	
-	#Receives a 1-dimensional dict with only the most recent value of each column
-	#The subclass is responsible for storing the relevant data internally
-	@abstractmethod
-	def update(self, data, t): pass
-	
-	#Receives the time to scrub to
-	@abstractmethod
 	def draw(self, t, forceUpdate=False):
-		if forceUpdate: self.viz.fig.canvas.draw_idle()
+		if self.scrubline is not None:
+			self.scrubline.remove()
+			self.scrubline = None
+		
+		#Draw new data if this is a new refresh
+		if t==len(self.series[0].fdata)*self.resolution:
+			tseries = range(0, t, self.resolution)
+		
+			#No way to update the stack (?) so redraw it from scratch
+			if self.stack:
+				lines = self.axes.stackplot(tseries, *[s.fdata for s in self.series], colors=[s.color.hex for s in self.series])
+				for series, poly in zip(self.series, lines): series.poly = poly
+			else:
+				for serie in self.series:
+					serie.line.set_ydata(serie.fdata)
+					serie.line.set_xdata(tseries)
+				self.axes.relim()
+				self.axes.autoscale_view(tight=False)
+		
+			#Prevent decaying averages on logscale graphs from compressing the entire view
+			ylim = self.axes.get_ylim()
+			if self.axes.get_yscale() == 'log' and ylim[0] < 10**-6: self.axes.set_ylim(bottom=10**-6)
+			super().draw(t, forceUpdate)
+		
+		#Note the position in the old data if we're scrubbing
+		else:
+			self.scrubline = self.axes.axvline(x=t, color='#330000')
+			
 	
-	def remove(self):
-		self.viz.removePlot(self.name)
+	@property
+	def resolution(self):
+		return self.viz.resolution if hasattr(self.viz, 'resolution') else int(self.viz.model.param('refresh'))
 
 class BarChart(ChartPlot):
 	type = 'bar'

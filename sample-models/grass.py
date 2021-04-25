@@ -101,27 +101,29 @@ heli.param('refresh', 1)
 # from helipad.visualize import TimeSeries
 # viz = heli.useVisual(TimeSeries)
 
-# viz.addPlot('pop', 'Population', logscale=True)
-# viz.addPlot('sexratio', 'Sex Ratio', logscale=True)
-# viz.addPlot('age', 'Age')
-# viz.addPlot('energy', 'Energy')
 heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
 heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
 heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
 heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
-# viz.plots['pop'].addSeries('num_agent', 'Population', 'black')
-# viz.plots['pop'].addSeries('grass', 'Grass', 'green')
-# viz.plots['sexratio'].addSeries('sexratio', 'M/F Sex Ratio', 'brown')
-# viz.plots['age'].addSeries('age', 'Average Age', 'blue')
-# viz.plots['pop'].addSeries('expectancy', 'Life Expectancy', 'black')
-# viz.plots['energy'].addSeries('agentenergy', 'Energy', 'green')
 
 mapPlot = heli.spatial(x=16, diag=True)
 mapPlot.config('patchProperty', 'good:energy')
 mapPlot.config('patchColormap', 'Greens')
 mapPlot.config('agentSize', 'good:energy')
+
+pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True)
+sexratio = heli.visual.addPlot('sexratio', 'Sex Ratio', 'timeseries', logscale=True)
+age = heli.visual.addPlot('age', 'Age', 'timeseries')
+energy = heli.visual.addPlot('energy', 'Energy', 'timeseries')
+
+pop.addSeries('num_agent', 'Population', 'black')
+pop.addSeries('grass', 'Grass', 'green')
+sexratio.addSeries('sexratio', 'M/F Sex Ratio', 'brown')
+age.addSeries('age', 'Average Age', 'blue')
+pop.addSeries('expectancy', 'Life Expectancy', 'black')
+energy.addSeries('agentenergy', 'Energy', 'green')
 
 @heli.hook
 def spatialAgentClick(agent, plot, t):
