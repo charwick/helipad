@@ -69,6 +69,11 @@ class MPLVisualization(BaseVisualization):
 		self.keys[key].append(fn)
 	
 	def catchKeypress(self, event):
+		if event.inaxes is not None:
+			for p in self.activePlots.values():
+				if event.inaxes is p.axes:
+					p.catchKeypress(event.key)
+					break
 		if event.key in self.keys:
 			for f in self.keys[event.key]: f(self.model, event)
 	
@@ -389,6 +394,9 @@ class ChartPlot(Item):
 	
 	def remove(self):
 		self.viz.removePlot(self.name)
+	
+	#Override in order to provide plot-specific key callbacks
+	def catchKeypress(self, event): pass
 
 class TimeSeriesPlot(ChartPlot):
 	type = 'timeseries'
@@ -608,10 +616,6 @@ class NetworkPlot(ChartPlot):
 			agents = [self.viz.model.agent(pk[i]) for i in event.ind]
 			self.viz.model.doHooks('networkNodeClick', [agents, self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
-		
-		def rotateNetworkLayout(model, event):
-			if self.axes is event.inaxes: self.rotateLayout()
-		self.viz.addKeypress('l', rotateNetworkLayout)
 
 	def update(self, data, t):
 		G = self.viz.model.network(self.kind, self.prim)
@@ -635,6 +639,9 @@ class NetworkPlot(ChartPlot):
 		nodes.set_picker(True)	#Listen for mouse events on nodes
 		nodes.set_pickradius(5)	#Set margin of valid events in pixels
 		super().draw(t, forceUpdate)
+	
+	def catchKeypress(self, event):
+		if event.key=='l': self.rotateLayout()
 	
 	def rotateLayout(self):
 		self.axes.set_yscale('linear')
