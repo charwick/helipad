@@ -105,6 +105,7 @@ class Cpanel:
 		def renderParam(frame, param, item=None, bg='#EEEEEE'):
 			if param.type in ['hidden', 'checkgrid']: return
 	
+			#Parent frame for per-item parameters
 			if param.obj is not None and item is None:
 				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
 				efSub = expFrame.subframe
@@ -126,6 +127,8 @@ class Cpanel:
 			
 					i+=1
 				return expFrame
+			
+			#Single parameters, including the individual per-item parameters
 			else:
 				title = param.title if item is None else item.title()
 				wrap = Frame(frame, bg=bg, padx=10 if item is None and not getattr(param,'config',False) else 0, pady=8 if item is None and not getattr(param,'config',False) else 0)
@@ -150,8 +153,11 @@ class Cpanel:
 							el.checkVar.set(True)
 							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
 						else: el.set(dflt)
-					el.grid(row=0, column=1)
-					if item is not None: drawCircle(wrap, param.keys[item].color.hex, bg).grid(row=0, column=0)
+					
+					if item is not None:
+						el.grid(row=0, column=1)
+						drawCircle(wrap, param.keys[item].color.hex, bg).grid(row=0, column=0)
+					else: el.pack(anchor='center' if param.type=='check' else 'w')
 		
 				#These need a separate label
 				else:					
@@ -237,7 +243,7 @@ class Cpanel:
 		for k, param in self.model.params.items():
 			if not getattr(param, 'config', False):
 				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
-				if e is not None: e.pack(fill=None if param.type=='check' else X)
+				if e is not None: e.pack(fill=X)
 		fnum += 1
 		
 		#Checkgrid parameters
