@@ -127,7 +127,7 @@ energy.addSeries('agentenergy', 'Energy', 'green')
 
 @heli.hook
 def spatialAgentClick(agent, plot, t):
-	print([a.position for a in agent if a is not None])
+	print([f'Agent {a.id} at ({a.x}, {a.y})' for a in agent if a is not None])
 
 @heli.hook
 def spatialPatchClick(patch, plot, t):

@@ -4,7 +4,7 @@ from collections import namedtuple
 import pandas, random as rand2
 
 from helipad import Helipad
-from math import sqrt, log
+from math import sqrt, log, floor
 from numpy import *
 heli = Helipad()
 
@@ -77,12 +77,15 @@ def modelPreSetup(model):
 		def cull3(model):	return model.events['taper2'].triggered and sum(diff(model.data.getLast('ruralH-25-pctile', 20))) > 2
 		@heli.event
 		def stab4(model):	return model.events['cull3'].triggered and sum(diff(model.data.getLast('ruralPop', 400))) > 0
+	
+	#Start with the equilibrium population
+	else: model.param('num_agent', math.floor(25.63-13.43*model.param('fixed')))
 
 # from helipad.utility import CobbDouglas
 @heli.hook
 def agentInit(agent, model):
 	# agent.utility = CobbDouglas({'consumption': 0.5}) #Single good
-	agent.H = 1 #Human capital
+	agent.H = random.normal(100, 15) if model.param('city') else 1 #Human capital
 	agent.prod = {'urban': 0, 'rural': 0}
 	agent.wealth = 0
 	agent.lastWage = 0

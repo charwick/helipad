@@ -61,7 +61,7 @@ class SpatialPlot(ChartPlot):
 		self.agentHistory = {} #For coloring 
 		self.params = {
 			'patchColormap': 'Blues',
-			'patchProperty': 'mapcolor',
+			#'patchProperty': 'mapcolor', #Don't specify, so we have a default white
 			'agentMarker': 'o',
 			'agentSize': 5
 		}
@@ -69,12 +69,14 @@ class SpatialPlot(ChartPlot):
 	#Helper function
 	def getPatchParamValue(self, patch, t=None):
 		if t is not None: return patch.colorData[t]
+		if not 'patchProperty' in self.params: return 0
 		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
 		else: return getattr(patch, self.params['patchProperty'])
 	
 	def patchData(self, t=None):
 		if not hasattr(self.viz.model, 'patches'): return
-		return pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches])
+		#Pandas goes row,col instead of col,row so we have to transpose it
+		return pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).transpose()
 	
 	def agentLoc(self, update=False):
 		agents = [a for a in self.viz.model.allagents.values() if a.primitive!='patch']
@@ -228,8 +230,8 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	
 	#Can also take an agent or patch as a single argument
 	def moveTo(self, x, y=None):
-		if type(x) is not int: x,y = x.position
-		if x>=self.model.param('x') or y>=self.model.param('y'): raise IndexError('Dimension is out of range.')
+		if type(x) not in [int, float]: x,y = x.position
+		if x>self.model.param('x')+0.5 or y>self.model.param('y')+0.5 or x<-0.5 or y<-0.5: raise IndexError('Dimension is out of range.')
 		self.position = [x,y]
 	baseAgent.moveTo = NotPatches(moveTo)
 	
