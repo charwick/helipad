@@ -12,6 +12,10 @@ from numpy import *
 class baseAgent:
 	fixed = False
 	
+	#==================
+	# UTILITY METHODS
+	#==================
+	
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		self.id = int(id)
@@ -37,6 +41,10 @@ class baseAgent:
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
 		if stage == self.model.stages: self.age += 1
+	
+	#==================
+	# ECONOMIC METHODS
+	#==================
 	
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
@@ -101,6 +109,19 @@ class baseAgent:
 			recipient.stocks[self.model.moneyGood] += amount
 			self.stocks[self.model.moneyGood] -= amount
 		return amount
+	
+	@property
+	def balance(self):
+		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
+		bal = self.stocks[self.model.moneyGood]
+		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
+		if bal_ is not None: bal = bal_
+		
+		return bal
+	
+	#==================
+	# GENETIC METHODS
+	#==================
 	
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
 		if self.fixed: raise NotImplementedError('Fixed primitives cannot reproduce.')
@@ -170,6 +191,21 @@ class baseAgent:
 		self.dead = True
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 	
+	@property
+	def parent(self):
+		p = self.inbound('lineage', obj='agent')
+		if len(p)==0: return None
+		elif len(p)==1: return p[0]
+		else: return p
+	
+	@property
+	def children(self):
+		return [edge.partner(self) for edge in self.outbound('lineage')]
+	
+	#==================
+	# NETWORK METHODS
+	#==================
+	
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
 		return Edge(self, partner, kind, direction, weight)
 	
@@ -198,39 +234,23 @@ class baseAgent:
 		else: edges = self.alledges
 		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
 	
-	#In a multi-level model, allow the agent to move to a different deme/firm/etc
-	def moveTo(self, dest):
-		origin = self.model
-		dest.agents[self.primitive].append(self)
-		self.model = dest
-		origin.agents[self.primitive].remove(self)
-		self.model.doHooks(['baseAgentMove', self.primitive+'Move'], [self, origin, dest])
-	
 	@property
 	def alledges(self):
 		edges = []
 		for e in self.edges.values(): edges += e
 		return edges
 	
-	@property
-	def parent(self):
-		p = self.inbound('lineage', obj='agent')
-		if len(p)==0: return None
-		elif len(p)==1: return p[0]
-		else: return p
+	#==================
+	# OTHER METHODS
+	#==================
 	
-	@property
-	def children(self):
-		return [edge.partner(self) for edge in self.outbound('lineage')]
-	
-	@property
-	def balance(self):
-		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
-		bal = self.stocks[self.model.moneyGood]
-		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
-		if bal_ is not None: bal = bal_
-		
-		return bal
+	#In a multi-level model, allow the agent to move to a different deme/firm/etc
+	def transfer(self, dest):
+		origin = self.model
+		dest.agents[self.primitive].append(self)
+		self.model = dest
+		origin.agents[self.primitive].remove(self)
+		self.model.doHooks(['baseAgentMove', self.primitive+'Move'], [self, origin, dest])
 
 #The default agent class corresponding to the 'agent' primitive.	
 class Agent(baseAgent):

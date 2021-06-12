@@ -59,7 +59,7 @@ def war(demes, primitive, model, stage):
 	pop = len(demes[not result].agents['agent'])
 	for a in demes[not result].agents['agent']: a.die()
 	for i in range(pop):
-		choice(demes[result].agents['agent']).reproduce().moveTo(demes[not result])
+		choice(demes[result].agents['agent']).reproduce().transfer(demes[not result])
 
 @heli.hook
 def demeStep(deme, model, stage):

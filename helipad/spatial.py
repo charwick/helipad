@@ -96,7 +96,7 @@ class SpatialPlot(ChartPlot):
 		super().launch(axes)
 		patchData = self.patchData()
 		self.normal = plt.cm.colors.Normalize(patchData.min().min(), patchData.max().max())
-		self.patchmap = axes.imshow(patchData, norm=self.normal, cmap=self.params['patchColormap'])
+		self.patchmap = axes.imshow(patchData, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
 		
 		al = self.agentLoc()
 		size = al[3] or self.params['agentSize']*10
@@ -152,7 +152,7 @@ class SpatialPlot(ChartPlot):
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
+def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect=None):
 	
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
@@ -309,5 +309,5 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 		model.useVisual(Charts)
 	
 	model.visual.addPlotType(SpatialPlot)
-	mapPlot = model.visual.addPlot('map', 'Map', type='spatial')
+	mapPlot = model.visual.addPlot('map', 'Map', type='spatial', aspect=aspect)
 	return mapPlot
