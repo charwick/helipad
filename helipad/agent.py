@@ -198,6 +198,14 @@ class baseAgent:
 		else: edges = self.alledges
 		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
 	
+	#In a multi-level model, allow the agent to move to a different deme/firm/etc
+	def moveTo(self, dest):
+		origin = self.model
+		dest.agents[self.primitive].append(self)
+		self.model = dest
+		origin.agents[self.primitive].remove(self)
+		self.model.doHooks(['baseAgentMove', self.primitive+'Move'], [self, origin, dest])
+	
 	@property
 	def alledges(self):
 		edges = []
