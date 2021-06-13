@@ -208,5 +208,5 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect
 	if not hasattr(model, 'visual') or type(model.visual) is not Charts:
 		model.useVisual(Charts)
 	
-	mapPlot = model.visual.addPlot('map', 'Map', type='network', aspect=aspect, layout='spatial')
+	mapPlot = model.visual.addPlot('map', 'Map', type='network', aspect=aspect, layout='patchgrid')
 	return mapPlot

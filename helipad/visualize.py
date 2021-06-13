@@ -616,10 +616,10 @@ class NetworkPlot(ChartPlot):
 	
 	def launch(self, axes):
 		import networkx as nx, networkx.drawing.layout as lay, pandas
-		def spatial_layout(G):
+		def patchgrid_layout(G):
 			if not hasattr(self.viz.model, 'patches'): raise
 			return {i: data['position'] for i,data in G.nodes.items()}
-		lay.spatial_layout = spatial_layout
+		lay.patchgrid_layout = patchgrid_layout
 		self.nx = nx
 		self.pandas = pandas
 		self.layClass = getattr(lay, self.layout+'_layout')
@@ -635,7 +635,7 @@ class NetworkPlot(ChartPlot):
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
 		
 		def patchEvent(event):
-			if self.axes is not event.inaxes or self.layout != 'spatial': return
+			if self.axes is not event.inaxes or self.layout != 'patchgrid': return
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
 
@@ -673,10 +673,10 @@ class NetworkPlot(ChartPlot):
 	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
-		if self.layout != 'spatial': self.axes.axis('off')
+		if self.layout != 'patchgrid': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
 		
-		if self.layout == 'spatial':
+		if self.layout == 'patchgrid':
 			pd = self.patchData(t)			
 			# self.patchmap.set_norm(self.normal)
 			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
@@ -707,7 +707,7 @@ class NetworkPlot(ChartPlot):
 		if self.params['lockLayout']: return
 
 		import networkx.drawing.layout as lay
-		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral', 'spatial']
+		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral', 'patchgrid']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
