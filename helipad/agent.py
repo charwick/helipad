@@ -257,6 +257,40 @@ class baseAgent:
 class Agent(baseAgent):
 	pass
 
+#For spatial models
+class Patch(baseAgent):
+	fixed = True
+	
+	@property
+	def neighbors(self):
+		return self.outbound('space', True, obj='agent')
+	
+	@property
+	def up(self):
+		if self.y==0 and not self.model.param('wrap'): return None
+		return self.model.patches[self.x, self.y-1 if self.y > 0 else self.model.param('y')-1]
+	
+	@property
+	def right(self):
+		if self.x>=self.model.param('x')-1 and not self.model.param('wrap'): return None
+		return self.model.patches[self.x+1 if self.x < self.model.param('x')-1 else 0, self.y]
+	
+	@property
+	def down(self):
+		if self.y>=self.model.param('y')-1 and not self.model.param('wrap'): return None
+		return self.model.patches[self.x, self.y+1 if self.y < self.model.param('y')-1 else 0]
+	
+	@property
+	def left(self):
+		if self.x==0 and not self.model.param('wrap'): return None
+		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('x')-1, self.y]
+	
+	@property
+	def agentsOn(self):
+		for prim, lst in self.model.agents.items():
+			if prim=='patch': continue
+			yield from [a for a in lst if self.x-0.5<=a.x<self.x+0.5 and self.y-0.5<=a.y<self.y+0.5]
+
 #Direction can take an Agent object (corresponding to the endpoint),
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
 #or a boolean (False for undirected, True for agent1 to agent2)

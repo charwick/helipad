@@ -92,7 +92,15 @@ def modelPostStep(model):
 net = viz.addPlot('net', 'Network Structure', type='network', layout='spring')
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
-net.config('agentLabel', 'id')
+net.config({
+	'agentLabel': True,
+ 	'labelColor': '#FFFFFF',
+# 	'labelFamily': 'serif',
+	'agentMarker': 'H',
+	'labelAlpha': 0.75,
+	'labelWeight': 'bold',
+ 	'labelSize': 8
+})
 
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):

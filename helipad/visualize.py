@@ -611,6 +611,13 @@ class NetworkPlot(ChartPlot):
 			'agentMarker': 'o',
 			'agentSize': 30,
 			'agentLabel': False,
+			'labelSize': 10,
+			'labelColor': 'k',
+			'labelFamily': 'sans-serif',
+			'labelWeight': 'normal',
+			'labelAlpha': None,
+			'labelAlign': 'center',
+			'labelVerticalAlign': 'center',
 			'lockLayout': False
 		}
 	
@@ -678,21 +685,21 @@ class NetworkPlot(ChartPlot):
 		
 		if self.layout == 'patchgrid':
 			pd = self.patchData(t)			
-			# self.patchmap.set_norm(self.normal)
 			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
+			# self.patchmap.set_norm(self.normal)
 			# self.components['patches'].set_data(pd)
 		
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
 		self.pos = self.layClass(self.ndata[t])
 		sizes = self.params['agentSize']*10 if type(self.params['agentSize']) in [int, float] else [n[1]['size']*10 for n in self.ndata[t].nodes(data=True)]
-		self.components['nodes'] = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)], node_size=sizes)
+		self.components['nodes'] = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)], node_size=sizes, node_shape=self.params['agentMarker'])
 		e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
 		e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
 		self.components['edges_d'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
 		self.components['edges_u'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
 		if self.params['agentLabel']:
 			lab = None if self.params['agentLabel']==True else {n:self.ndata[t].nodes[n]['label'] for n in self.ndata[t].nodes}
-			self.components['labels'] = self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes, labels=lab)
+			self.components['labels'] = self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes, labels=lab, font_size=self.params['labelSize'], font_color=self.params['labelColor'], font_family=self.params['labelFamily'], font_weight=self.params['labelWeight'], alpha=self.params['labelAlpha'], horizontalalignment=self.params['labelAlign'], verticalalignment=self.params['labelVerticalAlign'])
 		
 		self.components['nodes'].set_picker(True)	#Listen for mouse events on nodes
 		self.components['nodes'].set_pickradius(5)	#Set margin of valid events in pixels
