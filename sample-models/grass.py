@@ -109,9 +109,12 @@ heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
 
 mapPlot = heli.spatial(x=16, diag=True)
-mapPlot.config('patchProperty', 'good:energy')
-mapPlot.config('patchColormap', 'Greens')
-mapPlot.config('agentSize', 'good:energy')
+mapPlot.config({
+	'patchProperty': 'good:energy',
+	'patchColormap': 'Greens',
+	'agentSize': 'good:energy',
+	'lockLayout': True
+})
 
 pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True)
 sexratio = heli.visual.addPlot('sexratio', 'Sex Ratio', 'timeseries', logscale=True)
@@ -126,11 +129,11 @@ pop.addSeries('expectancy', 'Life Expectancy', 'black')
 energy.addSeries('agentenergy', 'Energy', 'green')
 
 @heli.hook
-def spatialAgentClick(agent, plot, t):
+def agentClick(agent, plot, t):
 	print([f'Agent {a.id} at ({a.x}, {a.y})' for a in agent if a is not None])
 
 @heli.hook
-def spatialPatchClick(patch, plot, t):
+def patchClick(patch, plot, t):
 	print('Patch at',patch.position)
 
 #===============

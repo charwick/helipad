@@ -396,7 +396,7 @@ class ChartPlot(Item):
 		self.viz.removePlot(self.name)
 	
 	#Override in order to provide plot-specific key callbacks
-	def catchKeypress(self, event): pass
+	def catchKeypress(self, key): pass
 
 class TimeSeriesPlot(ChartPlot):
 	type = 'timeseries'
@@ -604,49 +604,110 @@ class NetworkPlot(ChartPlot):
 		if not 'layout' in kwargs: kwargs['layout'] = 'spring'
 		super().__init__(**kwargs)
 		self.ndata = {}
+		
+		self.params = {
+			'patchColormap': 'Blues',
+			#'patchProperty': 'mapcolor', #Don't specify, so we have a default white
+			'agentMarker': 'o',
+			'agentSize': 30,
+			'agentLabel': False,
+			'lockLayout': False
+		}
 	
 	def launch(self, axes):
-		import networkx as nx, networkx.drawing.layout as lay
+		import networkx as nx, networkx.drawing.layout as lay, pandas
+		def spatial_layout(G):
+			if not hasattr(self.viz.model, 'patches'): raise
+			return {i: data['position'] for i,data in G.nodes.items()}
+		lay.spatial_layout = spatial_layout
 		self.nx = nx
+		self.pandas = pandas
 		self.layClass = getattr(lay, self.layout+'_layout')
+		self.components = {}
+		axes.set_title(self.label, fontdict={'fontsize':10})
+		
 		super().launch(axes)
 		
 		def agentEvent(event):
 			pk = list(self.pos.keys())
 			agents = [self.viz.model.agent(pk[i]) for i in event.ind]
-			self.viz.model.doHooks('networkNodeClick', [agents, self, self.viz.scrubval])
+			self.viz.model.doHooks('agentClick', [agents, self, self.viz.scrubval])
 		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
+		
+		def patchEvent(event):
+			if self.axes is not event.inaxes or self.layout != 'spatial': return
+			self.viz.model.doHooks('patchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
+		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
 
 	def update(self, data, t):
-		G = self.viz.model.network(self.kind, self.prim)
+		G = self.viz.model.network(self.kind, self.prim, excludePatches=True)
+		
+		#Capture label and size data
+		if self.params['agentLabel'] and self.params['agentLabel'] != True:
+			agents = self.viz.model.allagents
+			if 'good:' in self.params['agentLabel']:
+				for n in G.nodes: G.nodes[n]['label'] = agents[n].stocks[self.params['agentLabel'].split(':')[1]]
+			else:
+				for n in G.nodes: G.nodes[n]['label'] = getattr(agents[n],self.params['agentLabel'])
+		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]:
+			agents = self.viz.model.allagents
+			if 'good:' in self.params['agentSize']:
+				for n in G.nodes: G.nodes[n]['size'] = agents[n].stocks[self.params['agentSize'].split(':')[1]]
+			else:
+				for n in G.nodes: G.nodes[n]['size'] = getattr(agents[n],self.params['agentSize'])
+		
 		self.ndata[t] = G
+		
+		#Save spatial data even if we're on a different layout
+		if hasattr(self.viz.model, 'patches'):
+			pd = self.patchData(None if t==self.viz.model.t else t)
+			for col in self.viz.model.patches:
+				for p in col:
+					p.colorData[t] = pd[p.x][p.y]
+			
+			#Renormalize color scale
+			nmin, nmax = pd.min().min(), pd.max().max()
+			self.normal = plt.cm.colors.Normalize(nmin if not hasattr(self,'normal') or nmin<self.normal.vmin else self.normal.vmin, nmax if not hasattr(self,'normal') or nmax>self.normal.vmax else self.normal.vmax)
+			
 
 	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
-		self.axes.axis('off')
+		if self.layout != 'spatial': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
+		
+		if self.layout == 'spatial':
+			pd = self.patchData(t)			
+			# self.patchmap.set_norm(self.normal)
+			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
+			# self.components['patches'].set_data(pd)
 		
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
 		self.pos = self.layClass(self.ndata[t])
-		nodes = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)])
+		sizes = self.params['agentSize']*10 if type(self.params['agentSize']) in [int, float] else [n[1]['size']*10 for n in self.ndata[t].nodes(data=True)]
+		self.components['nodes'] = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.primitives[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)], node_size=sizes)
 		e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]
 		e_undirected = [e for e in self.ndata[t].edges.data() if not e[2]['directed']]
-		self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
-		self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
-		self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes)
+		self.components['edges_d'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
+		self.components['edges_u'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
+		if self.params['agentLabel']:
+			lab = None if self.params['agentLabel']==True else {n:self.ndata[t].nodes[n]['label'] for n in self.ndata[t].nodes}
+			self.components['labels'] = self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes, labels=lab)
 		
-		nodes.set_picker(True)	#Listen for mouse events on nodes
-		nodes.set_pickradius(5)	#Set margin of valid events in pixels
+		self.components['nodes'].set_picker(True)	#Listen for mouse events on nodes
+		self.components['nodes'].set_pickradius(5)	#Set margin of valid events in pixels
+		
 		super().draw(t, forceUpdate)
 	
-	def catchKeypress(self, event):
-		if event.key=='l': self.rotateLayout()
+	def catchKeypress(self, key):
+		if key=='l': self.rotateLayout()
 	
 	def rotateLayout(self):
-		self.axes.set_yscale('linear')
+		self.axes.set_yscale('linear') #Override default logscale keypress
+		if self.params['lockLayout']: return
+
 		import networkx.drawing.layout as lay
-		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
+		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral', 'spatial']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
@@ -655,6 +716,24 @@ class NetworkPlot(ChartPlot):
 		#kamada_kawai requires scipy
 		try: self.draw(self.viz.scrubval)
 		except: self.rotateLayout()
+	
+	#Helper function
+	def getPatchParamValue(self, patch, t=None):
+		if t is not None: return patch.colorData[t]
+		if not 'patchProperty' in self.params: return 0
+		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
+		else: return getattr(patch, self.params['patchProperty'])
+	
+	def patchData(self, t=None):
+		if not hasattr(self.viz.model, 'patches'): return
+		#Pandas goes row,col instead of col,row so we have to transpose it
+		return self.pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).transpose()
+	
+	def config(self, param, val=None):
+		if type(param) is dict:
+			for k,v in param.items(): self.config(k,v)
+		elif val is None: return self.params[param]
+		else: self.params[param] = val
 
 #======================
 # HELPER FUNCTIONS

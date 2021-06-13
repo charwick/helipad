@@ -48,106 +48,6 @@ class Patch(baseAgent):
 			yield from [a for a in lst if self.x-0.5<=a.x<self.x+0.5 and self.y-0.5<=a.y<self.y+0.5]
 
 #===============
-# THE VISUALIZER
-#===============
-
-from helipad.visualize import ChartPlot
-import matplotlib.pyplot as plt
-class SpatialPlot(ChartPlot):
-	type='spatial'
-	
-	def __init__(self, *args, **kwargs):
-		super().__init__(*args, **kwargs)
-		self.agentHistory = {} #For coloring 
-		self.params = {
-			'patchColormap': 'Blues',
-			#'patchProperty': 'mapcolor', #Don't specify, so we have a default white
-			'agentMarker': 'o',
-			'agentSize': 5
-		}
-	
-	#Helper function
-	def getPatchParamValue(self, patch, t=None):
-		if t is not None: return patch.colorData[t]
-		if not 'patchProperty' in self.params: return 0
-		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
-		else: return getattr(patch, self.params['patchProperty'])
-	
-	def patchData(self, t=None):
-		if not hasattr(self.viz.model, 'patches'): return
-		#Pandas goes row,col instead of col,row so we have to transpose it
-		return pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).transpose()
-	
-	def agentLoc(self, update=False):
-		agents = [a for a in self.viz.model.allagents.values() if a.primitive!='patch']
-		if not agents: return
-		
-		if type(self.params['agentSize']) is int: size = None
-		else:
-			if 'good:' in self.params['agentSize']: size = [a.stocks[self.params['patchProperty'].split(':')[1]]*10 for a in self.viz.model.allagents.values() if a.primitive!='patch']
-			else: size = [getattr(a, self.params['agentSize']) for a in self.viz.model.allagents.values() if a.primitive!='patch']
-			#Normalize size here?
-		
-		#Matplotlib wants the coordinates in two x and y lists to create the plot, but one list of x,y tuples to update it 😡
-		if update: return ([(a.x, a.y) for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size, [a.id for a in agents])
-		else: return ([a.x for a in agents], [a.y for a in agents], [self.viz.model.primitives[a.primitive].breeds[a.breed].color.hex for a in agents], size, [a.id for a in agents])
-	
-	def launch(self, axes):
-		super().launch(axes)
-		patchData = self.patchData()
-		self.normal = plt.cm.colors.Normalize(patchData.min().min(), patchData.max().max())
-		self.patchmap = axes.imshow(patchData, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
-		
-		al = self.agentLoc()
-		size = al[3] or self.params['agentSize']*10
-		self.agentmap = axes.scatter(al[0], al[1], marker=self.params['agentMarker'], c=al[2], s=size)
-		self.agentHistory[0] = self.agentLoc(update=True)
-		
-		#Route clicks
-		self.agentmap.set_picker(True)	#Listen for mouse events on nodes
-		self.agentmap.set_pickradius(5)	#Set margin of valid events in pixels
-		def agentEvent(event):
-			if self.axes is not event.mouseevent.inaxes: return
-			agents = [self.viz.model.agent(self.agentHistory[self.viz.scrubval][3][a]) for a in event.ind]
-			self.viz.model.doHooks('spatialAgentClick', [agents, self, self.viz.scrubval])
-		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
-		def patchEvent(event):
-			if self.axes is not event.inaxes: return
-			self.viz.model.doHooks('spatialPatchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
-		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
-	
-	def update(self, data, t):
-		pd = self.patchData()
-		al = self.agentLoc(update=1)
-		self.patchmap.set_data(pd)
-		self.agentmap.set_offsets(al[0])
-		self.agentmap.set_facecolor(al[1])
-		
-		#Renormalize color scale
-		nmin, nmax = pd.min().min(), pd.max().max()
-		self.normal = plt.cm.colors.Normalize(nmin if nmin<self.normal.vmin else self.normal.vmin, nmax if nmax>self.normal.vmax else self.normal.vmax)
-		self.patchmap.set_norm(self.normal)
-		
-		#Store data
-		self.agentHistory[t] = al
-		for col in self.viz.model.patches:
-			for p in col:
-				p.colorData[t] = pd[p.x][p.y]
-	
-	def draw(self, t=None, forceUpdate=False):
-		if t is None: t=self.viz.scrubval
-		pd = self.patchData(t)
-		self.patchmap.set_data(pd)
-		self.agentmap.set_offsets(self.agentHistory[t][0])
-		self.agentmap.set_facecolor(self.agentHistory[t][1])
-		if self.agentHistory[t][2] is not None: self.agentmap.set_sizes(self.agentHistory[t][2])
-		super().draw(t, forceUpdate)
-	
-	def config(self, param, val=None):
-		if val is None: return self.params[param]
-		else: self.params[param] = val
-
-#===============
 # SETUP
 # Create parameters, add functions, and so on
 #===============
@@ -308,6 +208,5 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect
 	if not hasattr(model, 'visual') or type(model.visual) is not Charts:
 		model.useVisual(Charts)
 	
-	model.visual.addPlotType(SpatialPlot)
-	mapPlot = model.visual.addPlot('map', 'Map', type='spatial', aspect=aspect)
+	mapPlot = model.visual.addPlot('map', 'Map', type='network', aspect=aspect, layout='spatial')
 	return mapPlot

@@ -89,9 +89,10 @@ def modelPostStep(model):
 	random.choice(model.allEdges['edge']).cut()
 	newedge(model)
 
-viz.addPlot('net', 'Network Structure', type='network', layout='spring')
+net = viz.addPlot('net', 'Network Structure', type='network', layout='spring')
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
+net.config('agentLabel', 'id')
 
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
 for i in range(20):
@@ -100,7 +101,7 @@ for i in range(20):
 
 #Replace an agent, but only if we click during the current model time
 @heli.hook
-def networkNodeClick(agents, plot, t):
+def agentClick(agents, plot, t):
 	if t != heli.t: return
 	
 	for agent in agents:

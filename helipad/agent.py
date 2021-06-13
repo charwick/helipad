@@ -25,6 +25,7 @@ class baseAgent:
 		self.stocks = {}
 		self.edges = {}
 		self.utils = 0
+		self.position = None #Overridden in spatial init
 		for good, ginfo in model.goods.items():
 			endow = ginfo.endowment(self.breed if hasattr(self, 'breed') else None) if callable(ginfo.endowment) else ginfo.endowment
 			if endow is None: self.stocks[good] = 0

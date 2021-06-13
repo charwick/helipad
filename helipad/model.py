@@ -288,6 +288,17 @@ class Helipad:
 		return {k:v for k,v in self.goods.items() if not v.money}
 			
 	def addHook(self, place, func, prioritize=False):
+		deprec = {
+			'graphUpdate':'visualRefresh',		#1.2; can be removed in 1.4
+			'plotsLaunch':'visualLaunch',		#1.2; can be removed in 1.4
+			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5
+			'spatialAgentClick': 'agentClick',	#1.3; can be removed in 1.5
+			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
+		}
+		if place in deprec:
+			warnings.warn('The '+place+' hook is deprecated and will be removed in a future version. Please use the '+deprec[place]+' hook instead.', None, 2)
+			place = deprec[place]
+		
 		if not place in self.hooks: self.hooks[place] = []
 		if prioritize: self.hooks[place].insert(0, func)
 		else: self.hooks[place].append(func)
@@ -317,14 +328,6 @@ class Helipad:
 				r = self.doHooks(f, args)
 				if r is not None: return r
 			return None
-		
-		deprec = {
-			'graphUpdate':'visualRefresh',	#1.2; can be removed in 1.4
-			'plotsLaunch':'visualLaunch'	#1.2; can be removed in 1.4
-		}
-		if place in deprec:
-			warnings.warn('The '+place+' hook is deprecated and will be removed in a future version. Please use the '+deprec[place]+' hook instead.', None, 2)
-			place = deprec[place]
 		
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
@@ -649,14 +652,15 @@ class Helipad:
 				c[0].newEdge(c[1], kind)
 		return self.network(kind, prim)
 	
-	def network(self, kind='edge', prim=None):
+	def network(self, kind='edge', prim=None, excludePatches=False):
 		try: import networkx as nx
 		except: warnings.warn('Network export requires Networkx.', None, 2)
 		
 		#Have to use DiGraph in order to draw any arrows
 		G = nx.DiGraph(name=kind)
-		agents = self.allagents.values() if prim is None else self.agents[prim]
-		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive}) for a in agents])
+		agents = list(self.allagents.values()) if prim is None else self.agents[prim]
+		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
+		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
 		ae = self.allEdges
 		if kind in ae:
 			for e in ae[kind]:
