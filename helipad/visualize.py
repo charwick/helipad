@@ -61,21 +61,25 @@ class MPLVisualization(BaseVisualization):
 		if not isIpy(): self.fig.canvas.manager.set_window_title(title)
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
-		self.fig.canvas.mpl_connect('key_press_event', self.catchKeypress)
+		self.fig.canvas.mpl_connect('key_press_event', self.sendEvent)
+		self.fig.canvas.mpl_connect('pick_event', self.sendEvent)
+		self.fig.canvas.mpl_connect('button_press_event', self.sendEvent)
 		self.lastUpdate = 0
+	
+	def sendEvent(self, event):
+		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
+		if axes is not None:
+			for p in self.activePlots.values():
+				if axes is p.axes:
+					p.MPLEvent(event)
+					break
+		
+		if event.name=='key_press_event' and event.key in self.keys:
+			for f in self.keys[event.key]: f(self.model, event)
 	
 	def addKeypress(self, key, fn):
 		if not key in self.keys: self.keys[key] = []
 		self.keys[key].append(fn)
-	
-	def catchKeypress(self, event):
-		if event.inaxes is not None:
-			for p in self.activePlots.values():
-				if event.inaxes is p.axes:
-					p.catchKeypress(event.key)
-					break
-		if event.key in self.keys:
-			for f in self.keys[event.key]: f(self.model, event)
 	
 	@property
 	def activePlots(self):
@@ -98,13 +102,13 @@ class TimeSeries(MPLVisualization):
 		if model.moneyGood is not None:
 			self.addPlot('money', 'Money', selected=False)
 		
-		#Toggle legend boxes
+		#Toggle legend boxes all at once
 		#Use event.canvas.figure and not self.fig so it pertains to the current window
 		def toggle(model, event):
 			for axes in event.canvas.figure.axes:
 				leg = axes.get_legend()
 				leg.set_visible(not leg.get_visible())
-			event.canvas.draw()
+			event.canvas.draw_idle()
 		self.addKeypress('t', toggle)
 		
 		#Delete the corresponding series when a reporter is removed
@@ -164,7 +168,6 @@ class TimeSeries(MPLVisualization):
 		#Style plots
 		self.fig.subplots_adjust(hspace=0, bottom=0.05, right=1, top=0.97, left=0.1)
 		# plt.setp([a.get_xticklabels() for a in self.fig.axes[:-1]], visible=False)	#What was this for again…?
-		self.fig.canvas.mpl_connect('pick_event', self.toggleLine)
 		
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
@@ -190,25 +193,7 @@ class TimeSeries(MPLVisualization):
 		for plot in self.activePlots.values(): plot.draw(time) #Update the actual plots. Has to be after the new resolution is set
 		if self.fig.stale: self.fig.canvas.draw_idle()
 		self.fig.canvas.flush_events() #Listen for user input
-	
-	def toggleLine(self, event):
-		c1 = event.artist					#The label or line that was clicked
-		if len(c1.series._x) == 0: return	#Ignore if it's a stackplot
-		vis = not c1.series.get_visible()
-		c1.series.set_visible(vis)
-		for s in c1.series.subseries: s.line.set_visible(vis) #Toggle subseries (e.g. percentile bars)
-		c1.set_alpha(1.0 if vis else 0.2)
-		c1.otherComponent.set_alpha(1.0 if vis else 0.2)
-
-		## Won't work because autoscale_view also includes hidden lines
-		## Will have to actually remove and reinstate the line for this to work
-		# for g in self.activePlots:
-		# 	if c1.series in g.get_lines():
-		# 		g.relim()
-		# 		g.autoscale_view(tight=True)
 		
-		self.fig.canvas.draw()
-	
 	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
 		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
@@ -395,8 +380,8 @@ class ChartPlot(Item):
 	def remove(self):
 		self.viz.removePlot(self.name)
 	
-	#Override in order to provide plot-specific key callbacks
-	def catchKeypress(self, key): pass
+	#Override in order to catch plot-specific keypresses, clicks, or picks
+	def MPLEvent(self, event): pass
 
 class TimeSeriesPlot(ChartPlot):
 	type = 'timeseries'
@@ -465,6 +450,7 @@ class TimeSeriesPlot(ChartPlot):
 					legline.series = s.line
 					legline.otherComponent = label
 					label.otherComponent = legline
+					label.axes = axes #Necessary because an MPL bug fails to set the axes property of the text labels
 					break
 		
 	def update(self, data, t):
@@ -509,7 +495,32 @@ class TimeSeriesPlot(ChartPlot):
 		#Note the position in the old data if we're scrubbing
 		else:
 			self.scrubline = self.axes.axvline(x=t, color='#330000')
-			
+	
+	def MPLEvent(self, event):
+		#Toggle legend boxes one at a time if we're in the Charts visualizer
+		if hasattr(self.viz, 'scrub') and event.name=='key_press_event' and event.key=='t':
+			leg = self.axes.get_legend()
+			leg.set_visible(not leg.get_visible())
+			event.canvas.draw_idle()
+		
+		#Toggle lines on and off when clicking the legend
+		if event.name=='pick_event':
+			c1 = event.artist					#The label or line that was clicked
+			if len(c1.series._x) == 0: return	#Ignore if it's a stackplot
+			vis = not c1.series.get_visible()
+			c1.series.set_visible(vis)
+			for s in c1.series.subseries: s.line.set_visible(vis) #Toggle subseries (e.g. percentile bars)
+			c1.set_alpha(1.0 if vis else 0.2)
+			c1.otherComponent.set_alpha(1.0 if vis else 0.2)
+
+			## Won't work because autoscale_view also includes hidden lines
+			## Will have to actually remove and reinstate the line for this to work
+			# for g in self.activePlots:
+			# 	if c1.series in g.get_lines():
+			# 		g.relim()
+			# 		g.autoscale_view(tight=True)
+		
+			event.canvas.draw_idle()
 	
 	@property
 	def resolution(self):
@@ -635,17 +646,18 @@ class NetworkPlot(ChartPlot):
 		axes.set_title(self.label, fontdict={'fontsize':10})
 		
 		super().launch(axes)
+	
+	#Receives event from MPLVisualization.sendEvent()
+	def MPLEvent(self, event):
+		if event.name=='key_press_event' and event.key=='l': self.rotateLayout()
 		
-		def agentEvent(event):
+		elif event.name=='pick_event':
 			pk = list(self.pos.keys())
 			agents = [self.viz.model.agent(pk[i]) for i in event.ind]
 			self.viz.model.doHooks('agentClick', [agents, self, self.viz.scrubval])
-		self.viz.fig.canvas.mpl_connect('pick_event', agentEvent)
 		
-		def patchEvent(event):
-			if self.axes is not event.inaxes or self.layout != 'patchgrid': return
+		elif event.name=='button_press_event' and self.layout=='patchgrid':
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
-		self.viz.fig.canvas.mpl_connect('button_press_event', patchEvent)
 
 	def update(self, data, t):
 		G = self.viz.model.network(self.kind, self.prim, excludePatches=True)
@@ -706,9 +718,6 @@ class NetworkPlot(ChartPlot):
 		self.components['nodes'].set_pickradius(5)	#Set margin of valid events in pixels
 		
 		super().draw(t, forceUpdate)
-	
-	def catchKeypress(self, key):
-		if key=='l': self.rotateLayout()
 	
 	def rotateLayout(self):
 		self.axes.set_yscale('linear') #Override default logscale keypress
