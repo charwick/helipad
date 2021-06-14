@@ -618,7 +618,8 @@ class NetworkPlot(ChartPlot):
 			'labelAlpha': None,
 			'labelAlign': 'center',
 			'labelVerticalAlign': 'center',
-			'lockLayout': False
+			'lockLayout': False,
+			'patchAspect': 1
 		}
 	
 	def launch(self, axes):
@@ -685,7 +686,7 @@ class NetworkPlot(ChartPlot):
 		
 		if self.layout == 'patchgrid':
 			pd = self.patchData(t)			
-			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.aspect)
+			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.params['patchAspect'])
 			# self.patchmap.set_norm(self.normal)
 			# self.components['patches'].set_data(pd)
 		
