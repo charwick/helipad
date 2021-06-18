@@ -14,7 +14,7 @@ import pandas
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect=None):
+def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
@@ -29,7 +29,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect
 		model.addParameter('x', 'Map Width ', 'slider', dflt=x, opts={'low': 1, 'high': x, 'step': 1}, runtime=False)
 		model.addParameter('y', 'Map Height', 'slider', dflt=y, opts={'low': 1, 'high': y, 'step': 1}, runtime=False)
 	
-	model.addPrimitive('patch', Patch, hidden=True)
+	model.addPrimitive('patch', Patch, hidden=True, priority=-10)
 	model.addParameter('square', 'Square', 'hidden', dflt=square)
 	model.addParameter('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
 	
@@ -170,5 +170,5 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False, aspect
 	if not hasattr(model, 'visual') or type(model.visual) is not Charts:
 		model.useVisual(Charts)
 	
-	mapPlot = model.visual.addPlot('map', 'Map', type='network', aspect=aspect, layout='patchgrid')
+	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid')
 	return mapPlot

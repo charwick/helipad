@@ -450,7 +450,7 @@ class TimeSeriesPlot(ChartPlot):
 					legline.series = s.line
 					legline.otherComponent = label
 					label.otherComponent = legline
-					label.axes = axes #Necessary because an MPL bug fails to set the axes property of the text labels
+					label.axes = axes #Necessary because an MPL bug fails to set the axes property of the text labels. Fixed in 3.5.0 (#20458)
 					break
 		
 	def update(self, data, t):
