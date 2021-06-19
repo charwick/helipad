@@ -15,6 +15,8 @@ heli.order = 'match'
 
 heli.addParameter('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5}, runtime=False)
 heli.params['num_agent'].opts['step'] = 2 #Make sure we don't get stray agents
+heli.params['num_agent'].opts['low'] = 2 #Make sure we don't get stray agents
+
 
 heli.addGood('shmoo','#11CC00', (1, 1000))
 heli.addGood('soma', '#CC0000', lambda breed: (1, floor(exp(heli.param('ratio'))*1000)))

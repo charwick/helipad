@@ -263,7 +263,7 @@ class Helipad:
 			else: raise KeyError('Breed must specify which primitive it belongs to')
 		return self.addItem('breed', name, color, prim=prim)
 		
-	def addGood(self, name, color, endowment=None, money=False):
+	def addGood(self, name, color, endowment=None, money=False, props={}):
 		if money:
 			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
 			self.moneyGood = name
@@ -280,8 +280,9 @@ class Helipad:
 				if not 'demand' in self.visual.plots: self.visual.addPlot('demand', 'Demand', selected=False)
 				if not 'shortages' in self.visual.plots: self.visual.addPlot('shortage', 'Shortages', selected=False)
 			except: pass
-			
-		return self.addItem('good', name, color, endowment=endowment, money=money)
+		
+		props['quantity'] = endowment
+		return self.addItem('good', name, color, money=money, props=props)
 	
 	@property
 	def nonMoneyGoods(self):

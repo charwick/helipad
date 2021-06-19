@@ -22,15 +22,10 @@ class baseAgent:
 		self.model = model
 		self.age = 0
 		self.dead = False
-		self.stocks = {}
+		self.stocks = Stocks(breed, model.goods)
 		self.edges = {}
 		self.utils = 0
 		self.position = None #Overridden in spatial init
-		for good, ginfo in model.goods.items():
-			endow = ginfo.endowment(self.breed if hasattr(self, 'breed') else None) if callable(ginfo.endowment) else ginfo.endowment
-			if endow is None: self.stocks[good] = 0
-			elif isinstance(endow, tuple) or isinstance(endow, list): self.stocks[good] = randint(*endow)
-			else: self.stocks[good] = endow
 		
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
@@ -341,3 +336,33 @@ class Edge:
 		oldagent.edges[self.kind].remove(self)
 		newagent.edges[self.kind].append(self)
 		newagent.model.doHooks('edgeReassign', [self, oldagent, newagent])
+
+class Stocks:
+	def __init__(self, breed, goodslist):
+		self.goods = {g:{} for g in goodslist}
+		for good, ginfo in goodslist.items():
+			for p, fn in ginfo.props.items():
+				endow = fn(breed) if callable(fn) else fn
+				if endow is None: self.goods[good][p] = 0
+				elif isinstance(endow, tuple) or isinstance(endow, list): self.goods[good][p] = randint(*endow)
+				else: self.goods[good][p] = endow
+	
+	def __getitem__(self, key):
+		if type(key) is str: return self.goods[key]['quantity']
+		elif type(key) is tuple:
+			if type(key[1]) is str: return self.goods[key[0]][key[1]]
+			elif key[1]==True: return self.goods[key[0]]
+			elif key[1]==False: return self.goods[key]['quantity']
+		raise KeyError
+	
+	def __setitem__(self, key, val):
+		if type(key) is str: self.goods[key]['quantity'] = val
+		elif type(key) is tuple and type(key[1]) is str: self.goods[key[0]][key[1]] = val
+		else: raise KeyError
+	
+	def __iter__(self): return iter({k: g['quantity'] for k,g in self.goods.items()})
+	def __next__(self): return next({k: g['quantity'] for k,g in self.goods.items()})
+	def __len__(self): return len(self.goods)
+	def keys(self): return self.goods.keys()
+	def values(self): return [g['quantity'] for g in self.goods.values()]
+	def items(self): return [(k, g['quantity']) for k,g in self.goods.items()]
