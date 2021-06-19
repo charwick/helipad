@@ -401,7 +401,7 @@ class Helipad:
 		
 		#Per-breed and per-good series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in next(iter(self.primitives.values())).breeds.items():
+		for breed, b in self.primitives[defPrim].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
 				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
@@ -747,7 +747,8 @@ class Helipad:
 	
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive=None):
-		if primitive is None: primitive = next(iter(self.primitives))
+		if primitive is None:
+			primitive = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		if isinstance(var, str):
 			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
@@ -758,7 +759,8 @@ class Helipad:
 		
 	#Returns summary statistics on an agent variable at a single point in time
 	def summary(self, var, prim=None, breed=None):
-		if prim is None: primitive = next(iter(self.primitives))
+		if prim is None:
+			prim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		agents = self.agents[prim] if breed is None else self.agent(breed, prim)
 		data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
 		stats = {
