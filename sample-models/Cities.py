@@ -216,7 +216,7 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	viz.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
 	viz.plots['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
 	viz.plots['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
-	viz.plots['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', 'pink')
+	viz.plots['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', 'pink', visible=False)
 	viz.plots['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
 	viz.plots['rates'].addSeries(breed+'moveRate', breed.title()+' Moveaway Rate', d.color2)
 	viz.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)

@@ -395,7 +395,7 @@ class TimeSeriesPlot(ChartPlot):
 	#First arg is a reporter name registered in DataCollector, or a lambda function
 	#Second arg is the series name. Use '' to not show in the legend.
 	#Third arg is the plot's hex color, or a Color object
-	def addSeries(self, reporter, label, color, style='-'):
+	def addSeries(self, reporter, label, color, style='-', visible=True):
 		if not isinstance(color, Color): color = Color(color)
 
 		#Check against columns and not reporters so subseries work
@@ -414,7 +414,7 @@ class TimeSeriesPlot(ChartPlot):
 			if s.reporter == reporter:
 				self.series.remove(s)
 
-		series = Item(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name)
+		series = Series(reporter=reporter, label=label, color=color, style=style, subseries=subseries, plot=self.name, visible=visible)
 		self.series.append(series)
 		return series
 	
@@ -435,8 +435,6 @@ class TimeSeriesPlot(ChartPlot):
 		for series in self.series:
 			series.line, = axes.plot([], label=series.label, color=series.color.hex, linestyle=series.style)
 			series.fdata = []
-			series.line.subseries = series.subseries
-			series.line.label = series.label
 	
 		#Set up the legend for click events on both the line and the legend
 		leg = axes.legend(loc='upper right')
@@ -446,13 +444,14 @@ class TimeSeriesPlot(ChartPlot):
 			label.set_picker(5)			#Do both on the legend text
 			for s in self.series:
 				if s.label==label.get_text():
-					label.series = s.line
-					legline.series = s.line
-					legline.otherComponent = label
-					label.otherComponent = legline
+					s.legline = legline
+					s.legtext = label
 					label.axes = axes #Necessary because an MPL bug fails to set the axes property of the text labels. Fixed in 3.5.0 (#20458)
 					break
 		
+		for series in self.series: #Make sure we start out with the user-set visibility
+			if series.label and not series._visible: series.visible = False
+
 	def update(self, data, t):
 		firstdata = next(iter(data.values()))
 		if isinstance(firstdata, list): newlen, res = len(firstdata), self.resolution
@@ -506,21 +505,10 @@ class TimeSeriesPlot(ChartPlot):
 		#Toggle lines on and off when clicking the legend
 		if event.name=='pick_event':
 			c1 = event.artist					#The label or line that was clicked
-			if len(c1.series._x) == 0: return	#Ignore if it's a stackplot
-			vis = not c1.series.get_visible()
-			c1.series.set_visible(vis)
-			for s in c1.series.subseries: s.line.set_visible(vis) #Toggle subseries (e.g. percentile bars)
-			c1.set_alpha(1.0 if vis else 0.2)
-			c1.otherComponent.set_alpha(1.0 if vis else 0.2)
-
-			## Won't work because autoscale_view also includes hidden lines
-			## Will have to actually remove and reinstate the line for this to work
-			# for g in self.activePlots:
-			# 	if c1.series in g.get_lines():
-			# 		g.relim()
-			# 		g.autoscale_view(tight=True)
-		
-			event.canvas.draw_idle()
+			for s in self.series:
+				if s.label and (c1 is s.legline or c1 is s.legtext):
+					s.toggle()
+					break
 	
 	@property
 	def resolution(self):
@@ -753,6 +741,42 @@ class NetworkPlot(ChartPlot):
 		else: self.params[param] = val
 
 #======================
+# SUB-PLOT OBJECTS
+# Mostly sub-plot data will use an Item object, but some need a little more
+#======================
+
+class Series(Item):	
+	@property
+	def visible(self):
+		if not hasattr(self, 'line'): return self._visible
+		elif hasattr(self, 'poly'): return True #If it's a stackplot
+		else: return self.line.get_visible()
+	
+	@visible.setter
+	def visible(self, val):
+		if not hasattr(self, 'line'): #If we haven't drawn it yet
+			self._visible = val
+			return
+		elif hasattr(self, 'poly'): return	#Ignore if it's a stackplot
+		
+		self.line.set_visible(val)
+		for s in self.subseries: s.line.set_visible(val) #Toggle subseries (e.g. percentile bars)
+		self.legline.set_alpha(1.0 if val else 0.2)
+		self.legtext.set_alpha(1.0 if val else 0.2)
+
+		## Won't work because autoscale_view also includes hidden lines
+		## Will have to actually remove and reinstate the line for this to work
+		# for g in self.activePlots:
+		# 	if c1.series in g.get_lines():
+		# 		g.relim()
+		# 		g.autoscale_view(tight=True)
+		
+		self.line.figure.canvas.draw_idle()
+	
+	def toggle(self):
+		self.visible = not self.visible
+
+#======================
 # HELPER FUNCTIONS
 #======================
 	
@@ -761,5 +785,5 @@ def keepEvery(lst, n):
 	for k in lst:
 		if (i%n==0): l.append(k)
 		i+=1
-	if len(lst)%n != 0: print('Original:',len(lst),'New:',len(l),'Remainder:',len(lst)%n)
+	# if len(lst)%n != 0: print('Original:',len(lst),'New:',len(l),'Remainder:',len(lst)%n)
 	return l
