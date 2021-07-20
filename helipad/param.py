@@ -207,6 +207,7 @@ class CheckentryParam(Param):
 				if val and isinstance(val, str):
 					self.event = True
 					if hasattr(self, 'element'):
+						self.disable()
 						if isIpy():
 							self.element.children[1].value = 'Event: '+val
 							self.element.children[0].value = True
@@ -215,7 +216,6 @@ class CheckentryParam(Param):
 							self.element.entryValue.set('Event: '+val)
 							self.element.checkVar.set(True)
 							self.element.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
-						self.disable()
 					self.svar = val
 					self.bvar = True
 					return
