@@ -5,11 +5,22 @@
 
 import warnings
 
-def isIpy():
-	try:
-		__IPYTHON__
-		return True
-	except NameError: return False
+#Pass True to check for any Ipython environment, including Spyder, for event loop purposes.
+#Otherwise check specifically whether it's an interactive notebook. However,  get_ipython() comes back
+#undefined inside callbacks. So cache the value once, the first time it runs.
+def isIpy(atall=False):
+	if atall:
+		try:
+			__IPYTHON__
+			return True
+		except NameError: return False
+	
+	if not '__helipad_ipy' in globals():
+		try:
+			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
+		except NameError: globals()['__helipad_ipy'] = False
+	
+	return __helipad_ipy
 
 #Generic extensible item class to store structured data
 class Item:

@@ -538,7 +538,7 @@ class Helipad:
 					self.doHooks('visualRefresh', [self, self.visual]) 
 				
 				elif getattr(self, 'cpanel', None):
-					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
+					if isIpy(True): await asyncio.sleep(0.001) #Listen for keyboard input
 					else: self.cpanel.parent.update() #Make sure we don't hang the interface if plotless
 			
 				# Performance indicator
@@ -567,7 +567,7 @@ class Helipad:
 		#that the statement in the try block doesn't get executed…?
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
-			if not isIpy(): asyncio.run(self.run())	#If Tkinter, it needs an event loop
+			if not isIpy(True): asyncio.run(self.run())	#If Tkinter, it needs an event loop
 			else: asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
 	
 	def stop(self, *args):

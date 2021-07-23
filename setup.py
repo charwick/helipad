@@ -34,5 +34,5 @@ setuptools.setup(
 		"Intended Audience :: Science/Research",
 		"Topic :: Scientific/Engineering :: Visualization"
 	],
-	python_requires='>=3.6',
+	python_requires='>=3.7',
 )

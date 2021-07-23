@@ -30,7 +30,7 @@ The included [bootstrap model](https://github.com/charwick/helipad/blob/master/s
 
 ## Requirements
 
-Helipad requires Python 3.6 or higher. The following libraries are also required:
+Helipad requires Python 3.7 or higher. The following libraries are also required:
 
 * [Matplotlib](https://matplotlib.org/) (for visualization)
 * [Pandas](https://pandas.pydata.org/) (for data collection)
