@@ -32,16 +32,17 @@ The included [bootstrap model](https://github.com/charwick/helipad/blob/master/s
 
 Helipad requires Python 3.7 or higher. The following libraries are also required:
 
-* [Matplotlib](https://matplotlib.org/) (for visualization)
-* [Pandas](https://pandas.pydata.org/) (for data collection)
+* [Matplotlib](https://matplotlib.org/) for visualization
+* [Pandas](https://pandas.pydata.org/) for data collection
 
 The following libraries are optional but recommended:
 
-* [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) (to run Helipad in Jupyter notebooks)
-* [NetworkX](http://networkx.github.io/) (for network analysis and spatial visualization)
-* [PMW](https://pypi.org/project/Pmw/) (for tooltips in the Tkinter GUI)
-* [Readline](https://pypi.org/project/readline/) and Code (for the debug console)
-* [Pyobjc](https://pypi.org/project/pyobjc/) (for Mac interface niceties)
+* [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) to run Helipad in Jupyter notebooks
+* [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
+* [PMW](https://pypi.org/project/Pmw/) for tooltips in the Tkinter GUI
+* [Readline](https://pypi.org/project/readline/) and Code for the debug console
+* [Pyobjc](https://pypi.org/project/pyobjc/) for Mac interface niceties
+* [Nest-asyncio](https://pypi.org/project/nest-asyncio/) to run Helipad from Spyder
 
 ## Version History
 

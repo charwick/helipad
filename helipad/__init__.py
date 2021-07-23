@@ -2,4 +2,4 @@ from helipad.model import Helipad, MultiLevel
 from helipad.agent import *
 import helipad.utility as utility
 
-__version__ = "1.3.1"
+__version__ = "1.3.2"
