@@ -133,7 +133,11 @@ class Data:
 		while os.path.isfile(file): #Avoid filename collisions
 			i += 1
 			file = filename+'-'+str(i)+'.csv'
-		self.dataframe.to_csv(file)
+		
+		df = self.dataframe
+		hook = self.model.doHooks('saveCSV', [df, self.model]) #can't do `or None` since "The truth value of a DataFrame is ambiguous"
+		if hook is not None: df = hook
+		df.to_csv(file)
 
 class Reporter(Item):
 	def __init__(self, **kwargs):

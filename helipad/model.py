@@ -517,7 +517,7 @@ class Helipad:
 		
 		self.data.collect(self)
 		for e in self.events.values():
-			if (not e.triggered or e.repeat) and e.check(self) and self.visual is not None and e.name!=self.param('stopafter'):
+			if (not e.triggered or e.repeat) and e.check(self) and self.visual is not None and not self.visual.isNull and e.name!=self.param('stopafter'):
 				self.visual.event(self.t, **e.kwargs)
 		self.doHooks('modelPostStep', [self])
 		return self.t

@@ -34,6 +34,9 @@ heli.name = 'Cities'
 heli.stages = 2
 heli.order = 'linear'
 
+popfactor = 4 #Multiplies the productivity and therefore the equilibrium population, without changing anything else
+burnout = 2000 #The end period, once it's equilibrated, over which to average the values
+
 class Land():
 	def __init__(self, loc):
 		self.loc = loc
@@ -42,7 +45,7 @@ class Land():
 		self.product = 0
 	
 	def produce(self):
-		self.product = 4*log(self.input) #if self.loc=='rural' else sqrt(self.input)	# = ln∑P (eq. 2)
+		self.product = popfactor*log(self.input) #if self.loc=='rural' else sqrt(self.input)	# = ln∑P (eq. 2)
 		self.lastInput = self.input
 		self.input = 0 #Reset productivity at the end of each period
 		return self.product
@@ -92,13 +95,11 @@ def modelPreSetup(model):
 		@heli.event
 		def stab2(model):	return model.events['exp1'].triggered and model.t > model.events['exp1'].triggered+1000 and sum(diff(model.data.getLast('ruralH', 3000))) < 0
 		@heli.event
-		def end3(model):	return model.events['stab2'].triggered and model.t >= model.events['stab2'].triggered + 2000
-		# heli.param('stopafter', 'end3')
+		def end3(model): return model.events['stab2'].triggered and model.t >= model.events['stab2'].triggered + burnout
 	
 	#Start with the equilibrium population
 	else: model.param('num_agent', math.floor(25.63-13.43*model.param('fixed')))
 
-# from helipad.utility import CobbDouglas
 @heli.hook
 def agentInit(agent, model):
 	agent.H = random.normal(100, 15) if model.param('city') else 10 #Human capital
@@ -224,10 +225,43 @@ for breed, d in heli.primitives['agent'].breeds.items():
 
 heli.launchCpanel()
 
-#Malthusian parameter sweep
+#================
+# PARAM SWEEP & ANALYSIS
+#================
 
-# heli.param('csv', 'CSVs/malthusian')
+# #Remove superfluous columns
+# @heli.hook
+# def saveCSV(data, model):
+# 	for c in data:
+# 		if 'urban' in c or c in ['city', 'hsum'] or 'utility' in c or 'moveRate' in c or 'Unnamed' in c:
+# 			del data[c]
+# 	return data
+#
+# #Set up parameter sweep
+# folder = 'CSVs'
+# heli.param('csv', folder+'/malthusian')
 # @heli.hook('modelPreSetup', prioritize=True)
 # def turnOffCity(model): model.param('city', False)
+# heli.param('stopafter', 'end3')
 # results = heli.paramSweep(['rent', 'fixed'])
-# print([{e.name: e.triggered for e in run.events} for run in results])
+#
+# #Post-sweep analysis
+# import os, pandas
+# times = [{e.name: e.triggered for e in run.events} for run in results]
+# files = [f for f in os.listdir(folder) if '.csv' in f]
+# analysis = []
+# i=0
+# for f in files:
+# 	data = pandas.read_csv(folder+'/'+f)
+#
+# 	#Summary statistics
+# 	analysis.append({
+# 		'rent': data['rent'][0],
+# 		'fixed': data['fixed'][0],
+# 		'h': mean(data['ruralH'][-burnout:]),
+# 		'pop': mean(data['ruralPop'][-burnout:])/popfactor
+# 	}|times[i])
+# 	i+=1
+#
+# analysis = pandas.DataFrame(analysis)
+# analysis.to_csv(folder+'/analysis.csv')
