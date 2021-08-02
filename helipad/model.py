@@ -592,7 +592,7 @@ class Helipad:
 		if self.visual is not None: self.visual.terminate(self) #Clean up visualizations
 		
 		remainder = int(self.t % self.param('refresh')) #For some reason this returns a float sometimes?
-		if remainder > 0 and self.visual is not None: self.visual.update(self.data.getLast(remainder)) #Last update at the end
+		if remainder > 0 and self.visual is not None and not self.visual.isNull: self.visual.update(self.data.getLast(remainder)) #Last update at the end
 		
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
 		if getattr(self, 'cpanel', False):

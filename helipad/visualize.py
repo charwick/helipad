@@ -92,6 +92,7 @@ class MPLVisualization(BaseVisualization):
 class TimeSeries(MPLVisualization):
 	def __init__(self, model):
 		super().__init__(model)
+		self.verticals = []
 		
 		#Plot categories
 		self.addPlot('utility', 'Utility', selected=False)
@@ -135,7 +136,6 @@ class TimeSeries(MPLVisualization):
 		if not len(self.activePlots): return #Windowless mode
 		
 		self.resolution = 1
-		self.verticals = []
 		if isIpy():
 			plt.close() #Clean up after any previous runs
 			matplotlib.rcParams['figure.figsize'] = [9, 7]
@@ -230,6 +230,7 @@ class TimeSeries(MPLVisualization):
 		return True
 	
 	def event(self, t, color='#CC0000', linestyle='--', linewidth=1, **kwargs):
+		if not hasattr(self, 'fig'): return
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 		
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure

@@ -156,6 +156,9 @@ viz.addPlot('ngdp', 'NGDP', 7, selected=False)
 viz.addPlot('capital', 'Production', 9, selected=False)
 viz.addPlot('wage', 'Wage', 11, selected=False)
 viz.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
+
+# heli.data.addReporter('rBal', heli.data.agentReporter('realBalances', 'agent', breed=True))
+
 for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))

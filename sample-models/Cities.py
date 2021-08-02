@@ -18,23 +18,26 @@ def constrain(model, var, val):
 	elif model.param('city'):
 		if var=='fixed':
 			model.params['rent'].enable() #Tkinter won't let you update the value of a disabled widget...
-			model.param('rent', .3099+.4598*val)
+			model.param('rent', .04+.037*val)
 			model.params['rent'].disable()
-		elif var=='rent': model.param('fixed', 2.1748486*val-.67398869)
+		# if var=='rent':
+		# 	model.params['fixed'].enable() #Tkinter won't let you update the value of a disabled widget...
+		# 	model.param('fixed', 24.7777*val-.9284659)
+		# 	model.params['fixed'].disable()
 
 heli.addParameter('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city', runtime=False, callback=constrain)
 heli.addParameter('lockH', 'Lock human capital', 'check', False, desc='Maintains the distribution of human capital when checked')
 heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
 heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=10, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
 heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.005, opts={'low':0, 'high': 0.05, 'step': 0.001})
-heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.4, opts={'low':0.1, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living, proportional to human capital', callback=constrain)
+heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.04, opts={'low':0.01, 'high': 0.1, 'step': 0.01}, desc='Per-period cost-of-living, proportional to human capital', callback=constrain)
 heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.4, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living', callback=constrain)
 
 heli.name = 'Cities'
 heli.stages = 2
 heli.order = 'linear'
 
-popfactor = 4 #Multiplies the productivity and therefore the equilibrium population, without changing anything else
+popfactor = 10 #Multiplies the productivity and therefore the equilibrium population, without changing anything else
 burnout = 2000 #The end period, once it's equilibrated, over which to average the values
 
 class Land():
@@ -98,13 +101,13 @@ def modelPreSetup(model):
 		def end3(model): return model.events['stab2'].triggered and model.t >= model.events['stab2'].triggered + burnout
 	
 	#Start with the equilibrium population
-	else: model.param('num_agent', math.floor(25.63-13.43*model.param('fixed')))
+	else: model.param('num_agent', math.floor(2.55-1.69*model.param('fixed'))*popfactor)
 
 @heli.hook
 def agentInit(agent, model):
 	agent.H = random.normal(100, 15) if model.param('city') else 10 #Human capital
 	agent.prod = 0
-	agent.wealth = model.param('breedThresh')/2
+	agent.wealth = model.param('breedThresh') + model.param('rent')*10
 	agent.lastWage = 0
 	agent.expwage = 0
 
@@ -153,7 +156,7 @@ def agentStep(agent, model, stage):
 	
 	#Get paid in modelStep, then pay rent
 	elif stage==2:
-		agent.wealth -= model.param('rent')/100 * agent.H + model.param('fixed')/100
+		agent.wealth -= model.param('rent') * agent.H + model.param('fixed')
 		if agent.wealth <= 0: agent.die()
 		return
 
@@ -212,7 +215,7 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', 'agent', breed=breed, percentiles=[25,75]))
 	heli.data.addReporter(breed+'Wage', heli.data.agentReporter('lastWage', 'agent', breed=breed, percentiles=[25,75]))
 	heli.data.addReporter(breed+'ExpWage', heli.data.agentReporter('expwage', 'agent', breed=breed, percentiles=[25,75]))
-	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', 'agent', breed=breed, percentiles=[25, 75]))
+	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', 'agent', breed=breed, percentiles=[25,75]))
 	heli.data.addReporter(breed+'moveRate', heli.data.modelReporter('moverate'+breed), smooth=0.99)
 	heli.data.addReporter(breed+'birthrate', heli.data.modelReporter('birthrate'+breed), smooth=0.99)
 	viz.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
@@ -229,12 +232,14 @@ heli.launchCpanel()
 # PARAM SWEEP & ANALYSIS
 #================
 
+# for p in viz.plots.values(): p.active(False) #Disable plots so Helipad doesn't try to update the visuals during param sweep
 # #Remove superfluous columns
 # @heli.hook
 # def saveCSV(data, model):
 # 	for c in data:
-# 		if 'urban' in c or c in ['city', 'hsum'] or 'utility' in c or 'moveRate' in c or 'Unnamed' in c:
+# 		if 'urban' in c or c in ['city', 'hsum'] or 'utility' in c or 'moveRate' in c or 'Unnamed' in c or 'pctile' in c:
 # 			del data[c]
+# 	print('Finished at', len(data))
 # 	return data
 #
 # #Set up parameter sweep
