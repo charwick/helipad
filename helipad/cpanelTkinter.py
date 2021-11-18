@@ -297,15 +297,6 @@ class Cpanel:
 		#Set application name
 		self.parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
 		self.parent.resizable(0,0)
-		if sys.platform=='darwin':
-			try:
-				from Foundation import NSBundle
-				bundle = NSBundle.mainBundle()
-				if bundle:
-					info = bundle.localizedInfoDictionary() or bundle.infoDictionary()
-					if info and info['CFBundleName'] == 'Python':
-						info['CFBundleName'] = 'Helipad'
-			except: print('Use pip to install pyobjc for nice Mac features')
 	
 	#Step one period at a time and update the graph
 	#For use in debugging

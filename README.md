@@ -41,7 +41,6 @@ The following libraries are optional but recommended:
 * [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
 * [PMW](https://pypi.org/project/Pmw/) for tooltips in the Tkinter GUI
 * [Readline](https://pypi.org/project/readline/) and Code for the debug console
-* [Pyobjc](https://pypi.org/project/pyobjc/) for Mac interface niceties
 * [Nest-asyncio](https://pypi.org/project/nest-asyncio/) to run Helipad from Spyder
 
 ## Version History
