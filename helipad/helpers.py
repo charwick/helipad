@@ -33,10 +33,12 @@ class dictLike(dict):
 	def __getitem__(self, index): return super().__getitem__(self.normalize(index))
 	def __setitem__(self, index, value): super().__setitem__(self.normalize(index), value)
 	def normalize(self, index):
-		#Remove in Helipad 1.4
-		if index=='updateEvery':
-			index = 'refresh'
-			warnings.warn('The \'updateEvery\' parameter has been renamed to \'refresh\'. The ability to refer to \'updateEvery\' is deprecated and will be removed in a future version.', None, 3)
+		deprecated = {
+			# 'updateEvery': 'refresh'
+		}
+		if index in deprecated:
+			warnings.warn(f'The \'{index}\' parameter has been renamed to \'{deprecated["index"]}\'. The ability to refer to \'{index}\' is deprecated and will be removed in a future version.', None, 3)
+			index = deprecated[index]
 		return index
 
 import colorsys, matplotlib.colors as mplcolor

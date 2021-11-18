@@ -314,7 +314,7 @@ class Charts(MPLVisualization):
 	def addPlot(self, name, label, type=None, selected=True, **kwargs):
 		self.selector.addItem(name, label, selected)
 		self.type = type if type is not None else 'bar'
-		if not self.type in self.plotTypes: raise KeyError('\''+self.type+'\' is not a registered plot visualizer.')
+		if not self.type in self.plotTypes: raise KeyError(f'\'{self.type}\' is not a registered plot visualizer.')
 		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
 		return self.plots[name]
 	
@@ -401,7 +401,7 @@ class TimeSeriesPlot(ChartPlot):
 
 		#Check against columns and not reporters so subseries work
 		if not callable(reporter) and not reporter in self.viz.model.data.columns:
-			raise KeyError('Reporter \''+reporter+'\' does not exist. Be sure to register reporters before adding series.')
+			raise KeyError(f'Reporter \'{reporter}\' does not exist. Be sure to register reporters before adding series.')
 
 		#Add subsidiary series (e.g. percentile bars)
 		subseries = []

@@ -24,7 +24,7 @@ class Helipad:
 		self.name = ''
 		self.agents = {}
 		self.primitives = {}
-		self.params = dictLike()#Global parameters
+		self.params = {}		#Global parameters
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
@@ -92,7 +92,7 @@ class Helipad:
 			except: pass #Fail silently if we're not online
 	
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
-		if name=='all': raise ValueError(name+' is a reserved name. Please choose another.')
+		if name=='all': raise ValueError(f'{name} is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
 		class_.primitive = name
 		self.primitives[name] = Item(
@@ -118,40 +118,6 @@ class Helipad:
 		del self.agents[name]
 		del self.params['num_'+name]
 		return True
-		
-	#Deprecated in Helipad 1.2 and moved to TimeSeries.plots
-	#Remove in Helipad 1.4
-	@property
-	def plots(self):
-		warnings.warn('model.plots is deprecated and will be removed in a future version. The list of TimeSeries plots can be accessed with model.visual.plots.', None, 2)
-		from helipad.visualize import TimeSeries
-		if not isinstance(self.visual, TimeSeries): self.useVisual(TimeSeries)
-		return self.visual.plots
-	
-	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
-	#To be removed in Helipad 1.4
-	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
-		from helipad.visualize import TimeSeries
-		
-		warnings.warn('model.addPlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.addPlot() instead.', None, 2)
-		if not isinstance(self.visual, TimeSeries):
-			self.useVisual(TimeSeries)
-			warnings.warn('Visualization must be explicitly specified. Adding TimeSeries for compatibility…', None, 2)
-		
-		return self.visual.addPlot(name, label, position, selected, logscale, stack)
-	
-	#Deprecated in Helipad 1.2 in favor of TimeSeries.addPlot()
-	#To be removed in Helipad 1.4
-	def removePlot(self, name, reassign=None):
-		from helipad.visualize import TimeSeries
-		warnings.warn('model.removePlot() is deprecated and will be removed in a future version. Specify model.useVisual(TimeSeries) and use TimeSeries.removePlot() instead.', None, 2)
-		if isinstance(self.visual, TimeSeries): return self.visual.removePlot(name, reassign)
-	
-	#Deprecated in Helipad 1.2 in favor of Plot.addSeries()
-	#To be removed in Helipad 1.4
-	def addSeries(self, plot, reporter, label, color, style='-'):
-		warnings.warn('model.addSeries() is deprecated and will be removed in a future version. Use Plot.addSeries() instead.', None, 2)
-		return self.plots[plot].addSeries(reporter, label, color, style)
 	
 	def addButton(self, text, func, desc=None):
 		self.shocks.register(text, None, func, 'button', True, desc)
@@ -161,9 +127,9 @@ class Helipad:
 		if paramType is None: params=self.params
 		elif paramType=='breed': params=self.primitives[prim].breedParams
 		elif paramType=='good': params=self.goodParams
-		else: raise ValueError('Invalid object \''+paramType+'\'')
+		else: raise ValueError(f'Invalid object \'{paramType}\'')
 		
-		if name in params: warnings.warn('Parameter \''+name+'\' already defined. Overriding…', None, 2)
+		if name in params: warnings.warn(f'Parameter \'{name}\' already defined. Overriding…', None, 2)
 		
 		if callable(getter):
 			args['getter'] = lambda item=None: getter(*([name, self] if paramType is None else [name, self, item]))
@@ -204,12 +170,6 @@ class Helipad:
 	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
 		
-		#Deprecated in Helipad 1.2, remove in Helipad 1.4
-		if param=='stopafter' and callable(val):
-			warnings.warn('Setting the \'stopafter\' parameter to a function is deprecated and will be removed in a future version. Use model.addEvent() and set \'stopafter\' to the event name instead.', None, 2)
-			self.addEvent(val.__name__, val)
-			val = val.__name__
-		
 		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
 		param = self.parseParamId(param)
 			
@@ -246,7 +206,7 @@ class Helipad:
 		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'');
 		
 		if name in itemDict:
-			warnings.warn(obj+' \''+name+'\' already defined. Overriding…', None, 2)
+			warnings.warn(f'{obj} \'{name}\' already defined. Overriding…', None, 2)
 		
 		cobj = color if isinstance(color, Color) else Color(color)
 		cobj2 = cobj.lighten()
@@ -265,7 +225,7 @@ class Helipad:
 		
 	def addGood(self, name, color, endowment=None, money=False, props={}):
 		if money:
-			if self.moneyGood is not None: print('Money good already specified as',self.moneyGood,'. Overriding…')
+			if self.moneyGood is not None: print(f'Money good already specified as {self.moneyGood}. Overriding…')
 			self.moneyGood = name
 			
 			#Add the M0 plot once we have a money good
@@ -290,14 +250,12 @@ class Helipad:
 			
 	def addHook(self, place, func, prioritize=False):
 		deprec = {
-			'graphUpdate':'visualRefresh',		#1.2; can be removed in 1.4
-			'plotsLaunch':'visualLaunch',		#1.2; can be removed in 1.4
 			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5
 			'spatialAgentClick': 'agentClick',	#1.3; can be removed in 1.5
 			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
 		}
 		if place in deprec:
-			warnings.warn('The '+place+' hook is deprecated and will be removed in a future version. Please use the '+deprec[place]+' hook instead.', None, 2)
+			warnings.warn(f'The {place} hook is deprecated and will be removed in a future version. Please use the {deprec[place]} hook instead.', None, 2)
 			place = deprec[place]
 		
 		if not place in self.hooks: self.hooks[place] = []
@@ -624,14 +582,6 @@ class Helipad:
 		from itertools import product
 		space = [{p[0]:run[k] for k,p in enumerate(params.items())} for run in product(*[p[1].range for p in params.values()])]
 		
-		#For backward-compatibility with pre-1.2 paramSweep results.
-		#Can be removed and replaced with Item in Helipad 1.4
-		class Result(Item):
-			def __getitem__(self, index):
-				warnings.warn('Parameter sweep results are now an object, not a tuple. Access by numeric index is deprecated and will be removed in a future version.', None, 2)
-				if index==0: return self.vars
-				elif index==1: return self.data
-		
 		#Run the model
 		alldata = []
 		for i,run in enumerate(space):
@@ -646,7 +596,7 @@ class Helipad:
 			if reporters is not None: data = pandas.DataFrame({k:self.data.all[k] for k in reporters})
 			else: data = self.data.dataframe
 			
-			events = [Result(name=e.name, triggered=e.triggered, data=e.data) for e in self.events.values()]
+			events = [Item(name=e.name, triggered=e.triggered, data=e.data) for e in self.events.values()]
 				
 			alldata.append(Item(vars=run, data=data, events=events))
 		return alldata
@@ -718,7 +668,7 @@ class Helipad:
 				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [id, self.primitives[prim].breeds.keys(), self])
 				if breed is None: breed = list(self.primitives[prim].breeds.keys())[id%len(self.primitives[prim].breeds)]
 				if not breed in self.primitives[prim].breeds:
-					raise ValueError('Breed \''+breed+'\' is not registered for the \''+prim+'\' primitive')
+					raise ValueError(f'Breed \'{breed}\' is not registered for the \'{prim}\' primitive')
 				new = self.primitives[prim].class_(breed, id, self)
 				array.append(new)
 		
@@ -843,11 +793,6 @@ class Helipad:
 			self.debugConsole()
 			self.root.mainloop()
 		else: self.start() #As long as we haven't already started
-	
-	#Remove in Helipad 1.4
-	def launchPlots(self):
-		warnings.warn('model.launchPlots() is deprecated. Use model.launchVisual() instead.', None, 2)
-		self.launchVisual()
 	
 	# Generates function decorators for hooks, reporters, etc.
 	def genDecorator(self, todo):
