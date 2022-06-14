@@ -148,7 +148,7 @@ def agentStep(agent, model, stage):
 		elif agent.wealth > model.param('breedThresh') * (randn if agent.breed=='rural' else agent.H/4):
 			child = agent.reproduce(
 				inherit=['H', ('wealth', lambda w: w[0]/2)],
-				mutate={'H': 8.5} if not model.param('lockH') else {} #sqrt(H^2/2)*SD, with 0.8 heritability and 15 population SD
+				mutate={'H': 14.25} if not model.param('lockH') else {} #See footnote 3 for derivation
 			)
 			agent.wealth -= agent.wealth/2 + 1 #-= breedThresh #Fixed cost
 			model.births[agent.breed] += 1
@@ -221,7 +221,7 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	viz.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
 	viz.plots['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
 	viz.plots['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
-	viz.plots['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', 'pink', visible=False)
+	viz.plots['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', d.color2, visible=False)
 	viz.plots['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
 	viz.plots['rates'].addSeries(breed+'moveRate', breed.title()+' Moveaway Rate', d.color2)
 	viz.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)

@@ -14,13 +14,6 @@ class Cpanel:
 	def __init__(self, model):
 		self.model = model
 		self.parent = Tk()
-		try:
-			import Pmw
-			self.balloon = Pmw.Balloon(self.parent)
-			textCheck.pmw = self.balloon
-		except:
-			self.balloon = None
-			print('Use pip to install Pmw in order to use tooltips')
 		
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 1
@@ -182,7 +175,7 @@ class Cpanel:
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
 					
-					if self.balloon and param.desc is not None: self.balloon.bind(el, param.desc)
+					if param.desc is not None: Tooltip(wrap, param.desc)
 				
 				if item is None:
 					param.element = el
@@ -274,7 +267,7 @@ class Cpanel:
 				shock.element = Checkbutton(frame8.subframe, text=shock.name, var=bv, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor=W, command=shock.setCallback)
 				shock.element.BooleanVar = bv #To set via the shock object
 				frame8.checks[shock.name] = bv #To set via the shock parameter
-				if self.balloon and shock.desc is not None: self.balloon.bind(shock.element, shock.desc)
+				if shock.desc is not None: Tooltip(shock.element, shock.desc)
 				shock.element.pack(fill=BOTH)
 			
 			b=0
@@ -284,7 +277,7 @@ class Cpanel:
 				for shock in self.model.shocks.buttons.values():
 					shock.element = Button(bframe, text=shock.name, command=shockCallback(shock.name), padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
 					shock.element.grid(row=3+int(ceil((b+1)/2)), column=b%2, sticky='W')
-					if self.balloon and shock.desc is not None: self.balloon.bind(shock.element, shock.desc)
+					if shock.desc is not None: Tooltip(shock.element, shock.desc)
 					b+=1
 				bframe.pack(fill=BOTH)
 			frame8.pack(fill="x", side=TOP)
@@ -545,3 +538,60 @@ class checkGrid(expandableFrame):
 		else:
 			for c in self.values(): c.disable()
 	def configure(self, state): self.disabled(state=='disabled')
+
+#Replaces PMW.balloon because it's unreliably maintained
+#Modified from https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
+class Tooltip:
+	def __init__(self, widget, text, bg='#FFFFEA', pad=(5, 3, 5, 3), waittime=500, wraplength=250, tip_delta=(10, 5)):
+		for v in ['text', 'widget', 'bg', 'pad', 'waittime', 'wraplength', 'tip_delta']: setattr(self, v, locals()[v]) #Populate object with arguments
+		self.widget.bind("<Enter>", self.onEnter)
+		self.widget.bind("<Leave>", self.onLeave)
+		self.widget.bind("<ButtonPress>", self.onLeave)
+		self.id = None
+		self.tw = None
+
+	def onLeave(self, event=None):
+		self.unschedule()
+		self.hide()
+
+	def onEnter(self, event=None):
+		self.unschedule()
+		self.id = self.widget.after(self.waittime, self.show)
+
+	def unschedule(self):
+		id_ = self.id
+		self.id = None
+		if id_: self.widget.after_cancel(id_)
+
+	def show(self):
+		self.tw = Toplevel(self.widget) # creates a toplevel window
+		self.tw.wm_overrideredirect(True) # Leaves only the label and removes the app window
+
+		win = Frame(self.tw, background=self.bg, borderwidth=0)
+		label = Label(win, text=self.text, justify=LEFT, background=self.bg, relief=SOLID, borderwidth=0, wraplength=self.wraplength)
+		label.grid(padx=(self.pad[0], self.pad[2]), pady=(self.pad[1], self.pad[3]), sticky=NSEW)
+		win.grid()
+		
+		#Calculate tooltip position
+		s_width, s_height = self.widget.winfo_screenwidth(), self.widget.winfo_screenheight()
+		width, height = (self.pad[0] + label.winfo_reqwidth() + self.pad[2], self.pad[1] + label.winfo_reqheight() + self.pad[3])
+		mouse_x, mouse_y = self.widget.winfo_pointerxy()
+		x1, y1 = mouse_x + self.tip_delta[0], mouse_y + self.tip_delta[1]
+		x2, y2 = x1 + width, y1 + height
+
+		x_delta = x2 - s_width
+		if x_delta < 0: x_delta = 0
+		y_delta = y2 - s_height
+		if y_delta < 0: y_delta = 0
+
+		#If offscreen
+		if (x_delta, y_delta) != (0, 0):
+			if x_delta: x1 = mouse_x - self.tip_delta[0] - width
+			if y_delta: y1 = mouse_y - self.tip_delta[1] - height
+		if y1 < 0: y1 = 0
+		
+		self.tw.wm_geometry("+%d+%d" % (x1, y1))
+
+	def hide(self):
+		if self.tw: self.tw.destroy()
+		self.tw = None

@@ -39,7 +39,6 @@ The following libraries are optional but recommended:
 
 * [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) to run Helipad in Jupyter notebooks
 * [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
-* [PMW](https://pypi.org/project/Pmw/) for tooltips in the Tkinter GUI
 * [Readline](https://pypi.org/project/readline/) and Code for the debug console
 * [Nest-asyncio](https://pypi.org/project/nest-asyncio/) to run Helipad from Spyder
 
