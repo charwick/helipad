@@ -404,9 +404,7 @@ class textCheck(Label):
 		def leave(event):
 			if self.enabled: self.config(bg=self.bg[self.value].hex, fg=self.fg[self.value].hex)
 		
-		#Have to do this *before* any other bindings because pmw.bind deletes all the others
-		if hasattr(self, 'pmw') and desc: self.pmw.bind(self, desc)
-		
+		if desc: Tooltip(self, desc)
 		self.bind('<Button-1>', self.toggle, add='+')
 		self.bind('<Enter>', hover, add='+')
 		self.bind('<Leave>', leave, add='+')
