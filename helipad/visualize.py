@@ -156,10 +156,8 @@ class TimeSeries(MPLVisualization):
 			#This should be the window height, but MPL only allows us to set the figure height.
 			#MacOS doesn't let us create a window taller than the screen, but we have to account for
 			#the height of the window frame crudely in Windows.
-			if sys.platform=='win32': #Respect the taskbar
-				import win32api
-				for monitor in win32api.EnumDisplayMonitors(): height = .92 * win32api.GetMonitorInfo(monitor[0])['Work'][3]
-			else: height = fm.window.winfo_screenheight()
+			height = fm.window.winfo_screenheight()
+			if sys.platform=='win32': height -= 150
 			
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
@@ -272,10 +270,8 @@ class Charts(MPLVisualization):
 			#This should be the window height, but MPL only allows us to set the figure height.
 			#MacOS doesn't let us create a window taller than the screen, but we have to account for
 			#the height of the window frame crudely in Windows.
-			if sys.platform=='win32': #Respect the taskbar
-				import win32api
-				for monitor in win32api.EnumDisplayMonitors(): height = .92 * win32api.GetMonitorInfo(monitor[0])['Work'][3]
-			else: height = fm.window.winfo_screenheight()
+			height = fm.window.winfo_screenheight()
+			if sys.platform=='win32': height -= 150
 			
 			x_px = fm.window.winfo_screenwidth()*2/3
 			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
