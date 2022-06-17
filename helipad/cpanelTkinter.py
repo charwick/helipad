@@ -6,7 +6,7 @@
 from tkinter import *
 from tkinter.ttk import Progressbar
 from helipad.helpers import Color
-import sys, colorsys
+import os, sys, colorsys
 from helipad.param import Param
 from math import ceil
 
@@ -290,6 +290,16 @@ class Cpanel:
 		#Set application name
 		self.parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
 		self.parent.resizable(0,0)
+		self.setAppIcon()
+	
+	#Separate function so we can call it again when MPL tries to override
+	def setAppIcon(self):
+		try:
+			__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+			icon = os.path.join(__location__, 'Helipad.png')
+			pi = PhotoImage(file=icon, master=self.parent)
+			self.parent.tk.call('wm','iconphoto', self.parent._w, pi)
+		except: pass
 	
 	#Step one period at a time and update the graph
 	#For use in debugging
