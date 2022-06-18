@@ -13,7 +13,7 @@ heli.order = 'random'
 heli.stages = 5
 
 heli.addParameter('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
-heli.addParameter('smart', 'Smart consumption', 'check', dflt=True)
+heli.addParameter('smart', 'Smart consumption', 'check', dflt=True, desc='Move to the neighboring patch with the most grass, rather than randomly')
 heli.addParameter('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
 heli.addParameter('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})

@@ -175,7 +175,7 @@ class Cpanel:
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
 
-					if param.desc is not None: Tooltip(wrap, param.desc)
+				if param.desc is not None: Tooltip(wrap, param.desc)
 
 				if item is None:
 					param.element = el
