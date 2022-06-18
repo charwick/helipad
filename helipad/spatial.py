@@ -4,10 +4,9 @@
 # The functions in this module are in pre-beta and not API stable.
 #===============
 
-from helipad.agent import Patch, baseAgent
 from random import randint
 from math import sqrt, degrees, radians, sin, cos, atan2, pi
-import pandas
+from helipad.agent import Patch, baseAgent
 
 #===============
 # SETUP
@@ -110,7 +109,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	baseAgent.rotate = NotPatches(rotate)
 
 	def orientTo(self, x, y=None):
-		if type(x) is not int: x,y = x.position
+		if not isinstance(x, int): x,y = x.position
 		difx, dify = x-self.x, y-self.y
 		if self.model.param('wrap'):
 			dimx, dimy = self.model.param('x'), self.model.param('y')
@@ -130,11 +129,11 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 	#A 2D list that lets us use [x,y] indices
 	class Patches(list):
 		def __getitem__(self, key):
-			if type(key) is int: return super().__getitem__(key)
+			if isinstance(key, int): return super().__getitem__(key)
 			else: return super().__getitem__(key[0])[key[1]]
 
 		def __setitem__(self, key, val):
-			if type(key) is int: return super().__setitem__(key, val)
+			if isinstance(key, int): return super().__setitem__(key, val)
 			else: super().__getitem__(key[0])[key[1]] = val
 
 	#Position our patches in a 2D array
@@ -167,7 +166,7 @@ def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
 
 	#Don't reset the visualizer if charts is already registered
 	from helipad.visualize import Charts
-	if not hasattr(model, 'visual') or type(model.visual) is not Charts:
+	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 
 	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid')

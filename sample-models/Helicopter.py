@@ -6,6 +6,7 @@ import pandas
 
 from helipad import *
 from math import sqrt
+from numpy import random, isnan
 heli = Helipad()
 
 #===============

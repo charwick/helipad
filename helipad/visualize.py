@@ -3,13 +3,13 @@
 # Do not run this file; import model.py and run from your file.
 # ==========
 
-from numpy import ndarray, asanyarray, log10
-from math import sqrt, ceil
-import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
+import sys
 from abc import ABC, abstractmethod
+from math import sqrt, ceil
+from numpy import ndarray, asanyarray, log10
+import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from helipad.helpers import *
 mlpstyle.use('fast')
-import sys
 
 #======================
 # TOP-LEVEL VISUALIZERS
@@ -17,7 +17,7 @@ import sys
 #======================
 
 #Used for creating an entirely new visualization window.
-class BaseVisualization:
+class BaseVisualization(ABC):
 	isNull = True
 
 	#Create the window. Mandatory to implement
@@ -134,7 +134,7 @@ class TimeSeries(MPLVisualization):
 
 	#listOfPlots is the trimmed model.plots list
 	def launch(self, title):
-		if not len(self.activePlots): return #Windowless mode
+		if not self.activePlots: return #Windowless mode
 
 		self.resolution = 1
 		if isIpy():
@@ -177,7 +177,7 @@ class TimeSeries(MPLVisualization):
 
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))
-		if (self.resolution > 1): data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
+		if self.resolution > 1: data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
 		for plot in self.activePlots.values(): plot.update(data, time) #Append new data to series
 
@@ -247,7 +247,7 @@ class Charts(MPLVisualization):
 		self.model = model # :(
 
 	def launch(self, title):
-		if not len(self.activePlots): return #Windowless mode
+		if not self.activePlots: return #Windowless mode
 		from matplotlib.widgets import Slider
 
 		n = len(self.activePlots)
@@ -733,7 +733,7 @@ class NetworkPlot(ChartPlot):
 		return self.pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).transpose()
 
 	def config(self, param, val=None):
-		if type(param) is dict:
+		if isinstance(param, dict):
 			for k,v in param.items(): self.config(k,v)
 		elif val is None: return self.params[param]
 		else: self.params[param] = val
@@ -781,7 +781,7 @@ class Series(Item):
 def keepEvery(lst, n):
 	i,l = (1, [])
 	for k in lst:
-		if (i%n==0): l.append(k)
+		if i%n==0: l.append(k)
 		i+=1
 	# if len(lst)%n != 0: print('Original:',len(lst),'New:',len(l),'Remainder:',len(lst)%n)
 	return l

@@ -3,9 +3,9 @@
 # Do not run this file; import model.py and run from your file.
 # ==========
 
+from itertools import combinations
 from helipad.helpers import *
 from numpy import arange
-from itertools import combinations
 from numpy import random
 
 class Param(Item):
@@ -247,7 +247,7 @@ class CheckentryParam(Param):
 
 		if updateGUI and isIpy() and hasattr(self, 'element'):
 			els = self.element.children if self.obj is None else self.element[item].children
-			els[0].value = val != False 
+			els[0].value = val != False
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 
 	#Only re-enable the textbox if the checkbox is checked
@@ -393,7 +393,7 @@ class Shocks:
 		if timerFunc != 'button': self.model.params['shocks'].addItem(name, name, selected=active)
 
 	def step(self):
-		for name, shock in self.shocks.items():
+		for shock in self.shocks.values():
 			if shock.selected and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
 				shock.do(self.model)
 
@@ -414,19 +414,17 @@ class Shocks:
 	#With n% probability each period
 	def randn(self, n):
 		if n<0 or n>100: raise ValueError('randn() argument can only be between 0 and 100')
-		def fn(t): return True if random.randint(0,100) < n else False
+		def fn(t): return random.randint(0,100) < n
 		return fn
 
 	#Once at t=n. n can be an int or a list of periods
 	def atperiod(self, n):
 		def fn(t):
-			if type(n) == list:
-				return True if t in n else False
-			else:
-				return True if t==n else False
+			if isinstance(n, list): return t in n
+			else: return t==n
 		return fn
 
 	#Regularly every n periods
 	def everyn(self, n, offset=0):
-		def fn(t): return True if t%n-offset==0 else False
+		def fn(t): return t%n-offset==0
 		return fn

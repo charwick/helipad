@@ -15,7 +15,7 @@ class Cpanel(VBox):
 
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
-		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
+		with open(os.path.join(__location__,'ipy-styles.css'), encoding='UTF-8') as c: css = c.read()
 		self.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
 
 		#Callback function generator for Jupyter elements

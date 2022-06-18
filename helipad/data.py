@@ -4,7 +4,7 @@
 # ==========
 
 import pandas, os.path
-from numpy import *
+import numpy as np
 from helipad.model import Item
 
 class Data:
@@ -91,9 +91,9 @@ class Data:
 				if v is not None: u.append(v)
 			if not u: return 0
 			elif stat=='sum':	return sum(u)
-			elif stat=='mean':	return mean(u)
-			elif stat=='gmean':	return exp(log(u).sum()/len(u))
-			elif stat=='std':	return std(u)
+			elif stat=='mean':	return np.mean(u)
+			elif stat=='gmean':	return np.exp(np.log(u).sum()/len(u))
+			elif stat=='std':	return np.std(u)
 			elif stat=='max':	return max(u)
 			elif stat=='min':	return min(u)
 			elif 'percentile-' in stat:
@@ -107,8 +107,8 @@ class Data:
 			elif 'mstd-' in stat: #Don't use directly; use the std kwarg
 				s, op, coef = stat.split('-')
 				coef = float(coef)
-				if op=='p': return mean(u) + coef * std(u)
-				else: return mean(u) - coef * std(u)
+				if op=='p': return np.mean(u) + coef * np.std(u)
+				else: return np.mean(u) - coef * np.std(u)
 			else: raise ValueError('Invalid statistic '+stat)
 		return (reporter, subplots) if subplots is not None else reporter
 
@@ -148,7 +148,7 @@ class Reporter(Item):
 		else: self.children[self.name+'-unsmooth'] = (None, [])
 
 	def collect(self, model):
-		for p, s in self.children.items():
+		for s in self.children.values():
 			if callable(s[0]): s[1].append(s[0](model))
 
 		if not self.smooth: self.data.append(self.func(model))

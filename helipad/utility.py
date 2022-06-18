@@ -6,7 +6,7 @@
 from abc import ABC, abstractmethod
 
 #Basic utility functions
-class Utility:
+class Utility(ABC):
 
 	#Receives an array of goods.
 	#Can, but doesn't necessarily have to correspond to the registered goods
@@ -81,14 +81,14 @@ class CES(Utility):
 
 		#The general utility function
 		else:
-			util = sum([self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods])
+			util = sum(self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods)
 			return util ** (self.elast/(self.elast-1))
 
 	def mu(self, quantities):
 		super().mu(quantities)
 
 		if self.elast==0:	#Leontief
-			mus = {g: 1 if quantities[g] < min(quantities.values()) else 0}
+			mus = {g: 1 if quantities[g] < min(quantities.values()) else 0 for g in self.goods}
 
 		elif self.elast==1:	#Cobb-Douglas
 			mus = {}
@@ -99,7 +99,7 @@ class CES(Utility):
 						mus[g] *= quantities[g2] ** self.coeffs[g2]
 
 		else:				#General CES
-			coeff = sum([self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods])
+			coeff = sum(self.coeffs[g] ** (1/self.elast) * quantities[g] ** ((self.elast-1)/self.elast) for g in self.goods)
 			coeff = coeff ** (1/(self.elast-1))
 			mus = {g: coeff * (self.coeffs[g]/quantities[g]) ** (1/self.elast) for g in self.goods}
 

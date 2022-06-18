@@ -11,7 +11,7 @@ from helipad.visualize import BaseVisualization
 from helipad.helpers import *
 from helipad.param import *
 from helipad.data import Data
-import helipad.agent as agent
+from helipad.agent import Agent, baseAgent
 
 class Helipad:
 	runInit = True #for multiple inheritance
@@ -37,7 +37,7 @@ class Helipad:
 		self.visual = None
 
 		#Default parameters
-		self.addPrimitive('agent', agent.Agent, dflt=50, low=1, high=100)
+		self.addPrimitive('agent', Agent, dflt=50, low=1, high=100)
 
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
@@ -200,10 +200,10 @@ class Helipad:
 		if obj=='good':
 			itemDict = self.goods
 			paramDict = self.goodParams
-		elif obj=='breed': 
+		elif obj=='breed':
 			itemDict = self.primitives[prim].breeds
 			paramDict = self.primitives[prim].breedParams
-		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'');
+		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'')
 
 		if name in itemDict:
 			warnings.warn(f'{obj} \'{name}\' already defined. Overriding…', None, 2)
@@ -213,7 +213,7 @@ class Helipad:
 		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
 
 		#Make sure the parameter lists keep up with our items
-		for k,p in paramDict.items(): p.addKey(name)
+		for p in paramDict.values(): p.addKey(name)
 
 		return itemDict[name]
 
@@ -275,7 +275,7 @@ class Helipad:
 
 	def clearHooks(self, place):
 		if isinstance(place, list): return [self.clearHooks(p) for p in place]
-		if not place in self.hooks or not len(self.hooks[place]): return False
+		if not place in self.hooks or not self.hooks[place]: return False
 		self.hooks[place].clear()
 		return True
 
@@ -336,12 +336,12 @@ class Helipad:
 			return reporter
 
 		#Add reporters for all parameters
-		for item, i in self.goods.items():				#Cycle through goods
+		for item in self.goods:							#Cycle through goods
 			for n,p in self.goodParams.items():			#Cycle through parameters
 				if p.type == 'hidden': continue			#Skip hidden parameters
 				self.data.addReporter(n+'-'+item, pReporter(p, item))
 		for prim, pdata in self.primitives.items():		#Cycle through primitives
-			for breed, i in pdata.breeds.items():		#Cycle through breeds
+			for breed in pdata.breeds:					#Cycle through breeds
 				for n,p in pdata.breedParams.items():	#Cycle through parameters
 					if p.type == 'hidden': continue		#Skip hidden parameters
 					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
@@ -349,7 +349,7 @@ class Helipad:
 			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
 			self.data.addReporter(n, pReporter(p))
 
-		if (self.moneyGood is not None):
+		if self.moneyGood is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
 			if self.visual is not None and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
 				self.visual.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
@@ -373,8 +373,8 @@ class Helipad:
 					if 'shortage' in self.visual.plots: self.visual.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
 
 		#Initialize agents
-		self.primitives = {k:v for k, v in sorted(self.primitives.items(), key=lambda d: d[1].priority)}	#Sort by priority
-		pops = {prim: self.param('num_'+prim) for prim in self.primitives.keys()}
+		self.primitives = dict(sorted(self.primitives.items(), key=lambda d: d[1].priority))				#Sort by priority
+		pops = {prim: self.param('num_'+prim) for prim in self.primitives}
 		for ags in self.agents.values(): ags.clear()														#Clear any surviving agents from last run
 		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
 
@@ -407,8 +407,8 @@ class Helipad:
 		#Have to do this all at once at the beginning of the period, not when each agent steps
 		for p in self.agents.values():
 			for a in p:
-				a.currentDemand = {g:0 for g in self.goods.keys()}
-				a.currentShortage = {g:0 for g in self.goods.keys()}
+				a.currentDemand = {g:0 for g in self.goods}
+				a.currentShortage = {g:0 for g in self.goods}
 
 		self.shocks.step()
 
@@ -452,7 +452,7 @@ class Helipad:
 							if a==0:
 								others = self.doHooks('matchSelect', [agent, matchpool, self, self.stage])
 								if others is not None:
-									if (isinstance(others, agent.baseAgent) and matchN==2): others = [others]
+									if (isinstance(others, baseAgent) and matchN==2): others = [others]
 									if (isinstance(others, list) and len(others)==matchN-1):
 										for other in others: matchpool.remove(other)
 										agents += others
@@ -501,7 +501,7 @@ class Helipad:
 					self.visual.update(data)
 					self.visual.lastUpdate = t
 
-					self.doHooks('visualRefresh', [self, self.visual]) 
+					self.doHooks('visualRefresh', [self, self.visual])
 
 				elif getattr(self, 'cpanel', None):
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
@@ -567,7 +567,6 @@ class Helipad:
 
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
 	def paramSweep(self, param, reporters=None):
-		import pandas
 		if not self.param('stopafter'): raise RuntimeError('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set')
 
 		#Standardize format and get the Param objects
@@ -646,7 +645,7 @@ class Helipad:
 	@property
 	def allagents(self):
 		agents = {}
-		for k, l in self.agents.items():
+		for l in self.agents.values():
 			agents.update({a.id:a for a in l})
 		return agents
 
@@ -664,12 +663,12 @@ class Helipad:
 			maxid = 1
 			for a in self.allagents.values():
 				if a.id > maxid: maxid = a.id #Figure out maximum existing ID
-			for id in range(maxid+1, maxid+int(diff)+1):
-				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [id, self.primitives[prim].breeds.keys(), self])
-				if breed is None: breed = list(self.primitives[prim].breeds.keys())[id%len(self.primitives[prim].breeds)]
+			for aId in range(maxid+1, maxid+int(diff)+1):
+				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.primitives[prim].breeds.keys(), self])
+				if breed is None: breed = list(self.primitives[prim].breeds.keys())[aId%len(self.primitives[prim].breeds)]
 				if not breed in self.primitives[prim].breeds:
 					raise ValueError(f'Breed \'{breed}\' is not registered for the \'{prim}\' primitive')
-				new = self.primitives[prim].class_(breed, id, self)
+				new = self.primitives[prim].class_(breed, aId, self)
 				array.append(new)
 
 		#Remove agents
@@ -697,9 +696,9 @@ class Helipad:
 		if sys.platform=='darwin':
 			try:
 				import code, readline
-				vars = globals().copy()
-				vars['self'] = self
-				shell = code.InteractiveConsole(vars)
+				env = globals().copy()
+				env['self'] = self
+				shell = code.InteractiveConsole(env)
 				shell.interact()
 			except: print('Use pip to install readline and code for a debug console')
 
@@ -810,7 +809,7 @@ class Helipad:
 			return rep1(func) if isDec else rep1
 		return dec
 
-class MultiLevel(agent.baseAgent, Helipad):
+class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
 		self.setup()

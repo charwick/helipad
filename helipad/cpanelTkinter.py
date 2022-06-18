@@ -165,12 +165,12 @@ class Cpanel:
 						el.set(param.get(item))
 
 					if item is None and not getattr(param, 'config', False):
-						label = tk.Label(wrap, text=title, fg="#333", bg=bg).pack(side='left', padx=8, pady=3)
+						tk.Label(wrap, text=title, fg="#333", bg=bg).pack(side='left', padx=8, pady=3)
 						el.pack(side='right')
 					elif getattr(param, 'config', False): el.pack()
 					else:
 						lframe = tk.Frame(wrap, bg=bg, padx=0, pady=0)
-						label = tk.Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
+						tk.Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
 						drawCircle(lframe, param.keys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
@@ -489,7 +489,7 @@ class checkEntry(tk.Frame):
 	def set(self, val):
 		if isinstance(val, bool):
 			self.checkVar.set(val)
-		elif isinstance(val, str) or isinstance(val, int):
+		elif isinstance(val, (str, int)):
 			if self.type=='int' and val!='': val=int(val)
 			self.checkVar.set(True)
 			self.entryValue.set(val)

@@ -4,7 +4,7 @@
 # ==========
 
 from random import choice, randint
-from numpy import *
+import numpy as np
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
@@ -16,9 +16,9 @@ class baseAgent:
 	# UTILITY METHODS
 	#==================
 
-	def __init__(self, breed, id, model):
+	def __init__(self, breed, aId, model):
 		self.breed = breed
-		self.id = int(id)
+		self.id = int(aId)
 		self.model = model
 		self.age = 0
 		self.dead = False
@@ -145,12 +145,12 @@ class baseAgent:
 			if stat is None:
 				stat = 'mean' if isinstance(v[0], (int, float, complex)) and not isinstance(v[0], bool) else 'first'
 
-			if stat=='mean': n = mean(v)
+			if stat=='mean': n = np.mean(v)
 			elif stat=='sum': n = sum(v)
-			elif stat=='gmean': n = exp(log(v).sum()/len(v))
+			elif stat=='gmean': n = np.exp(np.log(v).sum()/len(v))
 			elif stat=='first': n = v[0]
 			elif stat=='last': n = v[len(v)-1]
-			elif stat=='rand' or stat=='random': n = choice(v)
+			elif stat in ('rand', 'random'): n = choice(v)
 			elif stat=='max': n = max(v)
 			elif stat=='min': n = min(v)
 			elif callable(stat): n = stat(v)
@@ -168,8 +168,8 @@ class baseAgent:
 				if isinstance(v, tuple): v, scale = v
 				else: scale = 'linear'
 
-				if scale=='log': newval = random.lognormal(log(getattr(newagent, k)), v)
-				else: newval = random.normal(getattr(newagent, k), v)
+				if scale=='log': newval = np.random.lognormal(np.log(getattr(newagent, k)), v)
+				else: newval = np.random.normal(getattr(newagent, k), v)
 			setattr(newagent, k, newval)
 
 		newagent.id = maxid+1
@@ -344,20 +344,20 @@ class Stocks:
 			for p, fn in ginfo.props.items():
 				endow = fn(breed) if callable(fn) else fn
 				if endow is None: self.goods[good][p] = 0
-				elif isinstance(endow, tuple) or isinstance(endow, list): self.goods[good][p] = randint(*endow)
+				elif isinstance(endow, (tuple, list)): self.goods[good][p] = randint(*endow)
 				else: self.goods[good][p] = endow
 
 	def __getitem__(self, key):
-		if type(key) is str: return self.goods[key]['quantity']
-		elif type(key) is tuple:
-			if type(key[1]) is str: return self.goods[key[0]][key[1]]
+		if isinstance(key, str): return self.goods[key]['quantity']
+		elif isinstance(key, tuple):
+			if isinstance(key[1], str): return self.goods[key[0]][key[1]]
 			elif key[1]==True: return self.goods[key[0]]
 			elif key[1]==False: return self.goods[key]['quantity']
 		raise KeyError
 
 	def __setitem__(self, key, val):
-		if type(key) is str: self.goods[key]['quantity'] = val
-		elif type(key) is tuple and type(key[1]) is str: self.goods[key[0]][key[1]] = val
+		if isinstance(key, str): self.goods[key]['quantity'] = val
+		elif isinstance(key, tuple) and isinstance(key[1], str): self.goods[key[0]][key[1]] = val
 		else: raise KeyError
 
 	def __iter__(self): return iter({k: g['quantity'] for k,g in self.goods.items()})
