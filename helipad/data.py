@@ -11,7 +11,7 @@ class Data:
 	def __init__(self, model):
 		self.reporters = {}
 		self.model = model
-	
+
 	def __getitem__(self, index):
 		r = self.columns[index]
 		return r.data if index==r.name else r.children[index][1]
@@ -22,11 +22,11 @@ class Data:
 	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key, func, **kwargs):
 		func, children = func if isinstance(func, tuple) else (func, {})
-		
+
 		if not callable(func): raise TypeError('Second argument of addReporter must be callable')
 		self.reporters[key] = Reporter(name=key, func=func, children=children, **kwargs)
 		return self.reporters[key]
-	
+
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
 	def removeReporter(self, key):
 		if self.model.hasModel:
@@ -37,10 +37,10 @@ class Data:
 	def collect(self, model):
 		model.doHooks('dataCollect', [self, model.t])
 		for v in self.reporters.values(): v.collect(model)
-	
+
 	def reset(self):
 		for v in self.reporters.values(): v.clear()
-	
+
 	@property
 	def all(self):
 		data = {}
@@ -48,7 +48,7 @@ class Data:
 			data[k] = r.data
 			for s,d in r.children.items(): data[s] = d[1]
 		return data
-	
+
 	@property
 	def columns(self):
 		cols = {}
@@ -56,19 +56,19 @@ class Data:
 			cols[k] = r
 			for s in r.children: cols[s] = r
 		return cols
-	
+
 	@property
 	def dataframe(self): return pandas.DataFrame(self.all)
-	
+
 	#
 	# REPORTERS
 	# These functions return reporters; they take some arguments and return a function that takes 1 argument: model.
 	#
-	
+
 	def modelReporter(self, key):
 		def reporter(model): return getattr(model, key)
 		return reporter
-	
+
 	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
@@ -79,11 +79,11 @@ class Data:
 		elif 'std' in kwargs:
 			subplots = {('' if not breed else breed)+key+'+'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-p-'+str(kwargs['std'])), key+'-'+str(kwargs['std'])+'std': self.agentReporter(key, prim, breed=breed, good=good, stat='mstd-m-'+str(kwargs['std']))}
 		else: subplots = None
-		
+
 		def reporter(model):
 			u = []
 			array = model.allagents.values() if prim=='all' else model.agents[prim]
-			
+
 			for agent in array:
 				if breed is not None and agent.breed != breed: continue
 				v = getattr(agent, key)
@@ -111,11 +111,11 @@ class Data:
 				else: return mean(u) - coef * std(u)
 			else: raise ValueError('Invalid statistic '+stat)
 		return (reporter, subplots) if subplots is not None else reporter
-	
+
 	#
 	# OTHER FUNCTIONS
 	#
-	
+
 	#Slices the last n records for the key registered as a reporter
 	#Returns a value if n=1, otherwise a list
 	def getLast(self, key, n=1):
@@ -126,14 +126,14 @@ class Data:
 		elif isinstance(key, int):
 			return {k: v[-key:] for k,v in self.all.items()}
 		else: raise TypeError('First argument of getLast must be either a key name or an int')
-	
+
 	def saveCSV(self, filename='data'):
 		file = filename + '.csv'
 		i=0
 		while os.path.isfile(file): #Avoid filename collisions
 			i += 1
 			file = filename+'-'+str(i)+'.csv'
-		
+
 		df = self.dataframe
 		hook = self.model.doHooks('saveCSV', [df, self.model]) #can't do `or None` since "The truth value of a DataFrame is ambiguous"
 		if hook is not None: df = hook
@@ -144,20 +144,20 @@ class Reporter(Item):
 		super().__init__(**kwargs)
 		self.data = []
 		self.children = {k:(fn, []) for k, fn in self.children.items()}
-		if not 'smooth' in kwargs: self.smooth = False
+		if 'smooth' not in kwargs: self.smooth = False
 		else: self.children[self.name+'-unsmooth'] = (None, [])
-	
+
 	def collect(self, model):
 		for p, s in self.children.items():
 			if callable(s[0]): s[1].append(s[0](model))
-		
+
 		if not self.smooth: self.data.append(self.func(model))
 		else:
 			us = self.children[self.name+'-unsmooth'][1]
 			us.append(self.func(model))
 			#					  Old data 					   New data point
 			self.data.append(self.smooth*self.data[-1] + (1-self.smooth)*us[-1] if model.t>1 else us[-1])
-	
+
 	def clear(self):
 		self.data.clear()
 		for c in self.children.values(): c[1].clear()

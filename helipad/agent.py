@@ -11,11 +11,11 @@ from numpy import *
 #See below, the Agent() class for a minimal example.
 class baseAgent:
 	fixed = False
-	
+
 	#==================
 	# UTILITY METHODS
 	#==================
-	
+
 	def __init__(self, breed, id, model):
 		self.breed = breed
 		self.id = int(id)
@@ -26,30 +26,30 @@ class baseAgent:
 		self.edges = {}
 		self.utils = 0
 		self.position = None #Overridden in spatial init
-		
+
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.currentShortage = {g:0 for g in model.goods.keys()}
-		
+
 		if hasattr(super(), 'runInit'): super().__init__() #For multi-level models
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
-	
+
 	def step(self, stage):
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
 		if stage == self.model.stages: self.age += 1
-	
+
 	#==================
 	# ECONOMIC METHODS
 	#==================
-	
+
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
 	def trade(self, partner, good1, amt1, good2, amt2):
 		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
-		
+
 		if amt2 != 0: price = amt1 / amt2
-		
-		#Budget constraints. Hold price constant if hit		
+
+		#Budget constraints. Hold price constant if hit
 		if amt1 > self.stocks[good1]:
 			self.currentShortage[good1] += amt1 - self.stocks[good1]
 			amt1 = self.stocks[good1]
@@ -71,63 +71,63 @@ class baseAgent:
 		partner.stocks[good1] += amt1
 		self.stocks[good2] += amt2
 		partner.stocks[good2] -= amt2
-		
+
 		#Record demand
 		if amt1 > 0: partner.currentDemand[good1] += amt1
 		else: self.currentDemand[good1] -= amt1
 		if amt2 > 0: self.currentDemand[good2] += amt2
 		else: partner.currentDemand[good2] -= amt2
-		
+
 		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
-	
+
 	#Price is per-unit
 	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
 	def buy(self, partner, good, q, p):
 		if self.model.moneyGood is None: raise RuntimeError('Buy function requires a monetary good to be specified')
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
-		
+
 		before = self.stocks[good]
 		self.trade(partner, self.model.moneyGood, p*q, good, q)
 		return self.stocks[good] - before
-	
+
 	#Unilateral
 	def pay(self, recipient, amount):
 		if self.model.moneyGood is None: raise RuntimeError('Pay function requires a monetary good to be specified')
-		
+
 		#Budget constraint and hooks
 		if amount > self.balance: amount = self.balance
 		if -amount > recipient.balance: amount = -recipient.balance
 		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])
 		if amount_ is not None: amount = amount_
-				
+
 		if amount != 0:
 			recipient.stocks[self.model.moneyGood] += amount
 			self.stocks[self.model.moneyGood] -= amount
 		return amount
-	
+
 	@property
 	def balance(self):
 		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
 		bal = self.stocks[self.model.moneyGood]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
 		if bal_ is not None: bal = bal_
-		
+
 		return bal
-	
+
 	#==================
 	# GENETIC METHODS
 	#==================
-	
+
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
 		if self.fixed: raise NotImplementedError('Fixed primitives cannot reproduce.')
-		
+
 		maxid = 0
 		for a in self.model.allagents.values():
 			if a.id > maxid:
 				maxid = a.id
 		newagent = type(self)(self.breed, maxid+1, self.model)
-		
+
 		#Values in the inherit list can either be a variable name (in which case the new agent inherits
 		#the mean of all of the values for the parents), or a tuple, the first element of which is a
 		#variable name, and the second is a string representing how to merge them. Possible values are
@@ -140,11 +140,11 @@ class baseAgent:
 			if isinstance(a, tuple): a, stat = a
 			v = [getattr(p,a) for p in parents if hasattr(p,a)] #List of values, filtering those without
 			if len(v)==0: continue
-			
+
 			#Default statistic if unspecified. 'mean' for numbers, and 'first' for non-numbers.
 			if stat is None:
 				stat = 'mean' if isinstance(v[0], (int, float, complex)) and not isinstance(v[0], bool) else 'first'
-			
+
 			if stat=='mean': n = mean(v)
 			elif stat=='sum': n = sum(v)
 			elif stat=='gmean': n = exp(log(v).sum()/len(v))
@@ -155,9 +155,9 @@ class baseAgent:
 			elif stat=='min': n = min(v)
 			elif callable(stat): n = stat(v)
 			else: raise ValueError("Invalid statistic in reproduction function.")
-			
+
 			setattr(newagent, a, n)
-		
+
 		#Mutate variables
 		#Values in the mutate dict can be either a function (which takes a value and returns a value),
 		#  a number (a std dev by which to mutate the value), or a tuple, the first element of which
@@ -167,79 +167,79 @@ class baseAgent:
 			else:
 				if isinstance(v, tuple): v, scale = v
 				else: scale = 'linear'
-					
+
 				if scale=='log': newval = random.lognormal(log(getattr(newagent, k)), v)
 				else: newval = random.normal(getattr(newagent, k), v)
 			setattr(newagent, k, newval)
-		
+
 		newagent.id = maxid+1
 		for p in parents:
 			p.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
-		
+
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
-	
+
 	def die(self, updateGUI=True):
 		if self.fixed: raise NotImplementedError('Fixed primitives cannot die.')
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.alledges: edge.cut()
 		self.dead = True
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
-	
+
 	@property
 	def parent(self):
 		p = self.inbound('lineage', obj='agent')
 		if len(p)==0: return None
 		elif len(p)==1: return p[0]
 		else: return p
-	
+
 	@property
 	def children(self):
 		return [edge.partner(self) for edge in self.outbound('lineage')]
-	
+
 	#==================
 	# NETWORK METHODS
 	#==================
-	
+
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
 		return Edge(self, partner, kind, direction, weight)
-	
+
 	def outbound(self, kind='edge', undirected=False, obj='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
 		if kind is None: edges = self.alledges
 		else:
-			if not kind in self.edges: return []
+			if kind not in self.edges: return []
 			edges = self.edges[kind]
 		ob = [edge for edge in edges if edge.startpoint == self or (undirected and not edge.directed)]
 		return ob if obj=='edge' else [e.partner(self) for e in ob]
-	
+
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
 		if kind is None: edges = self.alledges
 		else:
-			if not kind in self.edges: return []
+			if kind not in self.edges: return []
 			edges = self.edges[kind]
 		ib = [edge for edge in edges if edge.endpoint == self or (undirected and not edge.directed)]
 		return ib if obj=='edge' else [e.partner(self) for e in ib]
-	
+
 	def edgesWith(self, partner, kind='edge'):
 		if kind is not None:
-			if not kind in self.edges: return []
+			if kind not in self.edges: return []
 			edges = self.edges[kind]
 		else: edges = self.alledges
 		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
-	
+
 	@property
 	def alledges(self):
 		edges = []
 		for e in self.edges.values(): edges += e
 		return edges
-	
+
 	#==================
 	# OTHER METHODS
 	#==================
-	
+
 	#In a multi-level model, allow the agent to move to a different deme/firm/etc
 	def transfer(self, dest):
 		origin = self.model
@@ -248,38 +248,38 @@ class baseAgent:
 		origin.agents[self.primitive].remove(self)
 		self.model.doHooks(['baseAgentMove', self.primitive+'Move'], [self, origin, dest])
 
-#The default agent class corresponding to the 'agent' primitive.	
+#The default agent class corresponding to the 'agent' primitive.
 class Agent(baseAgent):
 	pass
 
 #For spatial models
 class Patch(baseAgent):
 	fixed = True
-	
+
 	@property
 	def neighbors(self):
 		return self.outbound('space', True, obj='agent')
-	
+
 	@property
 	def up(self):
 		if self.y==0 and not self.model.param('wrap'): return None
 		return self.model.patches[self.x, self.y-1 if self.y > 0 else self.model.param('y')-1]
-	
+
 	@property
 	def right(self):
 		if self.x>=self.model.param('x')-1 and not self.model.param('wrap'): return None
 		return self.model.patches[self.x+1 if self.x < self.model.param('x')-1 else 0, self.y]
-	
+
 	@property
 	def down(self):
 		if self.y>=self.model.param('y')-1 and not self.model.param('wrap'): return None
 		return self.model.patches[self.x, self.y+1 if self.y < self.model.param('y')-1 else 0]
-	
+
 	@property
 	def left(self):
 		if self.x==0 and not self.model.param('wrap'): return None
 		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('x')-1, self.y]
-	
+
 	@property
 	def agentsOn(self):
 		for prim, lst in self.model.agents.items():
@@ -312,25 +312,25 @@ class Edge:
 			else: raise ValueError('Direction must be either int, bool, or agent.')
 		if not self.directed:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
-		
+
 		#Add object to each agent, and to the model
 		for agent in self.vertices:
 			if not kind in agent.edges: agent.edges[kind] = []
 			if not self in agent.edges[kind]: agent.edges[kind].append(self) #Don't add self-links twice
-		
+
 		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
-	
+
 	def cut(self):
 		for agent in self.vertices:
 			if self in agent.edges[self.kind]: agent.edges[self.kind].remove(self) #Remove from agents
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
-	
+
 	def partner(self, agent):
 		if agent==self.vertices[0]: return self.vertices[1]
 		elif agent==self.vertices[1]: return self.vertices[0]
 		else: raise ValueError('Agent',agent.id,'is not connected to this edge.')
-	
+
 	def reassign(self, oldagent, newagent):
 		self.vertices = (self.partner(oldagent), newagent)
 		oldagent.edges[self.kind].remove(self)
@@ -346,7 +346,7 @@ class Stocks:
 				if endow is None: self.goods[good][p] = 0
 				elif isinstance(endow, tuple) or isinstance(endow, list): self.goods[good][p] = randint(*endow)
 				else: self.goods[good][p] = endow
-	
+
 	def __getitem__(self, key):
 		if type(key) is str: return self.goods[key]['quantity']
 		elif type(key) is tuple:
@@ -354,12 +354,12 @@ class Stocks:
 			elif key[1]==True: return self.goods[key[0]]
 			elif key[1]==False: return self.goods[key]['quantity']
 		raise KeyError
-	
+
 	def __setitem__(self, key, val):
 		if type(key) is str: self.goods[key]['quantity'] = val
 		elif type(key) is tuple and type(key[1]) is str: self.goods[key[0]][key[1]] = val
 		else: raise KeyError
-	
+
 	def __iter__(self): return iter({k: g['quantity'] for k,g in self.goods.items()})
 	def __next__(self): return next({k: g['quantity'] for k,g in self.goods.items()})
 	def __len__(self): return len(self.goods)

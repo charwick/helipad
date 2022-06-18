@@ -14,12 +14,12 @@ def isIpy(atall=False):
 			__IPYTHON__
 			return True
 		except NameError: return False
-	
+
 	if not '__helipad_ipy' in globals():
 		try:
 			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
 		except NameError: globals()['__helipad_ipy'] = False
-	
+
 	return __helipad_ipy
 
 #Generic extensible item class to store structured data
@@ -46,7 +46,7 @@ class Color:
 	def __init__(self, color):
 		#Can take a hex string, color name, or [r,g,b] list/tuple.
 		self.rgb = mplcolor.hex2color(color) if isinstance(color, str) else list(color)
-	
+
 	@property
 	def hex(self): return mplcolor.to_hex(self.rgb)
 	@property
@@ -63,10 +63,10 @@ class Color:
 	def s(self): return self.hsv[1]
 	@property
 	def v(self): return self.hsv[2]
-	
+
 	def lighten(self, factor=3):
 		hls = colorsys.rgb_to_hls(*self.rgb)
 		return Color(colorsys.hls_to_rgb(hls[0], (1-1/factor) + hls[1]/factor, hls[2]))
-	
+
 	def blend(self, color2):
 		return Color(((self.r+color2.r)/2, (self.g+color2.g)/2, (self.b+color2.b)/2))

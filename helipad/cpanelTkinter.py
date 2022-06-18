@@ -4,56 +4,56 @@
 # ==========
 
 import tkinter as tk
+import os, sys, colorsys
+from math import ceil
 from tkinter.ttk import Progressbar
 from helipad.helpers import Color
-import os, sys, colorsys
 from helipad.param import Param
-from math import ceil
 
-class Cpanel:	
+class Cpanel:
 	def __init__(self, model):
 		self.model = model
 		self.parent = tk.Tk()
-		
+
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 1
-		
+
 		#
 		# CALLBACK FUNCTION GENERATORS FOR TKINTER ELEMENTS
-		#		
+		#
 		def setVar(param, item=None):
 			def sv(val=None):
 				#Different widgets send different things to the callback…
 				if param.type=='slider': val = float(val)
 				elif param.type=='menu': val = {y:x for x,y in param.opts.items()}[val]
 				elif param.type=='check': val = (param.element if item is None else param.element[item]).BooleanVar.get()
-				
+
 				#Parameters that don't update automatically
 				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
-				
+
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
 			return sv
 		Param.setVar = setVar
-		
+
 		#For shock buttons.
 		#Can't do an inline lambda here because lambdas apparently don't preserve variable context
 		def shockCallback(name):
 			return lambda: self.model.shocks[name].do(self.model)
-		
+
 		class progressBar(Progressbar):
 			def __init__(self, determinate=True, root=None):
 				super().__init__(root, length=250, style="whitebg.Horizontal.TProgressbar")
 				self.determinate(determinate, False)
 				self.running = False
-			
+
 			@property
 			def mode(self):
 				#Windows returns a string here, and MacOS returns an object
 				mode = self.cget('mode')
 				return mode if isinstance(mode, str) else self.cget('mode').string
-			
+
 			def determinate(self2, det, refresh=True):
 				self2.config(mode='determinate' if det else 'indeterminate')
 				if det: super().stop()
@@ -69,35 +69,35 @@ class Cpanel:
 			def done(self):
 				self.stop()
 				self.update(0)
-		
+
 		class runButton(tk.Button):
 			def __init__(self2, root, bg='#EEEEEE'):
 				super().__init__(root, text='Run', command=self.model.launchVisual, padx=10, pady=10, highlightbackground=bg)
-			
+
 			def run(self2):
 				self2['text'] = 'Pause'
 				self2['command'] = self.model.stop
-			
+
 			def pause(self2):
 				self2['text'] = 'Run'
 				self2['command'] = self.model.start
-			
+
 			def terminate(self2):
 				self2['text'] = 'New Model'
 				self2['command'] = self.model.launchVisual
-		
+
 		#
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
-		
+
 		def drawCircle(frame, color, bg):
 			circle = tk.Canvas(frame, width=17, height=12, bg=bg, highlightthickness=0)
 			circle.create_oval(0,0,12,12,fill=color, outline='')
 			return circle
-		
+
 		def renderParam(frame, param, item=None, bg='#EEEEEE'):
 			if param.type in ['hidden', 'checkgrid']: return
-	
+
 			#Parent frame for per-item parameters
 			if param.obj is not None and item is None:
 				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
@@ -106,31 +106,31 @@ class Cpanel:
 				param.element = {}
 				for name, b in param.keys.items():
 					if hasattr(b, 'money') and b.money: continue
-			
+
 					#Do this separately because they should all be stacked
 					f = renderParam(efSub, param, item=name, bg=bg)
 					if param.type == 'checkentry':
 						f.grid(row=i, column=0)
 						efSub.columnconfigure(0,weight=1)
-					
+
 					#Everything else goes in the two-column format
-					else:					
+					else:
 						f.grid(row=ceil((i+1)/2)*2, column=i%2)
 						for c in range(2): efSub.columnconfigure(c, weight=1)
-			
+
 					i+=1
 				return expFrame
-			
+
 			#Single parameters, including the individual per-item parameters
 			else:
 				title = param.title if item is None else item.title()
 				wrap = tk.Frame(frame, bg=bg, padx=10 if item is None and not getattr(param,'config',False) else 0, pady=8 if item is None and not getattr(param,'config',False) else 0)
-				
+
 				#Get .value directly rather than .get because we need the Var() items
 				#Except for checkentry since it doesn't store its values in .value
 				if param.value is not None:
 					val = param.value if item is None else param.value[item]
-				
+
 				#These put the circle beside the widget
 				if param.type in ['check', 'checkentry']:
 					if param.type=='check':
@@ -146,14 +146,14 @@ class Cpanel:
 							el.checkVar.set(True)
 							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
 						else: el.set(dflt)
-					
+
 					if item is not None:
 						el.grid(row=0, column=1)
 						drawCircle(wrap, param.keys[item].color.hex, bg).grid(row=0, column=0)
 					else: el.pack(anchor='center' if param.type=='check' else 'w')
-		
+
 				#These need a separate label
-				else:					
+				else:
 					if param.type == 'menu':
 						v = tk.StringVar(value=param.opts[val])
 						el = tk.OptionMenu(wrap, v, *param.opts.values(), command=param.setVar(item))
@@ -163,7 +163,7 @@ class Cpanel:
 						if isinstance(param.opts, dict): el = tk.Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient='horizontal', length=150, highlightthickness=0, command=param.setVar(item), bg=bg)
 						else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient='horizontal', values=param.opts, length=150, command=param.setVar(item), bg=bg)
 						el.set(param.get(item))
-						
+
 					if item is None and not getattr(param, 'config', False):
 						label = tk.Label(wrap, text=title, fg="#333", bg=bg).pack(side='left', padx=8, pady=3)
 						el.pack(side='right')
@@ -174,48 +174,48 @@ class Cpanel:
 						drawCircle(lframe, param.keys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
-					
+
 					if param.desc is not None: Tooltip(wrap, param.desc)
-				
+
 				if item is None:
 					param.element = el
 				else: param.element[item] = el
 				return wrap
-		
+
 		ctop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
 		if ctop:
 			ctop.pack(fill='x', side='top')
 			fnum += 1
-		
+
 		frame1 = tk.Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
 		if not self.model.params['stopafter'].event: self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
-		
+
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
-		
+
 		renderParam(frame1, self.model.params['refresh'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
 		self.runButton = runButton(frame1, bgcolors[fnum%2])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
-		
+
 		for c in range(2): frame1.columnconfigure(c, weight=1)
 		frame1.pack(fill='x', side='top')
 		fnum += 1
-		
+
 		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
 		frame0 = tk.Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
 		self.progress = progressBar(root=frame0)
 		self.progress.grid(row=0, column=0)
 		frame0.columnconfigure(0,weight=1)
 		frame0.pack(fill='x', side='top')
-		
+
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, bgcolors[fnum%2]])
 		if caip:
 			caip.pack(fill='x', side='top')
 			fnum += 1
-		
+
 		for k, param in model.goodParams.items():
 			e = renderParam(None, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill='x')
@@ -226,19 +226,19 @@ class Cpanel:
 					e = renderParam(None, param, bg=bgcolors[fnum%2])
 					if e is not None: e.pack(fill='x')
 				fnum += 1
-		
+
 		cap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
 		if cap:
 			cap.pack(fill='x', side='top')
 			fnum += 1
-		
+
 		#Parameter sliders
 		for k, param in self.model.params.items():
 			if not getattr(param, 'config', False):
 				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
 				if e is not None: e.pack(fill='x')
 		fnum += 1
-		
+
 		#Checkgrid parameters
 		for p in self.model.params.values():
 			if p.type!='checkgrid' or p.name=='shocks': continue
@@ -250,12 +250,12 @@ class Cpanel:
 			p.element = cg
 			p.element.pack(fill='both')
 			fnum += 1
-		
+
 		cas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
 		if cas:
 			cas.pack(fill='x', side='top')
 			fnum += 1
-		
+
 		#Shock checkboxes and buttons
 		if self.model.shocks.number > 0:
 			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
@@ -269,7 +269,7 @@ class Cpanel:
 				frame8.checks[shock.name] = bv #To set via the shock parameter
 				if shock.desc is not None: Tooltip(shock.element, shock.desc)
 				shock.element.pack(fill='both')
-			
+
 			b=0
 			if len(self.model.shocks.buttons):
 				bframe = tk.Frame(frame8.subframe, bg=bgcolors[fnum%2])
@@ -281,17 +281,17 @@ class Cpanel:
 					b+=1
 				bframe.pack(fill='both')
 			frame8.pack(fill='x', side='top')
-		
+
 		cbot = self.model.doHooks('CpanelBottom', [self, bgcolors[fnum%2]])
 		if cbot:
 			cbot.pack(fill='x', side='top')
 			fnum += 1
-		
+
 		#Set application name
 		self.parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
 		self.parent.resizable(0,0)
 		self.setAppIcon()
-	
+
 	#Separate function so we can call it again when MPL tries to override
 	def setAppIcon(self):
 		try:
@@ -300,7 +300,7 @@ class Cpanel:
 			pi = tk.PhotoImage(file=icon, master=self.parent)
 			self.parent.tk.call('wm','iconphoto', self.parent._w, pi)
 		except: pass
-	
+
 	#Step one period at a time and update the graph
 	#For use in debugging
 	def step(self):
@@ -313,35 +313,35 @@ class Cpanel:
 #
 
 # A slider with defined non-linear intervals
-class logSlider(tk.Frame):	
+class logSlider(tk.Frame):
 	def __init__(self, parent=None, title=None, command=None, bg='#FFFFFF', font=('Lucida Grande',12), values=(), **kwargs):
 		tk.Frame.__init__(self, parent, bg=bg)
 		self.label = tk.Label(self, font=font, text=title, bg=bg).pack(side='top') if title else None
 		self.values = values
 		self.extCommand = command
 		self.number = values[0]
-		
+
 		#Receives an index from the slider and sets the value
 		def setText(idx):
 			self.number = self.values[int(idx)]
 			self.text.configure(text=self.values[int(idx)])
-			if self.extCommand != None: self.extCommand(self.values[int(idx)])
-		
+			if self.extCommand is not None: self.extCommand(self.values[int(idx)])
+
 		self.slide = tk.Scale(self, command=setText,
 			bg=bg, showvalue=0, from_=0, to=len(self.values)-1, font=font, **kwargs
 		)
 		self.text = tk.Label(self, font=font, width=4, bg=bg)
 		self.slide.pack(side='right', expand=1, fill='x')
 		self.text.pack(side='top', fill='both', padx=5)
-		
+
 	def get(self): return self.number
-	
+
 	#Receives a value externally and sets the slider to an index
 	def set(self, val):
 		self.number = val
 		if val in self.values: self.slide.set(self.values.index(val))
 		self.text.configure(text=val)
-	
+
 	def enable(self): self.disabled(False)
 	def disable(self): self.disabled(True)
 	def disabled(self, val):
@@ -353,7 +353,7 @@ class logSlider(tk.Frame):
 			self.text.configure(fg='#333')
 			if self.label is not None: self.label.configure(fg='#333')
 			self.slide.configure(state='normal')
-	
+
 	#Here for compatibility with other Tkinter widgets
 	def configure(self, state): self.disabled(state=='disabled')
 
@@ -362,20 +362,20 @@ class expandableFrame(tk.Frame):
 	def __init__(self, parent=None, text="", fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
 		tk.Frame.__init__(self, parent, bg=bg)
 		self.columnconfigure(0, weight=1)
-		
+
 		self.pady=pady
 		self.padx=padx
-		
+
 		self.text = text
 		self.titleLabel = tk.Label(self, fg=fg, bg=bg, font=font, cursor='hand2')
 		self.titleLabel.bind('<Button-1>', self.toggle)
 		self.titleLabel.grid(row=0, column=0, sticky='we', pady=(pady, 2))
-		
+
 		self.open = tk.IntVar()
 		self.subframe = tk.Frame(self, padx=padx, pady=0, bg=bg)
 		self.open.set(int(not startOpen))
 		self.toggle()
-	
+
 	def toggle(self, event=None):
 		if bool(self.open.get()):	#If open, close
 			self.subframe.grid_forget()
@@ -390,46 +390,46 @@ class expandableFrame(tk.Frame):
 # bg and fg take a two-element tuple for inactive and active states
 class textCheck(tk.Label):
 	def __init__(self, parent=None, text=None, bg=('#FFFFFF','#419BF9'), fg=('#333333','#FFFFFF'),
-		font=('Lucida Grande',12), defaultValue=False, anchor='w', desc=None, callback=None
+		defaultValue=False, anchor='w', desc=None, callback=None
 	):
 		super().__init__(parent, text=text, bg=bg[defaultValue], fg=fg[defaultValue], anchor=anchor)
 		self.bg = (Color(bg[0]), Color(bg[1]))
 		self.fg = (Color(fg[0]), Color(fg[1]))
-		
+
 		def darken(color):
 			hls = colorsys.rgb_to_hls(*color.rgb)
 			return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
-		
+
 		#Generate disabled and hover colors
 		self.disabledbg = (self.bg[0], self.bg[1].lighten(2))
 		self.disabledfg = (self.fg[0].lighten(2), self.fg[1].lighten(2))
 		hoverbg = (darken(self.bg[0]), darken(self.bg[1]))
 		hoverfg = (darken(self.fg[0]), darken(self.fg[1]))
-		
+
 		self.value = defaultValue
 		self.enabled = True
-		
+
 		def hover(event):
 			if self.enabled: self.config(bg=hoverbg[self.value].hex, fg=hoverfg[self.value].hex)
 		def leave(event):
 			if self.enabled: self.config(bg=self.bg[self.value].hex, fg=self.fg[self.value].hex)
-		
+
 		if desc: Tooltip(self, desc)
 		self.bind('<Button-1>', self.toggle, add='+')
 		self.bind('<Enter>', hover, add='+')
 		self.bind('<Leave>', leave, add='+')
 		self.callback = callback
-	
+
 	def get(self): return self.value
 	def set(self, value):
 		if not self.enabled: return
-		
+
 		self.value = bool(value)
 		self.config(bg=self.bg[self.value].hex, fg=self.fg[self.value].hex)
 		if self.callback is not None: self.callback(value)
-	
+
 	def toggle(self, event=None): self.set(not self.value)
-	
+
 	def enable(self): self.disabled(False)
 	def disable(self): self.disabled(True)
 	def disabled(self, disable):
@@ -439,15 +439,15 @@ class textCheck(tk.Label):
 		else:
 			bg = self.bg
 			fg = self.fg
-		
+
 		self.enabled = not bool(disable)
 		self.config(bg=bg[self.value].hex, fg=fg[self.value].hex)
 
 # A checkbox that enables/disables a text box
 class checkEntry(tk.Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', font=('Lucida Grande', 12), padx=0, pady=0, default='', type='string', command=None):
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', type='string', command=None):
 		tk.Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
-		
+
 		#If we're enforcing int, don't allow nonnumerical input
 		self.type=type
 		def validate(code, insert, oldval, newval):
@@ -460,22 +460,22 @@ class checkEntry(tk.Frame):
 			if allow: self.callback(int(newval) if self.type=='int' and newval!='' else newval)
 			return allow
 		valint = self.register(validate)
-			
+
 		self.enabled = True
 		self.entryValue = tk.StringVar()
 		self.entryValue.set(default)
 		self.textbox = tk.Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
 		self.textbox.grid(row=0, column=1)
 		self.callback = command
-		
+
 		self.checkVar = tk.BooleanVar()
 		self.checkbox = tk.Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
 		self.checkbox.grid(row=0, column=0)
-	
+
 	def disableTextfield(self):
 		self.textbox.config(state='disabled' if not self.checkVar.get() else 'normal')
 		if callable(self.callback): self.callback(self.get())
-	
+
 	#Return False or the value of the textbox
 	def get(self):
 		if not self.checkVar.get(): return False
@@ -483,7 +483,7 @@ class checkEntry(tk.Frame):
 		if self.type=='int':
 			return 0 if v=='' else int(v)
 		else: return v
-	
+
 	#Can pass a bool to turn on and off the checkbox, or a string or an int (depending on the type)
 	#to change the value of the textbox.
 	def set(self, val):
@@ -494,14 +494,14 @@ class checkEntry(tk.Frame):
 			self.checkVar.set(True)
 			self.entryValue.set(val)
 		self.disableTextfield()
-	
+
 	def enable(self): self.disabled(False)
 	def disable(self): self.disabled(True)
 	def disabled(self, disable):
 		self.checkbox.config(state='disabled' if disable else 'normal')
 		self.textbox.config(state='disabled' if disable or not self.checkVar.get() else 'normal')
 		self.enabled = not disable
-	
+
 	#Here for compatibility with other Tkinter widgets
 	def configure(self, state): self.disabled(state=='disabled')
 
@@ -514,21 +514,21 @@ class checkGrid(expandableFrame):
 		self.checks = {}
 		self._index=0
 		self.callback = callback
-		
+
 		for i in range(columns): self.subframe.columnconfigure(i,weight=1)
-	
+
 	def addCheck(self, var, text, defaultValue=True, desc=None):
 		if self.callback is not None:
 			def cbWrap(val): self.callback(val)
 		else: cbWrap = None
-		
+
 		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc, callback=cbWrap)
 		self.checks[var].grid(row=int(ceil(len(self.checks)/self.columns)), column=(len(self.checks)-1)%self.columns, sticky='we')
 		return self.checks[var]
-	
+
 	def __getitem__(self, index): return self.checks[index].get()
 	def __setitem__(self, index, value): self.checks[index].set(value)
-	
+
 	def items(self): return self.checks.items()
 	def values(self): return self.checks.values()
 	def keys(self): return self.checks.keys()
@@ -579,7 +579,7 @@ class Tooltip:
 		label = tk.Label(win, text=self.text, justify='left', background=self.bg, relief='solid', borderwidth=0, wraplength=self.wraplength)
 		label.grid(padx=(self.pad[0], self.pad[2]), pady=(self.pad[1], self.pad[3]), sticky='nsew')
 		win.grid()
-		
+
 		#Calculate tooltip position
 		s_width, s_height = self.widget.winfo_screenwidth(), self.widget.winfo_screenheight()
 		width, height = (self.pad[0] + label.winfo_reqwidth() + self.pad[2], self.pad[1] + label.winfo_reqheight() + self.pad[3])
@@ -587,17 +587,15 @@ class Tooltip:
 		x1, y1 = mouse_x + self.tip_delta[0], mouse_y + self.tip_delta[1]
 		x2, y2 = x1 + width, y1 + height
 
-		x_delta = x2 - s_width
-		if x_delta < 0: x_delta = 0
-		y_delta = y2 - s_height
-		if y_delta < 0: y_delta = 0
+		x_delta = max(x2 - s_width, 0)
+		y_delta = max(y2 - s_height, 0)
 
 		#If offscreen
 		if (x_delta, y_delta) != (0, 0):
 			if x_delta: x1 = mouse_x - self.tip_delta[0] - width
 			if y_delta: y1 = mouse_y - self.tip_delta[1] - height
-		if y1 < 0: y1 = 0
-		
+		y1 = max(y1, 0)
+
 		self.tw.wm_geometry("+%d+%d" % (x1, y1))
 
 	def hide(self):

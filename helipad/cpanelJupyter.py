@@ -1,7 +1,7 @@
+import os
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
 from IPython.display import display
 from helipad.param import Param
-import os
 
 class Cpanel(VBox):
 	def __init__(self, model, redraw=False):
@@ -12,22 +12,22 @@ class Cpanel(VBox):
 			self.remove_class('invalid')
 		else: self.add_class('helipad_cpanel')
 		self.valid = True
-		
+
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css')) as c: css = c.read()
 		self.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
-		
+
 		#Callback function generator for Jupyter elements
 		def setVar(param, item=None):
 			def sv(val): #Ipywidgets bases on the function signature, so can't use more than one here…
 				if param.type=='checkgrid': param.set(item, val, updateGUI=False)
 				else: param.set(val, item, updateGUI=False)
-				
+
 				if callable(param.callback):
 					if param.obj is None: param.callback(self.model, param.name, param.get(item))
 					else: param.callback(self.model, param.name, item, param.get(item))
-			
+
 			#Consolidate value from bool and string, and toggle entry disabled state
 			#Have to return a different function since Ipywidgets bases the interactive off the function signature
 			if param.type=='checkentry':
@@ -39,11 +39,11 @@ class Cpanel(VBox):
 						val = s if (b and s=='') or 'func〈' in s else (param.entryType(s) if b else False)
 						sv(val)
 					except: els.children[1].value = str(param.get())
-					
+
 				return sv2
 			else: return sv
 		Param.setVar = setVar
-		
+
 		def renderParam(param, func, title, val, circle=None):
 			i=None
 			if param.type=='slider':
@@ -53,7 +53,7 @@ class Cpanel(VBox):
 					s.children[0].readout = False
 					l = Label(value=str(param.opts[0]), layout=Layout(margin='0 0 0 15px'))
 					i = HBox([s.children[0],l])
-					
+
 			elif param.type=='check':
 				i = interactive(func, val=val)
 			elif param.type=='menu':
@@ -69,7 +69,7 @@ class Cpanel(VBox):
 					i.children[0].layout = Layout(width='150px')
 				if val==False: i.children[1].disabled = True
 				i.children[1].description = ''
-				
+
 				if param.name=='stopafter' and param.event:
 					i.children[0].disabled = True
 					i.children[1].disabled = True
@@ -86,7 +86,7 @@ class Cpanel(VBox):
 				i = Accordion(children=[param.containerElement])
 				i.set_title(0, title)
 				i.add_class('helipad_checkgrid')
-	
+
 			if i is not None and param.type!='checkgrid':
 				circle='<span class="helipad_circle" style="background:'+circle.hex+'"></span>' if circle is not None else ''
 				i.children[0].description = circle+title
@@ -96,22 +96,22 @@ class Cpanel(VBox):
 					i.children[1].value = str(val)
 					if val in param.opts: val=param.opts.index(val)
 				if param.type!='checkentry': i.children[0].value = val
-	
+
 			return i
-		
+
 		def constructAccordion(param, itemList):
 			param.element = {}
 			for item, good in itemList.items():
 				param.element[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
-		
+
 			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
 			accordion.add_class('helipad_param_peritem')
 			return accordion
-		
+
 		ctop = self.model.doHooks('CpanelTop', [self, None])
 		if ctop: self.children += (ctop,)
-	
+
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
@@ -120,37 +120,37 @@ class Cpanel(VBox):
 			if param.name=='csv': param.set('filename')
 			if n=='stopafter' and not param.event: param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and param.event): param.set(False)
-		
+
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
 		if caip: self.children += (caip,)
-		
+
 		#Per-good parameters
 		for param in model.goodParams.values():
 			self.children += (constructAccordion(param, model.nonMoneyGoods),)
-	
+
 		#Per-breed parameters
 		for prim in model.primitives.values():
 			for param in prim.breedParams.values():
 				self.children += (constructAccordion(param, prim.breeds),)
-		
+
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
 		if cap: self.children += (cap,)
-	
+
 		#Global parameters
 		for param in model.params.values():
 			if getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
-		
+
 		#Checkgrids
 		for param in model.params.values():
 			if param.type!='checkgrid' or param.name=='shocks': continue
 			acc = renderParam(param, None, param.title, None)
 			if acc is not None: self.children += (acc,)
-		
+
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
 		if cas: self.children += (cas,)
-		
+
 		#Shocks
 		if len(model.shocks.shocks):
 			def sfuncButton(slef, *args): slef.do(self.model)
@@ -173,66 +173,66 @@ class Cpanel(VBox):
 			sacc = Accordion(children=[VBox(children)])
 			sacc.set_title(0, 'Shocks')
 			self.children += (sacc,)
-		
+
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += (cbot,)
-		
+
 		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisual() or start() to start the model.')
 		if not redraw:
 			display(self)
-		
+
 			class progressBar(FloatProgress):
 				def __init__(self):
 					super().__init__(min=0, max=1)
-			
+
 				def determinate(self, det):
 					self.mode = 'determinate' if det else 'indeterminate'
 					if det: self.remove_class('indeterminate')
 					else:
 						self.add_class('indeterminate')
 						self.value = 1
-			
+
 				def update(self, n): self.value = n
 				def start(self): self.add_class('helipad_running')
 				def stop(self): self.remove_class('helipad_running')
 				def done(self): self.layout.visibility = 'hidden'
-		
+
 			class runButton(Button):
 				def __init__(self2, **kwargs):
 					super().__init__(**kwargs)
 					self2.click = self.model.stop
-						
+
 				def run(self2):
 					self2.click = self.model.stop
 					self2.description = 'Pause'
 					self2.icon = 'pause'
-			
+
 				def pause(self2):
 					self2.click = self.model.start
 					self2.description = 'Run'
 					self2.icon = 'play'
-			
+
 				def terminate(self):
 					self.layout.visibility = 'hidden'
-			
+
 			#Remove previous hooks so we don't double up when re-running launchCpanel()
 			model.removeHook('modelPreSetup', 'cpanel_visualPreLaunch')
 			model.removeHook('terminate', 'cpanel_terminate')
-		
+
 			#Model flow control: pause/run button and progress bar
 			@model.hook('modelPreSetup', prioritize=True)
 			def cpanel_visualPreLaunch(model):
 				self.runButton = runButton(description='Pause', icon='pause')
 				self.progress = progressBar()
 				self.postinstruct.layout = Layout(display='none')
-				
+
 				self.stopbutton = Button(description='Stop', icon='stop')
 				self.stopbutton.click = self.model.terminate
-				
+
 				pbararea = HBox([self.runButton, self.stopbutton, self.progress])
 				pbararea.add_class('helipad_progress_area')
 				display(pbararea)
-		
+
 			@model.hook('terminate')
 			def cpanel_terminate(model, data):
 				self.postinstruct.layout = Layout(display='inline-block')
@@ -244,7 +244,7 @@ class Cpanel(VBox):
 		if inCpanel: self.children += (element,)
 		else: display(element)
 		return element
-	
+
 	def invalidate(self, message='Model parameters changed, please re-launch the control panel with launchCpanel().'):
 		self.valid = False
 		self.add_class('invalid')
