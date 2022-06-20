@@ -13,23 +13,25 @@ from helipad.agent import Patch, baseAgent
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, square=None, x=10, y=None, wrap=True, diag=False):
+def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
+	# Backward compatibility. Remove in Helipad 1.6
+	if 'x' in kwargs: dim = kwargs['x'] if not 'y' in kwargs else (kwargs['x'], kwargs['y'])
 
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
-	if square is None: square = not bool(y) #If y wasn't specified, assume user wants a square
-	if square:
-		model.addParameter('dimension', 'Map Size', 'slider', dflt=x, opts={'low': 1, 'high': x, 'step': 1}, runtime=False)
+	if isinstance(dim, int):
+		model.addParameter('dimension', 'Map Size', 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
 		def dimget(name, model): return model.param('dimension')
 		def dimset(val, name, model): model.param('dimension', val)
-		model.addParameter('x', 'Map Width ', 'hidden', dflt=x, setter=dimset, getter=dimget)
-		model.addParameter('y', 'Map Height', 'hidden', dflt=x, setter=dimset, getter=dimget)
-	else:
-		model.addParameter('x', 'Map Width ', 'slider', dflt=x, opts={'low': 1, 'high': x, 'step': 1}, runtime=False)
-		model.addParameter('y', 'Map Height', 'slider', dflt=y, opts={'low': 1, 'high': y, 'step': 1}, runtime=False)
+		model.addParameter('x', 'Map Width ', 'hidden', dflt=dim, setter=dimset, getter=dimget)
+		model.addParameter('y', 'Map Height', 'hidden', dflt=dim, setter=dimset, getter=dimget)
+	elif isinstance(dim, (list, tuple)):
+		model.addParameter('x', 'Map Width ', 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
+		model.addParameter('y', 'Map Height', 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
+	else: raise TypeError('Invalid dimension.')
 
 	model.addPrimitive('patch', Patch, hidden=True, priority=-10)
-	model.addParameter('square', 'Square', 'hidden', dflt=square)
+	model.addParameter('square', 'Square', 'hidden', dflt=isinstance(dim, (list, tuple)))
 	model.addParameter('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
 
 	def npsetter(val, item): raise RuntimeError('Patch number cannot be set directly. Set the x and y parameters instead.')

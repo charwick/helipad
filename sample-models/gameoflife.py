@@ -9,7 +9,7 @@ heli.stages = 2
 heli.param('refresh', 1)
 
 heli.removePrimitive('agent')
-mapPlot = heli.spatial(x=30, square=True, wrap=True, diag=True)
+mapPlot = heli.spatial(dim=30, wrap=True, diag=True)
 mapPlot.config('patchProperty', 'active')
 
 @heli.hook

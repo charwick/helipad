@@ -108,7 +108,7 @@ heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent')
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
 
-mapPlot = heli.spatial(x=16, diag=True)
+mapPlot = heli.spatial(dim=16, diag=True)
 mapPlot.config({
 	'patchProperty': 'good:energy',
 	'patchColormap': 'Greens',
