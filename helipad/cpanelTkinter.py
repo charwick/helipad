@@ -216,6 +216,7 @@ class Cpanel:
 			caip.pack(fill='x', side='top')
 			fnum += 1
 
+		#Per-good and per-breed parameters
 		for k, param in model.goodParams.items():
 			e = renderParam(None, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill='x')
@@ -232,12 +233,27 @@ class Cpanel:
 			cap.pack(fill='x', side='top')
 			fnum += 1
 
-		#Parameter sliders
+		#Pull out grouped parameters
+		groups = []
+		for group in self.model.paramGroups: groups += list(group.members.keys())
+
+		#Global parameters
 		for k, param in self.model.params.items():
-			if not getattr(param, 'config', False):
-				e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
-				if e is not None: e.pack(fill='x')
+			if getattr(param, 'config', False) or k in groups: continue
+			e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
+			if e is not None: e.pack(fill='x')
 		fnum += 1
+
+		#Param groups
+		for group in self.model.paramGroups:
+			group.element = expandableFrame(self.parent, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=font, startOpen=group.open)
+			i=0
+			for p in group.members.values():
+				f = renderParam(group.element.subframe, p, bg=bgcolors[fnum%2])
+				f.pack(fill='x')
+				i += 1
+			if group.element is not None: group.element.pack(fill='x')
+			fnum += 1
 
 		#Checkgrid parameters
 		for p in self.model.params.values():
@@ -371,20 +387,25 @@ class expandableFrame(tk.Frame):
 		self.titleLabel.bind('<Button-1>', self.toggle)
 		self.titleLabel.grid(row=0, column=0, sticky='we', pady=(pady, 2))
 
-		self.open = tk.IntVar()
 		self.subframe = tk.Frame(self, padx=padx, pady=0, bg=bg)
-		self.open.set(int(not startOpen))
-		self.toggle()
+		self._open = tk.IntVar()
+		self.open = startOpen
 
-	def toggle(self, event=None):
-		if bool(self.open.get()):	#If open, close
-			self.subframe.grid_forget()
-			self.titleLabel['text'] = self.text+' '+'▸'
-			self.open.set(0)
-		else:						#If closed, open
+	def toggle(self, event=None): self.open = not self.open
+
+	@property
+	def open(self): return bool(self._open.get())
+	
+	@open.setter
+	def open(self, val):
+		if val: #open
 			self.subframe.grid(row=1, column=0, padx=self.padx, pady=0, sticky='we')
 			self.titleLabel['text'] = self.text+' '+'▾'
-			self.open.set(1)
+			self._open.set(1)
+		else: #close
+			self.subframe.grid_forget()
+			self.titleLabel['text'] = self.text+' '+'▸'
+			self._open.set(0)
 
 # A checkbox-like widget whose toggle is the entire element
 # bg and fg take a two-element tuple for inactive and active states

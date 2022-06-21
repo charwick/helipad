@@ -25,6 +25,7 @@ class Helipad:
 		self.agents = {}
 		self.primitives = {}
 		self.params = {}		#Global parameters
+		self.paramGroups = []
 		self.goods = {}			#List of goods
 		self.goodParams = {}	#Per-good parameters
 		self.hooks = {}			#External functions to run
@@ -175,6 +176,11 @@ class Helipad:
 
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
+	
+	def paramGroup(self, name, params, opened=True):
+		pg = ParamGroup(name, {p: self.params[p] for p in params}, opened)
+		self.paramGroups.append(pg)
+		return pg
 
 	@property
 	def allParams(self):

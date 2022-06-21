@@ -4,6 +4,7 @@
 # The functions in this module are in pre-beta and not API stable.
 #===============
 
+import warnings
 from random import randint
 from math import sqrt, degrees, radians, sin, cos, atan2, pi
 from helipad.agent import Patch, baseAgent
@@ -15,7 +16,9 @@ from helipad.agent import Patch, baseAgent
 
 def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	# Backward compatibility. Remove in Helipad 1.6
-	if 'x' in kwargs: dim = kwargs['x'] if not 'y' in kwargs else (kwargs['x'], kwargs['y'])
+	if 'x' in kwargs:
+		dim = kwargs['x'] if not 'y' in kwargs else (kwargs['x'], kwargs['y'])
+		warnings.warn('Using x and y to set dimensions is deprecated. Use the dim argument instead.', None, 2)
 
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension

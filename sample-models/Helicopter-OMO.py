@@ -340,6 +340,8 @@ heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
 heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
 heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
 heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
+heli.paramGroup('Environment', ('pSmooth', 'wStick', 'kImmob'), opened=False)
+
 #Low Es means the two are complements (0=perfect complements)
 #High Es means the two are substitutes (infinity=perfect substitutes)
 #Doesn't really affect anything though – even utility – so don't bother exposing it

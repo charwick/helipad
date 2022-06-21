@@ -330,6 +330,31 @@ class CheckgridParam(Param):
 		self.vars[name] = selected
 		if selected: self.default.append(name)
 
+class ParamGroup:
+	def __init__(self, name, members, opened):
+		self.title = name
+		self.members = members
+		self.open = opened
+
+		for p in members.values():
+			if p.obj is not None or p.type=='checkgrid': raise TypeError('Cannot add checkgrids or per-item parameters to groups')
+			p.group = name
+
+	def get(self):
+		return {name: p.get() for name, p in self.members.items()}
+
+	def toggle(self): self.open = not self.open
+
+	@property
+	def open(self): return self._open
+
+	@open.setter
+	def open(self, val):
+		self._open = val
+		if hasattr(self, 'element'):
+			if isIpy(): self.element.selected_index = 0 if val else None
+			else: self.element.open = val
+
 #This object is instantiated once and lives in model.shocks
 class Shocks:
 	def __init__(self, model):

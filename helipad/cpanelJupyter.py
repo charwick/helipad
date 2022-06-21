@@ -16,7 +16,7 @@ class Cpanel(VBox):
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css'), encoding='UTF-8') as c: css = c.read()
-		self.children += (HTML(value='<style type="text/css">'+css+'</style>'),)
+		self.children += HTML(value='<style type="text/css">'+css+'</style>'),
 
 		#Callback function generator for Jupyter elements
 		def setVar(param, item=None):
@@ -110,7 +110,7 @@ class Cpanel(VBox):
 			return accordion
 
 		ctop = self.model.doHooks('CpanelTop', [self, None])
-		if ctop: self.children += (ctop,)
+		if ctop: self.children += ctop,
 
 		#Global config
 		for n,param in model.params.items():
@@ -122,34 +122,46 @@ class Cpanel(VBox):
 			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and param.event): param.set(False)
 
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])
-		if caip: self.children += (caip,)
+		if caip: self.children += caip,
 
 		#Per-good parameters
 		for param in model.goodParams.values():
-			self.children += (constructAccordion(param, model.nonMoneyGoods),)
+			self.children += constructAccordion(param, model.nonMoneyGoods),
 
 		#Per-breed parameters
 		for prim in model.primitives.values():
 			for param in prim.breedParams.values():
-				self.children += (constructAccordion(param, prim.breeds),)
+				self.children += constructAccordion(param, prim.breeds),
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
-		if cap: self.children += (cap,)
+		if cap: self.children += cap,
+
+		#Pull out grouped parameters
+		groups = []
+		for group in self.model.paramGroups: groups += list(group.members.keys())
 
 		#Global parameters
-		for param in model.params.values():
-			if getattr(param, 'config', False) or param.type=='checkgrid': continue
+		for k, param in model.params.items():
+			if getattr(param, 'config', False) or k in groups or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setVar(), param.title, param.get())
-			if param.element is not None: self.children += (param.element,)
+			if param.element is not None: self.children += param.element,
+
+		#Param groups
+		for group in model.paramGroups:
+			for param in group.members.values():
+				param.element = renderParam(param, param.setVar(), param.title, param.get())
+			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.opened else None)
+			group.element.set_title(0, group.title)
+			self.children += group.element,
 
 		#Checkgrids
 		for param in model.params.values():
 			if param.type!='checkgrid' or param.name=='shocks': continue
 			acc = renderParam(param, None, param.title, None)
-			if acc is not None: self.children += (acc,)
+			if acc is not None: self.children += acc,
 
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
-		if cas: self.children += (cas,)
+		if cas: self.children += cas,
 
 		#Shocks
 		if len(model.shocks.shocks):
@@ -172,10 +184,10 @@ class Cpanel(VBox):
 			children.append(HBox(buttons))
 			sacc = Accordion(children=[VBox(children)])
 			sacc.set_title(0, 'Shocks')
-			self.children += (sacc,)
+			self.children += sacc,
 
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
-		if cbot: self.children += (cbot,)
+		if cbot: self.children += cbot,
 
 		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisual() or start() to start the model.')
 		if not redraw:
