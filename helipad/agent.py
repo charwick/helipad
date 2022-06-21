@@ -3,6 +3,7 @@
 # Do not run this file; import model.py and run from your file.
 # ==========
 
+import warnings
 from random import choice, randint
 import numpy as np
 
@@ -11,9 +12,10 @@ import numpy as np
 #See below, the Agent() class for a minimal example.
 class baseAgent:
 	fixed = False
+	overdraft = 'continue-silent'
 
 	#==================
-	# UTILITY METHODS
+	# BASIC METHODS
 	#==================
 
 	def __init__(self, breed, aId, model):
@@ -45,38 +47,60 @@ class baseAgent:
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
 	def trade(self, partner, good1, amt1, good2, amt2):
+		go = True
 		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
 
-		if amt2 != 0: price = amt1 / amt2
-
 		#Budget constraints. Hold price constant if hit
+		message = None
+		prim1, prim2 = self.primitive.title(), partner.primitive.title()
+		if amt2 != 0: price = amt1 / amt2
 		if amt1 > self.stocks[good1]:
-			self.currentShortage[good1] += amt1 - self.stocks[good1]
-			amt1 = self.stocks[good1]
-			if amt2 != 0: amt2 = amt1 / price
+			message = f'{prim1} {self.id} does not have sufficient {good1} to give {prim2} {partner.id}.'
+			if 'continue' in self.overdraft:
+				message += f' Continuing with available {good1} of {self.stocks[good1]}…'
+				self.currentShortage[good1] += amt1 - self.stocks[good1]
+				amt1 = self.stocks[good1]
+				if amt2 != 0: amt2 = amt1 / price
 		elif -amt1 > partner.stocks[good1]:
-			partner.currentShortage[good1] += -amt1 - partner.stocks[good1]
-			amt1 = -partner.stocks[good1]
-			if amt2 != 0: amt2 = amt1 / price
+			message = f'{prim2} {partner.id} does not have sufficient {good1} to give {prim1} {self.id}.'
+			if 'continue' in self.overdraft:
+				message += f' Continuing with available {good1} of {partner.stocks[good1]}…'
+				partner.currentShortage[good1] += -amt1 - partner.stocks[good1]
+				amt1 = -partner.stocks[good1]
+				if amt2 != 0: amt2 = amt1 / price
 		if amt2 > partner.stocks[good2]:
-			partner.currentShortage[good2] += amt1 - partner.stocks[good2]
-			amt2 = partner.stocks[good2]
-			amt1 = price * amt2
+			message = f'{prim2} {partner.id} does not have sufficient {good2} to give {prim1} {self.id}.'
+			if 'continue' in self.overdraft:
+				message += f' Continuing with available {good2} of {partner.stocks[good2]}…'
+				partner.currentShortage[good2] += amt1 - partner.stocks[good2]
+				amt2 = partner.stocks[good2]
+				amt1 = price * amt2
 		elif -amt2 > self.stocks[good2]:
-			self.currentShortage[good2] += -amt1 - self.stocks[good2]
-			amt2 = -self.stocks[good2]
-			amt1 = price * amt2
+			message = f'{prim1} {self.id} does not have sufficient {good2} to give {prim2} {partner.id}.'
+			if 'continue' in self.overdraft:
+				message += f' Continuing with available {good2} of {self.stocks[good2]}…'
+				self.currentShortage[good2] += -amt1 - self.stocks[good2]
+				amt2 = -self.stocks[good2]
+				amt1 = price * amt2
 
-		self.stocks[good1] -= amt1
-		partner.stocks[good1] += amt1
-		self.stocks[good2] += amt2
-		partner.stocks[good2] -= amt2
+		if message is not None:
+			if self.overdraft == 'stop': raise ValueError(message)
+			if 'fail' in self.overdraft:
+				go = False
+				message += f' Cancelling trade…'
+			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
 
-		#Record demand
-		if amt1 > 0: partner.currentDemand[good1] += amt1
-		else: self.currentDemand[good1] -= amt1
-		if amt2 > 0: self.currentDemand[good2] += amt2
-		else: partner.currentDemand[good2] -= amt2
+		if go:
+			self.stocks[good1] -= amt1
+			partner.stocks[good1] += amt1
+			self.stocks[good2] += amt2
+			partner.stocks[good2] -= amt2
+
+			#Record demand
+			if amt1 > 0: partner.currentDemand[good1] += amt1
+			else: self.currentDemand[good1] -= amt1
+			if amt2 > 0: self.currentDemand[good2] += amt2
+			else: partner.currentDemand[good2] -= amt2
 
 		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
 
@@ -94,17 +118,39 @@ class baseAgent:
 	#Unilateral
 	def pay(self, recipient, amount):
 		if self.model.moneyGood is None: raise RuntimeError('Pay function requires a monetary good to be specified')
+		go = True
 
-		#Budget constraint and hooks
-		if amount > self.balance: amount = self.balance
-		if -amount > recipient.balance: amount = -recipient.balance
+		#Do hooks before budget constraints
 		amount_ = self.model.doHooks('pay', [self, recipient, amount, self.model])
 		if amount_ is not None: amount = amount_
 
-		if amount != 0:
+		#Budget constraints
+		prim1, prim2 = self.primitive.title(), recipient.primitive.title()
+		message = None
+		if amount > self.balance:
+			message = f'{prim1} {self.id} does not have sufficient funds to pay {prim2} {recipient.id}.'
+			if self.overdraft == 'stop': raise ValueError(message)
+			if 'continue' in self.overdraft:
+				amount = self.balance
+				message += f' Continuing with available balance of {self.balance}…'
+		elif -amount > recipient.balance:
+			message = f'{prim2} {recipient.id} does not have sufficient funds to pay {prim1} {self.id}.'
+			if 'continue' in self.overdraft:
+				amount = -recipient.balance
+				message += f' Continuing with available balance of {recipient.balance}…'
+
+		if message is not None:
+			if self.overdraft == 'stop': raise ValueError(message)
+			if 'fail' in self.overdraft:
+				go = False
+				message += f' Cancelling trade…'
+			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
+
+		if go and amount:
 			recipient.stocks[self.model.moneyGood] += amount
 			self.stocks[self.model.moneyGood] -= amount
-		return amount
+			return amount
+		else: return 0
 
 	@property
 	def balance(self):

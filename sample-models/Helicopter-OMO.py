@@ -14,6 +14,7 @@ heli = Helipad()
 # Have to come before adding the primitives
 #===============
 
+baseAgent.overdraft = 'continue-warn'
 class Store(baseAgent):
 	def __init__(self, breed, id, model):
 		super().__init__(breed, id, model)
