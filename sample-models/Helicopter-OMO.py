@@ -1,8 +1,8 @@
 # A model of the relative price effects of monetary shocks via helicopter drop vs. by open market operations.
 # Download the paper at https://ssrn.com/abstract=2545488
 
-from Helicopter import * #Building on the basic Helicopter model
 from numpy import isnan, mean, array
+from Helicopter import * #Building on the basic Helicopter model
 heli = setup()
 
 #===============
@@ -13,88 +13,88 @@ baseAgent.overdraft = 'continue-warn'
 class Bank(baseAgent):
 	def __init__(self, breed, id, model):
 		super().__init__(breed, id, model)
-		
+
 		self.i = .1				#Per-period interest rate
 		self.targetRR = 0.25
 		self.lastWithdrawal = 0
 		self.inflation = 0
 		self.accounts = {}		#Liabilities
 		self.credit = {}		#Assets
-		
+
 		self.dif = 0			#How much credit was rationed
 		self.defaultTotal = 0
 		self.pLast = 50 		#Initial price level, equal to average of initial prices
-			
+
 	def account(self, customer):
 		return self.accounts[customer.id] if customer.id in self.accounts else 0
-	
+
 	def setupAccount(self, customer):
 		if customer.id in self.accounts: return False		#If you already have an account
 		self.accounts[customer.id] = 0						#Liabilities
 		self.credit[customer.id] = Loan(customer, self)		#Assets
-	
+
 	#Assets and liabilities should return the same thing
 	#Any difference gets disbursed as interest on deposits
 	@property
 	def assets(self):
-		return self.stocks[self.model.moneyGood] + sum([l.owe for l in self.credit.values()]) #Reserves
-	
+		return self.stocks[self.model.moneyGood] + sum(l.owe for l in self.credit.values()) #Reserves
+
 	@property
 	def liabilities(self):
 		return sum(list(self.accounts.values())) #Values returns a dict_values object, not a list. So wrap it in list()
-	
+
 	@property
 	def loans(self):
 		return self.assets - self.stocks[self.model.moneyGood]
-	
+
 	@property
 	def reserveRatio(self):
 		l = self.liabilities
 		if l == 0: return 1
 		else: return self.stocks[self.model.moneyGood] / l
-		
+
 	@property
 	def realInterest(self): return self.i - self.inflation
-	
+
 	#amt<0 to withdraw
 	def deposit(self, customer, amt):
 		amt = customer.pay(self, amt)
 		self.accounts[customer.id] += amt	#Credit account
 		if amt<0: self.lastWithdrawal -= amt
 		return amt
-	
-	def transfer(self, customer, recipient, amt):		
+
+	def transfer(self, customer, recipient, amt):
 		if self.accounts[customer.id] < amt: amt = self.accounts[customer.id]
 		self.accounts[customer.id] -= amt
 		self.accounts[recipient.id] += amt
 		return amt
-	
+
 	def borrow(self, customer, amt):
 		if amt < 0.01: return 0 #Skip blanks and float errors
 		l = self.credit[customer.id]
-				
+
 		#Refinance anything with a higher interest rate
 		for n,loan in enumerate(l.loans):
 			if loan['i'] >= self.i:
 				amt += loan['amount']
 				del l.loans[n]
-				
+
 		#Increase assets
 		l.loans.append({
 			'amount': amt,
 			'i': self.i
 		})
-		
+
 		self.accounts[customer.id] += amt	#Increase liabilities
 		return amt							#How much you actually borrowed
-	
+
 	#Returns the amount you actually pay – the lesser of amt or your outstanding balance
 	def amortize(self, customer, amt):
 		if amt < 0.001: return 0			#Skip blanks and float errors
 		l = self.credit[customer.id]	#Your loan object
 		l.amortizeAmt += amt				#Count it toward minimum repayment
 		leftover = amt
-			
+
 		#Reduce assets; amortize in the order borrowed
 		while leftover > 0 and len(l.loans) > 0:
 			if leftover >= l.loans[0]['amount']:
@@ -103,14 +103,14 @@ class Bank(baseAgent):
 			else:
 				l.loans[0]['amount'] -= leftover
 				leftover = 0
-			
+
 		self.accounts[customer.id] -= (amt - leftover)	#Reduce liabilities
 		return amt - leftover							#How much you amortized
-	
+
 	def step(self, stage):
 		self.lastWithdrawal = 0
-		for l in self.credit: self.credit[l].step()
-				
+		for l in self.credit.values(): l.step()
+
 		#Pay interest on deposits
 		lia = self.liabilities
 		profit = self.assets - lia
@@ -118,7 +118,7 @@ class Bank(baseAgent):
 			print('Disbursing profit of $',profit)
 			for id, a in self.accounts.items():
 				self.accounts[id] += profit/lia * a
-		
+
 		# # Set target reserve ratio
 		# if self.model.t > 2:
 		# 	wd = self.model.data.getLast('withdrawals', 50)
@@ -126,30 +126,30 @@ class Bank(baseAgent):
 		# 	if isnan(mn) or isnan(st): mn, st = .1, .1
 		# 	ttargetRR = (mn + 2 * st) / lia
 		# 	self.targetRR = (49*self.targetRR + ttargetRR)/50
-	
+
 		#Calculate inflation as the unweighted average price change over all goods
 		if self.model.t >= 2:
 			inflation = self.model.cb.P/self.pLast - 1
 			self.pLast = self.model.cb.P	#Remember the price from this period before altering it for the next period
 			self.inflation = (19 * self.inflation + inflation) / 20		#Decaying average
-	
+
 		#Set interest rate and/or minimum repayment schedule
 		#Count potential borrowing in the interest rate adjustment
 		targeti = self.i * self.targetRR / (self.reserveRatio)
-	
+
 		#Adjust in proportion to the rate of reserve change
 		#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
 		if self.model.t > 2:
 			deltaReserves = (self.lastReserves - self.stocks[self.model.moneyGood])/self.model.cb.P
 			targeti *= (1 + deltaReserves/(20 ** self.model.param('pSmooth')))
 		self.i = (self.i * 24 + targeti)/25										#Interest rate stickiness
-	
+
 		self.lastReserves = self.stocks[self.model.moneyGood]
-			
+
 		#Upper and lower interest rate bounds
-		if self.i > 1 + self.inflation: self.i = 1 + self.inflation				#interest rate cap at 100%
-		if self.i < self.inflation + 0.005: self.i = self.inflation + 0.005		#no negative real rates
-		if self.i < 0.005: self.i = 0.005										#no negative nominal rates
+		self.i = min(self.i, 1+self.inflation)		#interest rate cap at 100%
+		self.i = max(self.i, self.inflation+0.005)	#no negative real rates
+		self.i = max(self.i, 0.005)					#no negative nominal rates
 
 class Loan():
 	def __init__(self, customer, bank):
@@ -157,10 +157,10 @@ class Loan():
 		self.bank = bank
 		self.loans = []
 		self.amortizeAmt = 0
-	
+
 	@property
 	def owe(self): return sum([l['amount'] for l in self.loans])
-	
+
 	def step(self):
 		#Charge the minimum repayment if the agent hasn't already amortized more than that amount
 		minRepay = 0
@@ -168,7 +168,7 @@ class Loan():
 			iLoan = l['amount'] * l['i']
 			minRepay += iLoan				#You have to pay at least the interest each period
 			l['amount'] += iLoan			#Roll over the remainder at the original interest rate
-		
+
 		#If they haven't paid the minimum this period, charge it
 		amtz = minRepay - self.amortizeAmt
 		defaulted = False
@@ -189,7 +189,7 @@ class Loan():
 					# else:
 					# 	l['amount'] -= l['amount'] * l['i']
 					# 	self.bank.defaultTotal += l['amount'] * l['i']
-				
+
 		self.amortizeAmt = 0
 
 #===============
@@ -294,12 +294,12 @@ def baseAgentInit(agent, model):
 		agent.bank.setupAccount(agent)
 
 @heli.hook
-def agentInit(agent, model):	
+def agentInit(agent, model):
 	if model.param('num_bank') > 0:
 		agent.liqPref = model.param(('liqPref', 'breed', agent.breed, 'agent'))
 
 @heli.hook
-def agentStep(agent, model, stage):	
+def agentStep(agent, model, stage):
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
 		tCash = agent.liqPref*agent.balance
@@ -316,7 +316,7 @@ def buy(agent, partner, good, q, p):
 		else:
 			amount = p*q
 			leftover = 0
-		agent.bank.transfer(agent, partner, amount)	
+		agent.bank.transfer(agent, partner, amount)
 		return (q, leftover)
 
 #Use the bank if the bank exists
@@ -338,7 +338,7 @@ def checkBalance(agent, balance, model):
 	if hasattr(agent, 'bank') and agent.primitive != 'bank':
 		balance += agent.bank.account(agent)
 		return balance
-			
+
 #
 # Central Bank
 #
@@ -346,10 +346,10 @@ def checkBalance(agent, balance, model):
 def cbstep(self):
 	#Record macroeconomic vars at the end of the last stage
 	#Getting demand has it lagged one period…
-	self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
+	self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods)
 	if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 	self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
-	
+
 	#Set macroeconomic targets
 	expand = 0
 	if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
@@ -358,14 +358,14 @@ def cbstep(self):
 CentralBank.step = cbstep
 
 def expand(self, amount):
-	
+
 	#Deposit with each bank in proportion to their liabilities
 	if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
 		self.stocks[self.model.moneyGood] += amount
 		r = self.model.agents['bank'][0].stocks[self.model.moneyGood]
 		if -amount > r: amount = -r + 1
 		self.model.agents['bank'][0].deposit(self, amount)
-			
+
 	elif self.model.param('dist') == 'lump':
 		amt = amount/self.model.param('num_agent')
 		for a in self.model.agents['agent']:
@@ -374,20 +374,20 @@ def expand(self, amount):
 		M0 = self.M0
 		for a in self.model.allagents.values():
 			a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
-	
+
 CentralBank.expand = expand
 
 def M2(self):
 	if 'bank' not in self.model.primitives or self.model.param('num_bank') == 0: return self.M0
-	return sum([a.balance for a in self.model.allagents.values()])
+	return sum(a.balance for a in self.model.allagents.values())
 CentralBank.M2 = property(M2)
-	
+
 #Price level
 #Average good prices at each store, then average all of those together weighted by the store's sale volume
 #Figure out whether to break this out or not
 def cbP(self):
-	denom = 0
-	numer = 0
+	# denom = 0
+	# numer = 0
 	if not 'store' in self.model.agents: return None
 	return mean(array(list(self.model.agents['store'][0].price.values())))
 	# for s in self.model.agents['store']:

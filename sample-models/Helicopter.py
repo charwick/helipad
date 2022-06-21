@@ -2,10 +2,9 @@
 # Download the paper at https://ssrn.com/abstract=2545488
 
 from itertools import combinations
-import pandas
-
-from helipad import *
 from math import sqrt
+from helipad import *
+import pandas
 from numpy import random, isnan
 
 M0 = 120000
@@ -18,37 +17,37 @@ M0 = 120000
 class Store(baseAgent):
 	def __init__(self, breed, id, model):
 		super().__init__(breed, id, model)
-		
+
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
+		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds)))
 		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
-		
+
 		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.nonMoneyGoods}
 		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
-	
+
 	def step(self, stage):
 		super().step(stage)
 		N = self.model.param('num_agent')
-		
+
 		#Calculate wages
 		self.cashDemand = N * self.wage #Hold enough cash for one period's disbursements
 		newwage = (self.balance - self.cashDemand) / N
-		if newwage < 1: newwage = 1
+		newwage = max(newwage, 1)
 		self.wage = (self.wage * self.model.param('wStick') + newwage)/(1 + self.model.param('wStick'))
 		if self.wage * N > self.balance: self.wage = self.balance / N 	#Budget constraint
-	
+
 		#Hire labor, with individualized wage shocks
 		labor = 0
 		for a in self.model.agents['agent']:
-			if self.wage < 0: self.wage = 0
+			self.wage = max(self.wage, 0)
 			wage = random.normal(self.wage, self.wage/2 + 0.1)	#Can't have zero stdev
-			wage = 0 if wage < 0 else wage						#Wage bounded from below by 0
+			wage = max(wage, 0)									#Wage bounded from below by 0
 			self.pay(a, wage)
 			labor += 1
-	
-		tPrice = sum([self.price[good] for good in self.model.nonMoneyGoods])		
+
+		tPrice = sum(self.price[good] for good in self.model.nonMoneyGoods)
 		avg, stdev = {},{} #Hang onto these for use with credit calculations
 		for i in self.model.nonMoneyGoods:
 
@@ -58,19 +57,19 @@ class Store(baseAgent):
 			avg[i], stdev[i] = history.mean(), history.std()
 			itt = (1 if isnan(avg[i]) else avg[i]) + 1.5 * (1 if isnan(stdev[i]) else stdev[i])
 			self.invTarget[i] = (self.invTarget[i] + itt)/2 #Smooth it a bit
-		
+
 			#Set prices
 			#Change in the direction of hitting the inventory target
 			# self.price[i] += log(self.invTarget[i] / (self.inventory[i][0] + self.lastShortage[i])) #Jim's pricing rule?
 			self.price[i] += (self.invTarget[i] - self.stocks[i] + self.model.data.getLast('shortage-'+i))/100 #/150
-		
+
 			#Adjust in proportion to the rate of inventory change
 			#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
 			lasti = self.model.data.getLast('inv-'+i,2)[0] if self.model.t > 1 else 0
 			deltaInv = lasti - self.stocks[i]
 			self.price[i] *= (1 + deltaInv/(50 ** self.model.param('pSmooth')))
 			if self.price[i] < 0: self.price[i] = 1
-		
+
 			#Produce stuff
 			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
 			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
@@ -110,7 +109,7 @@ def setup():
 	def rbalUpdater(model, var, breed, val):
 		if model.hasModel:
 			beta = val/(1+val)
-			
+
 			for a in model.agents['agent']:
 				if hasattr(a, 'utility') and a.breed == breed:
 					a.utility.coeffs['rbal'] = beta
@@ -140,8 +139,8 @@ def setup():
 		def reporter(model):
 			rbd = model.param(('rbd', 'breed', breed, 'agent'))
 			beta = rbd/(1+rbd)
-		
-			return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod','good',AgentGoods[breed]))) / sum([1/sqrt(pr) for pr in model.param(('prod','good')).values()])
+
+			return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod','good',AgentGoods[breed]))) / sum(1/sqrt(pr) for pr in model.param(('prod','good')).values())
 
 		return reporter
 
@@ -176,7 +175,7 @@ def setup():
 		heli.data.addReporter('rBal-'+breed, heli.data.agentReporter('realBalances', 'agent', breed=breed))
 		heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', good=AgentGoods[breed]))
 		heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
-	
+
 		viz.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
 		viz.plots['shortage'].addSeries('shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', d.color)
 		viz.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
@@ -229,15 +228,14 @@ def setup():
 		beta = rbd/(rbd+1)
 		agent.utility = CES({'good': 1-beta, 'rbal': beta }, agent.model.param('sigma'))
 		agent.expCons = model.param(('prod', 'good', agent.item))
-	
+
 		#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 		agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
 
 	@heli.hook
 	def agentStep(agent, model, stage):
 		itemPrice = agent.store.price[agent.item]
-	
-		b = agent.balance/itemPrice		#Real balances
+
 		q = agent.utility.demand(agent.balance, {'good': itemPrice, 'rbal': itemPrice})['good']	#Equimarginal condition given CES between real balances and consumption
 		basicq = q						#Save this for later since we adjust q
 		bought = agent.buy(agent.store, agent.item, q, itemPrice)
@@ -245,9 +243,9 @@ def setup():
 		if agent.stocks[model.moneyGood] < 0: agent.stocks[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
 		agent.utils = agent.utility.calculate({'good': agent.stocks[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
 		agent.stocks[agent.item] = 0 #Consume goods
-	
+
 		negadjust = q - bought											#Update your consumption expectations if the store has a shortage
-		if negadjust > basicq: negadjust = basicq
+		negadjust = min(negadjust, basicq)
 		agent.expCons = (19 * agent.expCons + basicq-negadjust)/20		#Set expected consumption as a decaying average of consumption history
 
 	def realBalances(agent):
@@ -259,13 +257,13 @@ def setup():
 	@heli.hook
 	def modelPreStep(model):
 		model.shortages = {g:0 for g in model.nonMoneyGoods}
-	
+
 	@heli.hook
 	def modelPostSetup(model): model.cb = CentralBank(0, model)
 
 	@heli.hook
 	def modelPostStep(model): model.cb.step()	#Step the central bank last
-	
+
 #========
 # SHOCKS
 #========
@@ -281,12 +279,12 @@ def setup():
 		# return v*2
 		pct = random.normal(1, 15)
 		m = model.cb.M0 * (1+pct/100)
-		if m < 10000: m = 10000		#Things get weird when there's a money shortage
+		m = max(m, 10000)		#Things get weird when there's a money shortage
 		model.cb.M0 = m
 	heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
-	
+
 	return heli
-			
+
 #
 # Central Bank
 #
@@ -295,28 +293,28 @@ class CentralBank(baseAgent):
 	ngdpAvg = 0
 	ngdp = 0
 	primitive = 'cb'
-	
+
 	def __init__(self, id, model):
 		super().__init__(None, id, model)
 		self.id = id
 		self.model = model
-		
+
 		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
-	
+
 	def step(self):
-		
+
 		#Record macroeconomic vars at the end of the last stage
 		#Getting demand has it lagged one period…
-		self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
+		self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods)
 		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
-		
+
 		#Set macroeconomic targets
 		expand = 0
 		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
 		if expand != 0: self.expand(expand)
-	
-	def expand(self, amount):				
+
+	def expand(self, amount):
 		if self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('num_agent')
 			for a in self.model.agents['agent']:
@@ -325,11 +323,11 @@ class CentralBank(baseAgent):
 			M0 = self.M0
 			for a in self.model.allagents.values():
 				a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
-				
+
 	@property
 	def M0(self):
 		return self.model.data.agentReporter('stocks', 'all', good=self.model.moneyGood, stat='sum')(self.model)
-	
+
 	@M0.setter
 	def M0(self, value): self.expand(value - self.M0)
 
