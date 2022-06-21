@@ -376,13 +376,20 @@ viz.addPlot('rbal', 'Real Balances', 5)
 viz.addPlot('ngdp', 'NGDP', 7, selected=False)
 viz.addPlot('capital', 'Production', 9, selected=False)
 viz.addPlot('wage', 'Wage', 11, selected=False)
+viz.addPlot('shortage', 'Shortages', 6, selected=False)
 viz.addPlot('debt', 'Debt', selected=False)
 viz.addPlot('rr', 'Reserve Ratio', selected=False)
 viz.addPlot('i', 'Interest Rate', selected=False)
 
 viz.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
+
+def shortageReporter(good):
+	def reporter(model): return model.shortages[good]
+	return reporter
+
 for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
+	heli.data.addReporter('shortage-'+AgentGoods[breed], shortageReporter(AgentGoods[breed]))
 	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
 	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', good=b.good)(model))
 	# heli.data.addReporter('expWage', heli.data.agentReporter('expWage', 'agent'))
@@ -391,6 +398,7 @@ for breed, d in heli.primitives['agent'].breeds.items():
 	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
 	
 	viz.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
+	viz.plots['shortage'].addSeries('shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', d.color)
 	viz.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
 	viz.plots['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
 	viz.plots['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
@@ -496,6 +504,7 @@ def agentStep(agent, model, stage):
 	basicq = q						#Save this for later since we adjust q
 	
 	bought = agent.buy(agent.store, agent.item, q, itemPrice)
+	if bought < q: model.shortages[agent.item] += q-bought #Record shortages
 	if agent.stocks[model.moneyGood] < 0: agent.stocks[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
 	agent.utils = agent.utility.calculate({'good': agent.stocks[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
 	agent.stocks[agent.item] = 0 #Consume goods
@@ -514,6 +523,10 @@ def realBalances(agent):
 	return agent.balance/agent.store.price[agent.item]
 	# return agent.balance/agent.model.cb.P
 Agent.realBalances = property(realBalances)
+
+@heli.hook
+def modelPreStep(model):
+	model.shortages = {g:0 for g in model.nonMoneyGoods}
 
 #Use the bank if the bank exists
 @heli.hook

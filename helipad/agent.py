@@ -30,7 +30,6 @@ class baseAgent:
 		self.position = None #Overridden in spatial init
 
 		self.currentDemand = {g:0 for g in model.goods.keys()}
-		self.currentShortage = {g:0 for g in model.goods.keys()}
 
 		if hasattr(super(), 'runInit'): super().__init__() #For multi-level models
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
@@ -58,28 +57,24 @@ class baseAgent:
 			message = f'{prim1} {self.id} does not have sufficient {good1} to give {prim2} {partner.id}.'
 			if 'continue' in self.overdraft:
 				message += f' Continuing with available {good1} of {self.stocks[good1]}…'
-				self.currentShortage[good1] += amt1 - self.stocks[good1]
 				amt1 = self.stocks[good1]
 				if amt2 != 0: amt2 = amt1 / price
 		elif -amt1 > partner.stocks[good1]:
 			message = f'{prim2} {partner.id} does not have sufficient {good1} to give {prim1} {self.id}.'
 			if 'continue' in self.overdraft:
 				message += f' Continuing with available {good1} of {partner.stocks[good1]}…'
-				partner.currentShortage[good1] += -amt1 - partner.stocks[good1]
 				amt1 = -partner.stocks[good1]
 				if amt2 != 0: amt2 = amt1 / price
 		if amt2 > partner.stocks[good2]:
 			message = f'{prim2} {partner.id} does not have sufficient {good2} to give {prim1} {self.id}.'
 			if 'continue' in self.overdraft:
 				message += f' Continuing with available {good2} of {partner.stocks[good2]}…'
-				partner.currentShortage[good2] += amt1 - partner.stocks[good2]
 				amt2 = partner.stocks[good2]
 				amt1 = price * amt2
 		elif -amt2 > self.stocks[good2]:
 			message = f'{prim1} {self.id} does not have sufficient {good2} to give {prim2} {partner.id}.'
 			if 'continue' in self.overdraft:
 				message += f' Continuing with available {good2} of {self.stocks[good2]}…'
-				self.currentShortage[good2] += -amt1 - self.stocks[good2]
 				amt2 = -self.stocks[good2]
 				amt1 = price * amt2
 

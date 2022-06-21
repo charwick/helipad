@@ -150,7 +150,7 @@ class Cpanel(VBox):
 		for group in model.paramGroups:
 			for param in group.members.values():
 				param.element = renderParam(param, param.setVar(), param.title, param.get())
-			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.opened else None)
+			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.open else None)
 			group.element.set_title(0, group.title)
 			self.children += group.element,
 

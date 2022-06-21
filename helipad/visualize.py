@@ -98,11 +98,8 @@ class TimeSeries(MPLVisualization):
 		#Plot categories
 		self.addPlot('utility', 'Utility', selected=False)
 
-		if len(model.goods) >= 2:
-			self.addPlot('demand', 'Demand', selected=False)
-			self.addPlot('shortage', 'Shortages', selected=False)
-		if model.moneyGood is not None:
-			self.addPlot('money', 'Money', selected=False)
+		if len(model.goods) >= 2: self.addPlot('demand', 'Demand', selected=False)
+		if model.moneyGood is not None: self.addPlot('money', 'Money', selected=False)
 
 		#Toggle legend boxes all at once
 		#Use event.canvas.figure and not self.fig so it pertains to the current window

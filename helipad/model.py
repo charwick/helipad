@@ -240,11 +240,10 @@ class Helipad:
 					if not 'money' in self.visual.plots: self.visual.addPlot('money', 'Money', selected=False)
 				except: pass #Can't add plot if re-drawing the cpanel
 
-		#Add demand and shortage plots once we have at least 2 goods
+		#Add demand plot once we have at least 2 goods
 		if len(self.goods) == 1 and (self.visual is None or self.visual.isNull) and hasattr(self.visual, 'plots'):
 			try:
 				if not 'demand' in self.visual.plots: self.visual.addPlot('demand', 'Demand', selected=False)
-				if not 'shortages' in self.visual.plots: self.visual.addPlot('shortage', 'Shortages', selected=False)
 			except: pass
 
 		props['quantity'] = endowment
@@ -373,10 +372,8 @@ class Helipad:
 		if len(self.goods) >= 2:
 			for good, g in self.nonMoneyGoods.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-				self.data.addReporter('shortage-'+good, self.data.agentReporter('currentShortage', 'all', good=good, stat='sum'))
 				if self.visual is not None and hasattr(self.visual, 'plots'):
 					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
-					if 'shortage' in self.visual.plots: self.visual.plots['shortage'].addSeries('shortage-'+good, good.title()+' Shortage', g.color)
 
 		#Initialize agents
 		self.primitives = dict(sorted(self.primitives.items(), key=lambda d: d[1].priority))				#Sort by priority
@@ -412,9 +409,7 @@ class Helipad:
 		#Reset per-period variables
 		#Have to do this all at once at the beginning of the period, not when each agent steps
 		for p in self.agents.values():
-			for a in p:
-				a.currentDemand = {g:0 for g in self.goods}
-				a.currentShortage = {g:0 for g in self.goods}
+			for a in p: a.currentDemand = {g:0 for g in self.goods}
 
 		self.shocks.step()
 
