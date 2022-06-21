@@ -1,91 +1,15 @@
 # A model of the relative price effects of monetary shocks via helicopter drop vs. by open market operations.
 # Download the paper at https://ssrn.com/abstract=2545488
 
-from itertools import combinations
-import pandas
-
-from helipad import *
-from math import sqrt
-from numpy import random, isnan, mean, array
-heli = Helipad()
+from Helicopter import * #Building on the basic Helicopter model
+from numpy import isnan, mean, array
+heli = setup()
 
 #===============
-# STORE AND BANK CLASSES
-# Have to come before adding the primitives
+# BANK CLASS
 #===============
 
 baseAgent.overdraft = 'continue-warn'
-class Store(baseAgent):
-	def __init__(self, breed, id, model):
-		super().__init__(breed, id, model)
-		
-		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum([1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods]) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum([1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds])))
-		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
-		
-		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.nonMoneyGoods}
-		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
-		self.wage = 0
-		self.cashDemand = 0
-		
-		if hasattr(self, 'bank'):
-			self.pavg = 0
-			self.projects = []
-			self.defaults = 0
-
-	def step(self, stage):
-		super().step(stage)
-		N = self.model.param('num_agent')
-		
-		#Calculate wages
-		self.cashDemand = N * self.wage #Hold enough cash for one period's disbursements
-		newwage = (self.balance - self.cashDemand) / N
-		if newwage < 1: newwage = 1
-		self.wage = (self.wage * self.model.param('wStick') + newwage)/(1 + self.model.param('wStick'))
-		if self.wage * N > self.balance: self.wage = self.balance / N 	#Budget constraint
-	
-		#Hire labor, with individualized wage shocks
-		labor = 0
-		for a in self.model.agents['agent']:
-			if self.wage < 0: self.wage = 0
-			wage = random.normal(self.wage, self.wage/2 + 0.1)	#Can't have zero stdev
-			wage = 0 if wage < 0 else wage							#Wage bounded from below by 0
-			self.pay(a, wage)
-			labor += 1
-				
-		tPrice = sum([self.price[good] for good in self.model.nonMoneyGoods])	
-		avg, stdev = {},{} #Hang onto these for use with credit calculations
-		for i in self.model.nonMoneyGoods:
-
-			#Keep track of typical demand
-			#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods
-			history = pandas.Series(self.model.data.getLast('demand-'+i, 50)) + pandas.Series(self.model.data.getLast('shortage-'+i, 50))
-			avg[i], stdev[i] = history.mean(), history.std()
-			itt = (1 if isnan(avg[i]) else avg[i]) + 1.5 * (1 if isnan(stdev[i]) else stdev[i])
-			self.invTarget[i] = (self.invTarget[i] + itt)/2 #Smooth it a bit
-		
-			#Set prices
-			#Change in the direction of hitting the inventory target
-			# self.price[i] += log(self.invTarget[i] / (self.inventory[i][0] + self.lastShortage[i])) #Jim's pricing rule?
-			self.price[i] += (self.invTarget[i] - self.stocks[i] + self.model.data.getLast('shortage-'+i))/100 #/150
-		
-			#Adjust in proportion to the rate of inventory change
-			#Positive deltaInv indicates falling inventory; negative deltaInv rising inventory
-			lasti = self.model.data.getLast('inv-'+i,2)[0] if self.model.t > 1 else 0
-			deltaInv = lasti - self.stocks[i]
-			self.price[i] *= (1 + deltaInv/(50 ** self.model.param('pSmooth')))
-			if self.price[i] < 0: self.price[i] = 1
-		
-			#Produce stuff
-			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
-			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
-	
-		#Intertemporal transactions
-		if hasattr(self, 'bank') and self.model.t > 0:
-			#Stipulate some demand for credit, we can worry about microfoundations later
-			self.bank.amortize(self, self.bank.credit[self.id].owe/1.5)
-			self.bank.borrow(self, self.model.cb.ngdp * (1-self.bank.i))
-
 class Bank(baseAgent):
 	def __init__(self, breed, id, model):
 		super().__init__(breed, id, model)
@@ -100,7 +24,6 @@ class Bank(baseAgent):
 		self.dif = 0			#How much credit was rationed
 		self.defaultTotal = 0
 		self.pLast = 50 		#Initial price level, equal to average of initial prices
-		
 			
 	def account(self, customer):
 		return self.accounts[customer.id] if customer.id in self.accounts else 0
@@ -274,26 +197,7 @@ class Loan():
 #===============
 
 heli.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
-heli.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
-heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
-
-# Configure how many breeds there are and what good each consumes
-# In this model, goods and breeds correspond, but they don't necessarily have to
-breeds = [
-	('hobbit', 'jam', '#D73229'),
-	('dwarf', 'axe', '#2D8DBE'),
-	# ('elf', 'lembas', '#CCBB22')
-]
-AgentGoods = {}
-for b in breeds:
-	heli.addBreed(b[0], b[2], prim='agent')
-	heli.addGood(b[1], b[2])
-	AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
-M0 = 120000
-heli.addGood('cash', '#009900', money=True)
-
 heli.name = 'Helicopter/OMO'
-heli.order = 'random'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
 #Callback for the dist parameter
@@ -312,128 +216,24 @@ heli.addHook('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the
 
 # UPDATE CALLBACKS
 
-def ngdpUpdater(model, var, val):
-	if model.hasModel: model.cb.ngdpTarget = val if not val else model.cb.ngdp
-
-def rbalUpdater(model, var, breed, val):
+def lpUpdater(model, var, breed, val):
 	if model.hasModel:
-		if var=='rbd':
-			beta = val/(1+val)
-			for a in model.agents['agent']:
-				if hasattr(a, 'utility') and a.breed == breed:
-					a.utility.coeffs['rbal'] = beta
-					a.utility.coeffs['good'] = 1-beta
-		elif var=='liqPref':
-			for a in model.agents['agent']:
-				if a.breed == breed:
-					a.liqPref = val
-				
-#Set up the info for the sliders on the control panel
-#These variables attach to the Helicopter object
-#Each parameter requires a corresponding routine in Helicopter.updateVar()
-heli.addParameter('ngdpTarget', 'NGDP Target', 'check', dflt=False, callback=ngdpUpdater)
-heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
+		for a in model.agents['agent']:
+			if a.breed == breed:
+				a.liqPref = val
+
+heli.params['dist'].opts = {
 	'prop': 'Helicopter/Proportional',
 	'lump': 'Helicopter/Lump Sum',
 	'omo': 'Open Market Operation'
-}, runtime=False, callback=bankCheckWrapper)
+}
+heli.params['dist'].callback = bankCheckWrapper
 
-heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
-heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
-heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
-heli.paramGroup('Environment', ('pSmooth', 'wStick', 'kImmob'), opened=False)
+heli.addBreedParam('liqPref', 'Demand for Liquidity', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
 
-#Low Es means the two are complements (0=perfect complements)
-#High Es means the two are substitutes (infinity=perfect substitutes)
-#Doesn't really affect anything though – even utility – so don't bother exposing it
-heli.addParameter('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
-
-heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':1, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
-heli.addBreedParam('liqPref', 'Demand for Liquidity', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=rbalUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
-
-heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
-
-#Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
-def rbaltodemand(breed):
-	def reporter(model):
-		rbd = model.param(('rbd', 'breed', breed, 'agent'))
-		beta = rbd/(1+rbd)
-		
-		return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod','good',AgentGoods[breed]))) / sum([1/sqrt(pr) for pr in model.param(('prod','good')).values()])
-
-	return reporter
-
-#===============
-# DATA COLLECTION AND VISUALIZATION
-#===============
-
-from helipad.visualize import TimeSeries
-viz = heli.useVisual(TimeSeries)
-
-viz.addPlot('prices', 'Prices', 1, selected=True)
-viz.addPlot('inventory', 'Inventory', 3)
-viz.addPlot('rbal', 'Real Balances', 5)
-viz.addPlot('ngdp', 'NGDP', 7, selected=False)
-viz.addPlot('capital', 'Production', 9, selected=False)
-viz.addPlot('wage', 'Wage', 11, selected=False)
-viz.addPlot('shortage', 'Shortages', 6, selected=False)
-viz.addPlot('debt', 'Debt', selected=False)
-viz.addPlot('rr', 'Reserve Ratio', selected=False)
-viz.addPlot('i', 'Interest Rate', selected=False)
-
-viz.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
-
-def shortageReporter(good):
-	def reporter(model): return model.shortages[good]
-	return reporter
-
-for breed, d in heli.primitives['agent'].breeds.items():
-	heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
-	heli.data.addReporter('shortage-'+AgentGoods[breed], shortageReporter(AgentGoods[breed]))
-	heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))
-	# heli.data.addReporter('rWage-'+breed, lambda model: heli.data.agentReporter('wage', 'store')(model) / heli.data.agentReporter('price', 'store', good=b.good)(model))
-	# heli.data.addReporter('expWage', heli.data.agentReporter('expWage', 'agent'))
-	heli.data.addReporter('rBal-'+breed, heli.data.agentReporter('realBalances', 'agent', breed=breed))
-	heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', good=AgentGoods[breed]))
-	heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
-	
-	viz.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
-	viz.plots['shortage'].addSeries('shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', d.color)
-	viz.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
-	viz.plots['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
-	viz.plots['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
-	viz.plots['capital'].addSeries('portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
-	# viz.plots['wage'].addSeries('expWage', 'Expected Wage', '#999999')
-
-#Do this one separately so it draws on top
-for good, g in heli.nonMoneyGoods.items():
-	heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
-	viz.plots['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
-	heli.data.addReporter('price-'+good, heli.data.agentReporter('price', 'store', good=good))
-	viz.plots['prices'].addSeries('price-'+good, good.title()+' Price', g.color)
-
-#Price ratio plots
-def ratioReporter(item1, item2):
-	def reporter(model):
-		return model.data.agentReporter('price', 'store', good=item1)(model)/model.data.agentReporter('price', 'store', good=item2)(model)
-	return reporter
-viz.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
-viz.plots['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
-
-for r in combinations(heli.nonMoneyGoods.keys(), 2):
-	heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
-	c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
-	viz.plots['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
-
-#Misc plots
-heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
-viz.plots['ngdp'].addSeries('ngdp', 'NGDP', '#000000')
-heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
-viz.plots['money'].addSeries('storeCash', 'Store Cash', '#777777')
-heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
-viz.plots['money'].addSeries('StoreCashDemand', 'Store Cash Demand', '#CCCCCC')
-heli.data.addReporter('wage', heli.data.agentReporter('wage', 'store'))
-viz.plots['wage'].addSeries('wage', 'Wage', '#000000')
+heli.visual.addPlot('debt', 'Debt', selected=False)
+heli.visual.addPlot('rr', 'Reserve Ratio', selected=False)
+heli.visual.addPlot('i', 'Interest Rate', selected=False)
 
 #================
 # AGENT BEHAVIOR
@@ -458,20 +258,33 @@ def modelPreSetup(model):
 		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
 		model.data.addReporter('M2', lambda model: model.cb.M2)
 
-		viz.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
-		viz.plots['money'].addSeries('M2', 'Money Supply', '#000000')
-		viz.plots['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
-		viz.plots['rr'].addSeries('targetRR', 'Target', '#777777')
-		viz.plots['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
-		viz.plots['i'].addSeries('i', 'Nominal interest', '#000000')
-		viz.plots['i'].addSeries('r', 'Real interest', '#0000CC')
-		viz.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
+		model.visual.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
+		model.visual.plots['money'].addSeries('M2', 'Money Supply', '#000000')
+		model.visual.plots['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
+		model.visual.plots['rr'].addSeries('targetRR', 'Target', '#777777')
+		model.visual.plots['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
+		model.visual.plots['i'].addSeries('i', 'Nominal interest', '#000000')
+		model.visual.plots['i'].addSeries('r', 'Real interest', '#0000CC')
+		model.visual.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
+
+@heli.hook
+def modelPostSetup(model):
+	if hasattr(model.agents['store'][0], 'bank'):
+		model.agents['store'][0].pavg = 0
+		model.agents['store'][0].projects = []
+		model.agents['store'][0].defaults = 0
+
+@heli.hook
+def storeStep(agent, model, stage):
+	#Intertemporal transactions
+	if hasattr(agent, 'bank') and model.t > 0:
+		#Stipulate some demand for credit, we can worry about microfoundations later
+		agent.bank.amortize(agent, agent.bank.credit[agent.id].owe/1.5)
+		agent.bank.borrow(agent, model.cb.ngdp * (1-agent.bank.i))
 
 #
 # Agents
 #
-
-from helipad.utility import CES
 
 #Choose a bank if necessary
 @heli.hook
@@ -481,52 +294,16 @@ def baseAgentInit(agent, model):
 		agent.bank.setupAccount(agent)
 
 @heli.hook
-def agentInit(agent, model):
-	agent.store = model.agents['store'][0]
-	agent.item = AgentGoods[agent.breed]
-	rbd = model.param(('rbd', 'breed', agent.breed, 'agent'))
-	beta = rbd/(rbd+1)
-	agent.utility = CES({'good': 1-beta, 'rbal': beta }, agent.model.param('sigma'))
-	agent.expCons = model.param(('prod', 'good', agent.item))
-	
-	#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
-	agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
-	
+def agentInit(agent, model):	
 	if model.param('num_bank') > 0:
 		agent.liqPref = model.param(('liqPref', 'breed', agent.breed, 'agent'))
 
 @heli.hook
-def agentStep(agent, model, stage):
-	itemPrice = agent.store.price[agent.item]
-	
-	b = agent.balance/itemPrice		#Real balances
-	q = agent.utility.demand(agent.balance, {'good': itemPrice, 'rbal': itemPrice})['good']	#Equimarginal condition given CES between real balances and consumption
-	basicq = q						#Save this for later since we adjust q
-	
-	bought = agent.buy(agent.store, agent.item, q, itemPrice)
-	if bought < q: model.shortages[agent.item] += q-bought #Record shortages
-	if agent.stocks[model.moneyGood] < 0: agent.stocks[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
-	agent.utils = agent.utility.calculate({'good': agent.stocks[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
-	agent.stocks[agent.item] = 0 #Consume goods
-	
-	negadjust = q - bought											#Update your consumption expectations if the store has a shortage
-	if negadjust > basicq: negadjust = basicq
-	agent.expCons = (19 * agent.expCons + basicq-negadjust)/20		#Set expected consumption as a decaying average of consumption history
-	
+def agentStep(agent, model, stage):	
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
 		tCash = agent.liqPref*agent.balance
 		agent.bank.deposit(agent, agent.stocks[agent.model.moneyGood]-tCash)
-
-def realBalances(agent):
-	if not hasattr(agent, 'store'): return 0
-	return agent.balance/agent.store.price[agent.item]
-	# return agent.balance/agent.model.cb.P
-Agent.realBalances = property(realBalances)
-
-@heli.hook
-def modelPreStep(model):
-	model.shortages = {g:0 for g in model.nonMoneyGoods}
 
 #Use the bank if the bank exists
 @heli.hook
@@ -566,102 +343,60 @@ def checkBalance(agent, balance, model):
 # Central Bank
 #
 
-class CentralBank(baseAgent):
-	ngdpAvg = 0
-	ngdp = 0
-	primitive = 'cb'
+def cbstep(self):
+	#Record macroeconomic vars at the end of the last stage
+	#Getting demand has it lagged one period…
+	self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
+	if not self.ngdpAvg: self.ngdpAvg = self.ngdp
+	self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
 	
-	def __init__(self, id, model):
-		super().__init__(None, id, model)
-		self.id = id
-		self.model = model
-		
-		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
+	#Set macroeconomic targets
+	expand = 0
+	if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
+	if self.model.param('num_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
+	if expand != 0: self.expand(expand)
+CentralBank.step = cbstep
+
+def expand(self, amount):
 	
-	def step(self):
-		
-		#Record macroeconomic vars at the end of the last stage
-		#Getting demand has it lagged one period…
-		self.ngdp = sum([self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods])
-		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
-		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
-		
-		#Set macroeconomic targets
-		expand = 0
-		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
-		if self.model.param('num_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
-		if expand != 0: self.expand(expand)
+	#Deposit with each bank in proportion to their liabilities
+	if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
+		self.stocks[self.model.moneyGood] += amount
+		r = self.model.agents['bank'][0].stocks[self.model.moneyGood]
+		if -amount > r: amount = -r + 1
+		self.model.agents['bank'][0].deposit(self, amount)
 			
-	def expand(self, amount):
-		
-		#Deposit with each bank in proportion to their liabilities
-		if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
-			self.stocks[self.model.moneyGood] += amount
-			r = self.model.agents['bank'][0].stocks[self.model.moneyGood]
-			if -amount > r: amount = -r + 1
-			self.model.agents['bank'][0].deposit(self, amount)
-				
-		elif self.model.param('dist') == 'lump':
-			amt = amount/self.model.param('num_agent')
-			for a in self.model.agents['agent']:
-				a.stocks[self.model.moneyGood] += amt
-		else:
-			M0 = self.M0
-			for a in self.model.allagents.values():
-				a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
-				
-	@property
-	def M0(self):
-		return self.model.data.agentReporter('stocks', 'all', good=self.model.moneyGood, stat='sum')(self.model)
+	elif self.model.param('dist') == 'lump':
+		amt = amount/self.model.param('num_agent')
+		for a in self.model.agents['agent']:
+			a.stocks[self.model.moneyGood] += amt
+	else:
+		M0 = self.M0
+		for a in self.model.allagents.values():
+			a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
 	
-	@M0.setter
-	def M0(self, value): self.expand(value - self.M0)
+CentralBank.expand = expand
+
+def M2(self):
+	if 'bank' not in self.model.primitives or self.model.param('num_bank') == 0: return self.M0
+	return sum([a.balance for a in self.model.allagents.values()])
+CentralBank.M2 = property(M2)
 	
-	@property
-	def M2(self):
-		if 'bank' not in self.model.primitives or self.model.param('num_bank') == 0: return self.M0
-		return sum([a.balance for a in self.model.allagents.values()])
-	
-	#Price level
-	#Average good prices at each store, then average all of those together weighted by the store's sale volume
-	#Figure out whether to break this out or not
-	@property
-	def P(self):
-		denom = 0
-		numer = 0
-		if not 'store' in self.model.agents: return None
-		return mean(array(list(self.model.agents['store'][0].price.values())))
-		# for s in self.model.agents['store']:
-		# 	volume = sum(list(s.lastDemand.values()))
-		# 	numer += mean(array(list(s.price.values()))) * volume
-		# 	denom += volume
-		#
-		# if denom==0: return 1
-		# else: return numer/denom
-
-@heli.hook
-def modelPostSetup(model): model.cb = CentralBank(0, model)
-
-@heli.hook
-def modelPostStep(model): model.cb.step()	#Step the central bank last
-
-#========
-# SHOCKS
-#========
-
-#Random shock to dwarf cash demand
-def shock(v):
-	c = random.normal(v, 4)
-	return c if c >= 1 else 1
-heli.shocks.register('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2))
-
-#Shock the money supply
-def mshock(model):
-	# return v*2
-	pct = random.normal(1, 15)
-	m = model.cb.M0 * (1+pct/100)
-	if m < 10000: m = 10000		#Things get weird when there's a money shortage
-	model.cb.M0 = m
-heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+#Price level
+#Average good prices at each store, then average all of those together weighted by the store's sale volume
+#Figure out whether to break this out or not
+def cbP(self):
+	denom = 0
+	numer = 0
+	if not 'store' in self.model.agents: return None
+	return mean(array(list(self.model.agents['store'][0].price.values())))
+	# for s in self.model.agents['store']:
+	# 	volume = sum(list(s.lastDemand.values()))
+	# 	numer += mean(array(list(s.price.values()))) * volume
+	# 	denom += volume
+	#
+	# if denom==0: return 1
+	# else: return numer/denom
+CentralBank.P = property(cbP)
 
 heli.launchCpanel()
