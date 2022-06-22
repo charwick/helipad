@@ -16,7 +16,7 @@ class Bank(baseAgent):
 
 		self.i = .1				#Per-period interest rate
 		self.targetRR = 0.25
-		self.lastWithdrawal = 0
+		# self.lastWithdrawal = 0
 		self.inflation = 0
 		self.accounts = {}		#Liabilities
 		self.credit = {}		#Assets
@@ -60,7 +60,7 @@ class Bank(baseAgent):
 	def deposit(self, customer, amt):
 		amt = customer.pay(self, amt)
 		self.accounts[customer.id] += amt	#Credit account
-		if amt<0: self.lastWithdrawal -= amt
+		# if amt<0: self.lastWithdrawal -= amt
 		return amt
 
 	def transfer(self, customer, recipient, amt):
@@ -108,7 +108,7 @@ class Bank(baseAgent):
 		return amt - leftover							#How much you amortized
 
 	def step(self, stage):
-		self.lastWithdrawal = 0
+		# self.lastWithdrawal = 0
 		for l in self.credit.values(): l.step()
 
 		#Pay interest on deposits
@@ -210,8 +210,6 @@ def bankChecks(model, val=None):
 	for e in model.primitives['agent'].breedParams['liqPref'].element.values():
 		e.config(state='disabled' if nobank else 'normal')
 
-#Since the param callback takes different parameters than the GUI callback
-def bankCheckWrapper(model, var, val): bankChecks(model, val)
 heli.addHook('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
@@ -227,7 +225,9 @@ heli.params['dist'].opts = {
 	'lump': 'Helicopter/Lump Sum',
 	'omo': 'Open Market Operation'
 }
-heli.params['dist'].callback = bankCheckWrapper
+#Since the param callback takes different parameters than the GUI callback
+heli.params['dist'].callback = lambda model, var, val: bankChecks(model, val)
+heli.param('dist','omo')
 
 heli.addBreedParam('liqPref', 'Demand for Liquidity', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
 
@@ -255,7 +255,7 @@ def modelPreSetup(model):
 		model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
 		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
 		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
-		model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
+		# model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
 		model.data.addReporter('M2', lambda model: model.cb.M2)
 
 		model.visual.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
@@ -362,9 +362,7 @@ def expand(self, amount):
 	#Deposit with each bank in proportion to their liabilities
 	if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
 		self.stocks[self.model.moneyGood] += amount
-		r = self.model.agents['bank'][0].stocks[self.model.moneyGood]
-		if -amount > r: amount = -r + 1
-		self.model.agents['bank'][0].deposit(self, amount)
+		self.model.agents['bank'][0].deposit(self, amount) #Budget constraint taken care of in .pay()
 
 	elif self.model.param('dist') == 'lump':
 		amt = amount/self.model.param('num_agent')
@@ -374,7 +372,6 @@ def expand(self, amount):
 		M0 = self.M0
 		for a in self.model.allagents.values():
 			a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
-
 CentralBank.expand = expand
 
 def M2(self):

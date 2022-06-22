@@ -139,7 +139,9 @@ class baseAgent:
 			if 'fail' in self.overdraft:
 				go = False
 				message += f' Cancelling trade…'
-			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
+			if 'warn' in self.overdraft:
+				# warnings.warn(message, None, 2) #Doesn't work?
+				print(message)
 
 		if go and amount:
 			recipient.stocks[self.model.moneyGood] += amount

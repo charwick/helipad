@@ -260,7 +260,7 @@ class Helipad:
 			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
 		}
 		if place in deprec:
-			warnings.warn(f'The {place} hook is deprecated and will be removed in a future version. Please use the {deprec[place]} hook instead.', None, 2)
+			warnings.warn(f'The {place} hook is deprecated and will be removed in a future version. Please use the {deprec[place]} hook instead.', FutureWarning, 2)
 			place = deprec[place]
 
 		if not place in self.hooks: self.hooks[place] = []
@@ -716,11 +716,12 @@ class Helipad:
 		return None #If nobody matched
 
 	#Returns summary statistics on an agent variable at a single point in time
-	def summary(self, var, prim=None, breed=None):
+	def summary(self, var, prim=None, breed=None, good=False):
 		if prim is None:
 			prim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
 		agents = self.agents[prim] if breed is None else self.agent(breed, prim)
-		data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
+		if not good: data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
+		else: data = pandas.Series([a.stocks[var] for a in agents])
 		stats = {
 			'n': data.size,
 			'Mean': data.mean(),
@@ -753,8 +754,8 @@ class Helipad:
 		if not isIpy():
 			from helipad.cpanelTkinter import Cpanel
 			self.cpanel = Cpanel(self)
-			self.debugConsole()
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
+			self.debugConsole()
 			self.cpanel.parent.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit

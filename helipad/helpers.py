@@ -37,7 +37,7 @@ class dictLike(dict):
 			# 'updateEvery': 'refresh'
 		}
 		if index in deprecated:
-			warnings.warn(f'The \'{index}\' parameter has been renamed to \'{deprecated["index"]}\'. The ability to refer to \'{index}\' is deprecated and will be removed in a future version.', None, 3)
+			warnings.warn(f'The \'{index}\' parameter has been renamed to \'{deprecated["index"]}\'. The ability to refer to \'{index}\' is deprecated and will be removed in a future version.', FutureWarning, 3)
 			index = deprecated[index]
 		return index
 

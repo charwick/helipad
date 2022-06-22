@@ -82,7 +82,6 @@ class Store(baseAgent):
 def setup():
 	heli = Helipad()
 	heli.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
-	heli.addPrimitive('agent', Agent, dflt=50, low=1, high=100, priority=3)
 
 	# Configure how many breeds there are and what good each consumes
 	# In this model, goods and breeds correspond, but they don't necessarily have to
@@ -277,7 +276,7 @@ def setup():
 	#Shock the money supply
 	def mshock(model):
 		# return v*2
-		pct = random.normal(1, 15)
+		pct = random.normal(3, 15) #High mean to counteract the downward bias of (1-%)(1+%)
 		m = model.cb.M0 * (1+pct/100)
 		m = max(m, 10000)		#Things get weird when there's a money shortage
 		model.cb.M0 = m
@@ -298,6 +297,7 @@ class CentralBank(baseAgent):
 		super().__init__(None, id, model)
 		self.id = id
 		self.model = model
+		self.stocks[self.model.moneyGood] = M0 #Has to have assets in order to contract
 
 		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
 

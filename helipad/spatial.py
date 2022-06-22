@@ -18,7 +18,7 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	# Backward compatibility. Remove in Helipad 1.6
 	if 'x' in kwargs:
 		dim = kwargs['x'] if not 'y' in kwargs else (kwargs['x'], kwargs['y'])
-		warnings.warn('Using x and y to set dimensions is deprecated. Use the dim argument instead.', None, 2)
+		warnings.warn('Using x and y to set dimensions is deprecated. Use the dim argument instead.', FutureWarning, 3)
 
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
