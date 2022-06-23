@@ -771,15 +771,15 @@ class Helipad:
 			if not getattr(self, 'cpanel', False):
 				print('No visualizations available. To run the model with no GUI, use model.start() instead.')
 				return
-			if not self.param('stopafter') or not self.param('csv'):
-				print('Running from the control panel with no visualization requires stop period and CSV export to be enabled.')
+			if not self.param('stopafter') or not (self.param('csv') or 'terminate' in self.hooks):
+				print('Running from the control panel with no visualization requires a stop condition, and either CSV export or a terminate hook.')
 				return
 
 		self.setup()
 
 		if self.visual is not None and not self.visual.isNull:
 			self.visual.launch(self.name+(' ' if self.name!='' else '')+'Data Plots')
-		else:
+		else: #Headless
 			self.params['stopafter'].disable()
 			self.params['csv'].disable()
 

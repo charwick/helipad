@@ -170,7 +170,8 @@ class TimeSeries(MPLVisualization):
 
 	def terminate(self, model):
 		if self.isNull:
-			for p in ['stopafter', 'csv']: model.params[p].enable()
+			model.params['csv'].enable()
+			if not isinstance(model.param('stopafter'), str): model.params['stopafter'].enable()
 
 	def update(self, data):
 		newlen = len(next(data[x] for x in data))

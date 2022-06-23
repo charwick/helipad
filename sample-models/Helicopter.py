@@ -214,6 +214,30 @@ def setup():
 	viz.plots['wage'].addSeries('wage', 'Wage', '#000000')
 
 #================
+# POST-ANALYSIS
+# Generate the appropriate impulse response functions
+#================
+
+	@heli.hook
+	def terminate(model, data):
+		shocks = model.params['shocks'].get()
+		if not model.param('stopafter') or not shocks: return
+
+		from statsmodels.tsa.api import VAR
+		import matplotlib.pyplot as plt
+
+		if 'Dwarf' in shocks[0]:	#Equilibrating shocks
+			data = data[['M0', 'ratio-jam-axe', 'rBal-dwarf']]
+		elif 'M0' in shocks[0]:		#Disequilibrating shocks
+			data = data[['M0', 'ratio-jam-axe']]
+
+		model = VAR(data)
+		results = model.fit(50)
+		irf = results.irf(50)
+		irf.plot(orth=False, impulse='M0', response='ratio-jam-axe')
+		plt.show()
+
+#================
 # AGENT BEHAVIOR
 #================
 
@@ -289,6 +313,9 @@ def setup():
 			for s in shocks:
 				if s != val[0]:
 					model.shocks[s].active(False)
+		
+		if 'M0' in val[0] and val[1]: model.param('ngdpTarget', False)
+		elif 'Dwarf' in val[0] and val[1]: model.param('ngdpTarget', True)
 	heli.params['shocks'].callback = shocksCb
 
 	return heli
