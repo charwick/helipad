@@ -65,7 +65,7 @@ class MPLVisualization(BaseVisualization):
 		self.fig.canvas.mpl_connect('pick_event', self.sendEvent)
 		self.fig.canvas.mpl_connect('button_press_event', self.sendEvent)
 		self.lastUpdate = 0
-		if not isIpy(): self.model.cpanel.setAppIcon()
+		if not isIpy() and hasattr(self.model, 'cpanel'): self.model.cpanel.setAppIcon()
 
 	def sendEvent(self, event):
 		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes

@@ -25,7 +25,9 @@ class Cpanel(VBox):
 				else: param.set(val, item, updateGUI=False)
 
 				if callable(param.callback):
-					if param.obj is None: param.callback(self.model, param.name, param.get(item))
+					if param.obj is None:
+						pval = param.get(item) if param.type != 'checkgrid' else (item, param.get(item))
+						param.callback(self.model, param.name, pval)
 					else: param.callback(self.model, param.name, item, param.get(item))
 
 			#Consolidate value from bool and string, and toggle entry disabled state

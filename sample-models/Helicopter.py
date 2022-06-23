@@ -271,7 +271,7 @@ def setup():
 	def shock(v):
 		c = random.normal(v, 4)
 		return c if c >= 1 else 1
-	heli.shocks.register('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2))
+	heli.shocks.register('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2), active=False)
 
 	#Shock the money supply
 	def mshock(model):
@@ -281,6 +281,15 @@ def setup():
 		m = max(m, 10000)		#Things get weird when there's a money shortage
 		model.cb.M0 = m
 	heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+
+	#Only one shock at a time
+	def shocksCb(model, var, val):
+		shocks = heli.param('shocks')
+		if len(shocks) > 1:
+			for s in shocks:
+				if s != val[0]:
+					model.shocks[s].active(False)
+	heli.params['shocks'].callback = shocksCb
 
 	return heli
 
@@ -330,7 +339,6 @@ class CentralBank(baseAgent):
 
 	@M0.setter
 	def M0(self, value): self.expand(value - self.M0)
-
 
 #Only launch the cpanel if we haven't embedded
 if __name__ == '__main__':

@@ -385,9 +385,13 @@ class Shocks:
 				else:
 					self.valFunc(model)
 
+			#Updates the parameter value when the GUI element is clicked
+			#Can't do the regular setVar without a unified Tkinter element (like CheckGrid) to route the values
 			def setCallback(self, val=None):
 				if not isIpy(): val = self.element.BooleanVar.get()
 				self.active(val, False)
+
+				if callable(model.params['shocks'].callback): model.params['shocks'].callback(model, 'shocks', (self.name, val))
 		self.Shock = Shock
 
 	def __getitem__(self, index): return self.shocks[index]

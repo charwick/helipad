@@ -540,7 +540,7 @@ class checkGrid(expandableFrame):
 
 	def addCheck(self, var, text, defaultValue=True, desc=None):
 		if self.callback is not None:
-			def cbWrap(val): self.callback(val)
+			def cbWrap(val): self.callback((var, val))
 		else: cbWrap = None
 
 		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc, callback=cbWrap)
