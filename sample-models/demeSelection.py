@@ -5,10 +5,10 @@
 # SETUP
 #===============
 
-from helipad import Helipad, MultiLevel, Agent
 from random import choice
+from math import exp
+from helipad import Helipad, MultiLevel
 import numpy.random as nprand
-from math import exp, sqrt
 
 heli = Helipad()
 heli.name = 'Deme Selection'
@@ -26,7 +26,7 @@ heli.addParameter('k', 'Likelihood of war', 'slider', dflt=0.25, opts={'low': 0,
 #===============
 
 def strength(self):
-	return sum([a.stocks['payoff'] for a in self.agents['agent']])
+	return sum(a.stocks['payoff'] for a in self.agents['agent'])
 MultiLevel.strength = property(strength)
 
 def agentStep(agent, deme, stage):
@@ -49,12 +49,12 @@ def demeInit(deme, model):
 def war(demes, primitive, model, stage):
 	k = model.param('k')
 	if not nprand.choice(2, 1, p=[1-k, k])[0]: return
-	
+
 	#Fight
 	diff = (demes[0].strength - demes[1].strength)/10
 	prob = 1/(1+exp(-diff))
 	result = nprand.choice(2, 1, p=[prob, 1-prob])[0]
-	
+
 	#Colonize
 	pop = len(demes[not result].agents['agent'])
 	for a in demes[not result].agents['agent']: a.die()
@@ -64,7 +64,7 @@ def war(demes, primitive, model, stage):
 @heli.hook
 def demeStep(deme, model, stage):
 	if stage > 1: deme.dontStepAgents = True
-	
+
 	#Reproduce
 	if stage==2:
 		for a in deme.agents['agent']:
@@ -77,8 +77,8 @@ def modelStep(model, stage):
 	if stage==3:
 		for d in model.agents['deme']:
 			targetDpop = 20
-			while len(d.agents['agent']) > 20: choice(d.agents['agent']).die()
-			while len(d.agents['agent']) < 20: choice(d.agents['agent']).reproduce()
+			while len(d.agents['agent']) > targetDpop: choice(d.agents['agent']).die()
+			while len(d.agents['agent']) < targetDpop: choice(d.agents['agent']).reproduce()
 
 #===============
 # DATA AND VISUALIZATION
@@ -88,13 +88,13 @@ from helipad.visualize import TimeSeries
 viz = heli.useVisual(TimeSeries)
 
 @heli.reporter
-def population(model): return sum([len(d.agents['agent']) for d in model.agents['deme']])
+def population(model): return sum(len(d.agents['agent']) for d in model.agents['deme'])
 @heli.reporter
-def altruists(model): return sum([len(d.agent('altruist')) for d in model.agents['deme']])/population(model)
+def altruists(model): return sum(len(d.agent('altruist')) for d in model.agents['deme'])/population(model)
 @heli.reporter
-def selfish(model): return sum([len(d.agent('selfish')) for d in model.agents['deme']])/population(model)
+def selfish(model): return sum(len(d.agent('selfish')) for d in model.agents['deme'])/population(model)
 @heli.reporter
-def fitness(model): return sum([sum([a.stocks['payoff'] for a in d.agents['agent']]) for d in model.agents['deme']])/population(model)
+def fitness(model): return sum(sum(a.stocks['payoff'] for a in d.agents['agent']) for d in model.agents['deme'])/population(model)
 
 viz.addPlot('pop', 'Population', selected=False)
 viz.addPlot('pheno', 'Phenotypes', stack=True)

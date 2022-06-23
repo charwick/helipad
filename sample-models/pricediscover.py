@@ -6,7 +6,7 @@
 
 from helipad import Helipad
 from helipad.utility import CobbDouglas
-from math import sqrt, exp, floor
+from math import exp, floor
 import random
 
 heli = Helipad()
@@ -32,19 +32,19 @@ def agentInit(agent, model):
 def match(agents, primitive, model, stage):
 	myEndowU = agents[0].utility.calculate(agents[0].stocks)
 	theirEndowU = agents[1].utility.calculate(agents[1].stocks)
-	
+
 	#Get the endpoints of the contract curve
 	#Contract curve isn't linear unless the CD exponents are both 0.5. If not, *way* more complicated
-	cc1Soma = myEndowU * (sum([a.stocks['soma'] for a in agents])/sum([a.stocks['shmoo'] for a in agents])) ** 0.5
-	cc2Soma = sum([a.stocks['soma'] for a in agents]) - theirEndowU  * (sum([a.stocks['soma'] for a in agents])/sum([a.stocks['shmoo'] for a in agents])) ** 0.5
-	cc1Shmoo = sum([a.stocks['shmoo'] for a in agents])/sum([a.stocks['soma'] for a in agents]) * cc1Soma
-	cc2Shmoo = sum([a.stocks['shmoo'] for a in agents])/sum([a.stocks['soma'] for a in agents]) * cc2Soma
-		
+	cc1Soma = myEndowU * (sum(a.stocks['soma'] for a in agents)/sum(a.stocks['shmoo'] for a in agents)) ** 0.5
+	cc2Soma = sum(a.stocks['soma'] for a in agents) - theirEndowU  * (sum(a.stocks['soma'] for a in agents)/sum(a.stocks['shmoo'] for a in agents)) ** 0.5
+	cc1Shmoo = sum(a.stocks['shmoo'] for a in agents)/sum(a.stocks['soma'] for a in agents) * cc1Soma
+	cc2Shmoo = sum(a.stocks['shmoo'] for a in agents)/sum(a.stocks['soma'] for a in agents) * cc2Soma
+
 	#Calculate demand: choose a random point on the contract curve
 	r = random.random()
 	somaDemand = r*cc1Soma + (1-r)*cc2Soma - agents[0].stocks['soma']
 	shmooDemand = r*cc1Shmoo + (1-r)*cc2Shmoo - agents[0].stocks['shmoo']
-	
+
 	#Do the trades
 	if abs(somaDemand) > 0.1 and abs(shmooDemand) > 0.1:
 		agents[0].trade(agents[1], 'soma', -somaDemand, 'shmoo', shmooDemand)
@@ -53,7 +53,7 @@ def match(agents, primitive, model, stage):
 	else:
 		agents[0].lastPrice = None
 		agents[1].lastPrice = None
-			
+
 	#Record data
 	agents[0].utils = agents[0].utility.calculate(agents[0].stocks)
 	agents[1].utils = agents[1].utility.calculate(agents[1].stocks)

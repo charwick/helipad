@@ -9,8 +9,7 @@
 #===============
 
 from helipad import Helipad
-import numpy.random as random
-from numpy import mean
+from numpy import mean, random
 
 heli = Helipad()
 heli.name = 'Axelrod Tournament'
@@ -61,7 +60,7 @@ heli.addParameter('strategies', 'Strategies', 'checkgrid',
 #===============
 
 def TFT(rnd, history, own):
-	if not len(history): return True
+	if not history: return True
 	else: return history[-1]
 
 def alwaysCooperate(rnd, history, own): return True
@@ -73,7 +72,7 @@ def randomly(rnd, history, own): return random.choice(2, 1)[0]
 def Tullock(rnd, history, own):
 	if len(history) < 11: return True
 	rate = mean(history[-10:])-.1
-	if rate < 0: rate = 0
+	rate = max(rate, 0)
 	return random.choice(2, 1, p=[1-rate, rate])[0]
 
 def Nydegger(rnd, history, own):
@@ -81,7 +80,7 @@ def Nydegger(rnd, history, own):
 	if len(history) == 3:
 		if not history[0] and not own[1] and history[1]: return False
 		else: return TFT(rnd, history, own)
-		
+
 	def a(i):
 		n=0
 		if not history[-i]: n += 2
@@ -91,7 +90,7 @@ def Nydegger(rnd, history, own):
 	return A not in [1,6,7,17,22,23,26,29,30,31,33,38,39,45,49,54,55,58,61]
 
 def Grofman(rnd, history, own):
-	if not len(history): return True
+	if not history: return True
 	elif history[-1] ^ own[-1]: return random.choice(2, 1, p=[5/7, 2/7])[0]
 	else: return True
 
@@ -102,8 +101,8 @@ def Shubik(rnd, history, own):
 		if me and not history[r]: k += 1 #Increment k every time the opponent defected while I wasn't retaliating
 		if not me: rs += 1
 		else: rs = 0 #Make sure we're only counting current retaliations
-	
-	if not len(history): return True 
+
+	if not history: return True
 	if not rs and not history[-1]: return False #Start retaliation if the opponent defected last period
 	if rs and rs < k: return False #Keep retaliating if you've started a string of defections and haven't reached the limit
 	return True
@@ -116,14 +115,14 @@ def Davis(rnd, history, own):
 	else: return Grudger(rnd, history, own)
 
 def Feld(rnd, history, own):
-	if not len(history): return True
+	if not history: return True
 	if not history[-1]: return False
-	
+
 	pDef = rnd/heli.param('rounds')/2
 	return random.choice(2, 1, p=[pDef, 1-pDef])[0]
 
 def Joss(rnd, history, own):
-	if not len(history) or history[-1]: return random.choice(2, 1, p=[0.1, 0.9])[0]
+	if not history or history[-1]: return random.choice(2, 1, p=[0.1, 0.9])[0]
 	if not history[-1]: return False
 
 #===============
@@ -139,7 +138,7 @@ def match(agents, primitive, model, stage):
 		response2 = globals()[agents[1].breed](rnd, h1, h2)
 		h1.append(response1)
 		h2.append(response2)
-	
+
 		#Payoffs
 		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
 		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
@@ -152,17 +151,17 @@ plot = viz.addPlot('payoffs', 'Payoffs')
 #Add breeds last-minute so we can toggle them in the control panel
 @heli.hook
 def modelPreSetup(model):
-	
+
 	#Clear breeds from the previous run
 	for b in model.primitives['agent'].breeds:
 		model.data.removeReporter(b+'-proportion')
 	model.primitives['agent'].breeds = {}
-	
+
 	for k in model.param('strategies'):
 		model.addBreed(k, strategies[k][1])
-	
+
 	model.param('num_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
-	
+
 	for b, d in model.primitives['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		plot.addSeries(b+'-proportion', b, d.color)

@@ -1,10 +1,11 @@
 # A sample spatial model with agents eating grass off patches.
-# No visualization as of yet
 
 #===============
 # SETUP
 #===============
 
+from random import choice, randint
+from numpy import mean
 from helipad import Helipad
 
 heli = Helipad()
@@ -26,9 +27,6 @@ heli.addBreed('male', 'blue')
 heli.addBreed('female', 'pink')
 heli.addGood('energy', 'red', 5)
 
-from random import choice, randint
-from numpy import mean
-
 #===============
 # BEHAVIOR
 #===============
@@ -39,23 +37,23 @@ from numpy import mean
 
 @heli.hook
 def agentStep(agent, model, stage):
-	
+
 	#Look for the neighboring patch with the most grass and move to it, if smart
 	if stage==1:
 		if model.param('smart'):
-			maxenergy = max([n.stocks['energy'] for n in agent.patch.neighbors])
+			maxenergy = max(n.stocks['energy'] for n in agent.patch.neighbors)
 			prospects = [n for n in agent.patch.neighbors if n.stocks['energy'] == maxenergy]
 		else: prospects = agent.patch.neighbors
 		agent.orientTo(choice(prospects))
 		agent.forward()
 		agent.stocks['energy'] -= 1
-	
+
 	#Eat grass
 	elif stage==2:
 		if agent.patch.stocks['energy'] > 0:
 			agent.patch.stocks['energy'] -= 1
 			agent.stocks['energy'] += model.param('energy')
-	
+
 	#Reproduce
 	elif stage==3:
 		if agent.breed == 'male':
@@ -70,7 +68,7 @@ def agentStep(agent, model, stage):
 					mate.stocks['energy'] -= fe
 					child = mate.reproduce(inherit=[('breed', 'rand')], partners=[agent])
 					child.stocks['energy'] = e
-	
+
 	#Die
 	elif stage==4:
 		if agent.stocks['energy'] <= 0 or agent.age > model.param('maxLife'):

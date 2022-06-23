@@ -1,7 +1,7 @@
 # A model of the long-run cyclical dynamics of urbanization and human capital.
 
-from helipad import Helipad
 from math import sqrt, log, floor, exp
+from helipad import Helipad
 from numpy import *
 heli = Helipad()
 
