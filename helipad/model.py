@@ -14,7 +14,7 @@ from helipad.data import Data
 from helipad.agent import Agent, baseAgent
 
 class Helipad:
-	runInit = True #for multiple inheritance
+	runInit = True #for multiple inheritance. Has to be a static property
 
 	def __init__(self):
 		self.data = Data(self)

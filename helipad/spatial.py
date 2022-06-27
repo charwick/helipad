@@ -83,10 +83,10 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 		self.position[0] += x
 		self.position[1] += y
 		if not wrap:
-			if self.position[0] > mapx-0.5: self.position[0] = mapx-0.5
-			elif self.position[0] < -0.5: self.position[0] = -0.5
-			if self.position[1] > mapy-0.5: self.position[1]=mapy-0.5
-			elif self.position[1] < -0.5: self.position[1] = -0.5
+			self.position[0] = min(self.position[0], mapx-0.5)
+			self.position[0] = max(self.position[0], -0.5)
+			self.position[1] = min(self.position[1], mapy-0.5)
+			self.position[1] = max(self.position[1], -0.5)
 		else:
 			while self.position[0] >= mapx-0.5: self.position[0] -= mapx
 			while self.position[0] < -0.5: self.position[0] += mapx

@@ -28,10 +28,12 @@ class baseAgent:
 		self.edges = {}
 		self.utils = 0
 		self.position = None #Overridden in spatial init
-
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 
-		if hasattr(super(), 'runInit'): super().__init__() #For multi-level models
+		#For multi-level models
+		#Has to be a static property since we're checking as the object initializes
+		if hasattr(super(), 'runInit'): super().__init__()
+
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
 
 	def step(self, stage):

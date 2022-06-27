@@ -149,6 +149,8 @@ def setup():
 
 	from helipad.visualize import TimeSeries
 	viz = heli.useVisual(TimeSeries)
+	viz.dim = (1000, 800)
+	viz.pos = (400, 100)
 
 	viz.addPlot('prices', 'Prices', 1, selected=True)
 	viz.addPlot('inventory', 'Inventory', 3)

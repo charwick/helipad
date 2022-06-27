@@ -43,6 +43,8 @@ class MPLVisualization(BaseVisualization):
 		self.model = model #Unhappy with this
 		self.plots = {}
 		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
+		self.dim = None
+		self.pos = (400, 0)
 
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
@@ -57,7 +59,7 @@ class MPLVisualization(BaseVisualization):
 
 	#Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
-	def launch(self, title):
+	def launch(self, title, dim=None, pos=None):
 		if not isIpy(): self.fig.canvas.manager.set_window_title(title)
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
@@ -66,6 +68,23 @@ class MPLVisualization(BaseVisualization):
 		self.fig.canvas.mpl_connect('button_press_event', self.sendEvent)
 		self.lastUpdate = 0
 		if not isIpy() and hasattr(self.model, 'cpanel'): self.model.cpanel.setAppIcon()
+
+		#Resize and position graph window if applicable
+		fm = self.fig.canvas.manager
+		if hasattr(fm, 'window'):
+			if not self.dim:
+				#This should be the window height, but MPL only allows us to set the figure height.
+				#MacOS doesn't let us create a window taller than the screen, but we have to account for
+				#the height of the window frame crudely in Windows.
+				height = fm.window.winfo_screenheight()
+				if sys.platform=='win32': height -= 150
+
+				width = fm.window.winfo_screenwidth()*2/3
+				width = min(width, fm.window.winfo_screenwidth()-400)
+			else: width, height = self.dim
+
+			self.fig.set_size_inches(width/self.fig.dpi, height/self.fig.dpi)
+			fm.window.wm_geometry(f'+{self.pos[0]}+{self.pos[1]}')
 
 	def sendEvent(self, event):
 		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
@@ -146,20 +165,6 @@ class TimeSeries(MPLVisualization):
 
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
 		for plot, axes in zip(self.activePlots.values(), plots): plot.launch(axes)
-
-		#Resize and position graph window
-		fm = self.fig.canvas.manager
-		if hasattr(fm, 'window'):
-			#This should be the window height, but MPL only allows us to set the figure height.
-			#MacOS doesn't let us create a window taller than the screen, but we have to account for
-			#the height of the window frame crudely in Windows.
-			height = fm.window.winfo_screenheight()
-			if sys.platform=='win32': height -= 150
-
-			x_px = fm.window.winfo_screenwidth()*2/3
-			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
-			self.fig.set_size_inches(x_px/self.fig.dpi, height/self.fig.dpi)
-			fm.window.wm_geometry("+400+0")
 
 		#Style plots
 		self.fig.subplots_adjust(hspace=0, bottom=0.05, right=1, top=0.97, left=0.1)
@@ -261,20 +266,6 @@ class Charts(MPLVisualization):
 		for i in range(n):
 			plots[i].launch(self.fig.add_subplot(y,x,i+1, projection=plots[i].projection))
 		super().launch(title)
-
-		#Resize and position graph window
-		fm = self.fig.canvas.manager
-		if hasattr(fm, 'window'):
-			#This should be the window height, but MPL only allows us to set the figure height.
-			#MacOS doesn't let us create a window taller than the screen, but we have to account for
-			#the height of the window frame crudely in Windows.
-			height = fm.window.winfo_screenheight()
-			if sys.platform=='win32': height -= 150
-
-			x_px = fm.window.winfo_screenwidth()*2/3
-			if x_px + 400 > fm.window.winfo_screenwidth(): x_px = fm.window.winfo_screenwidth()-400
-			self.fig.set_size_inches(x_px/self.fig.dpi, height/self.fig.dpi)
-			fm.window.wm_geometry("+400+0")
 
 		#Time slider
 		ref = self.refresh.get()
