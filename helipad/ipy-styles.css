@@ -39,6 +39,27 @@
 	cursor: default;
 }
 
+.helipad_checkgrid .p-Panel { /* Position toggle-all correctly */
+	overflow: visible;
+	position: static;
+}
+
+.helipad_toggleAll {
+	position: absolute;
+	right: 2px;
+	top: 2px;
+	background: none;
+	color: #999;
+	width: auto;
+	border-radius: 5px;
+	cursor: pointer;
+}
+.helipad_toggleAll:hover {
+	background: #EEE;
+	color: #555;
+	box-shadow: none !important;
+}
+
 /* Progress bar */
 
 .widget-hprogress { width: 100%; }

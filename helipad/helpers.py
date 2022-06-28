@@ -68,5 +68,9 @@ class Color:
 		hls = colorsys.rgb_to_hls(*self.rgb)
 		return Color(colorsys.hls_to_rgb(hls[0], (1-1/factor) + hls[1]/factor, hls[2]))
 
+	def darken(self):
+		hls = colorsys.rgb_to_hls(*self.rgb)
+		return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
+
 	def blend(self, color2):
 		return Color(((self.r+color2.r)/2, (self.g+color2.g)/2, (self.b+color2.b)/2))

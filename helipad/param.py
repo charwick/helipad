@@ -304,7 +304,8 @@ class CheckgridParam(Param):
 
 	def disabled(self, disable):
 		if hasattr(self, 'element') and isIpy():
-			for e in self.element.values(): e.children[0].disabled = disable
+			for e in self.element.values():
+				if hasattr(e, 'children'): e.children[0].disabled = disable
 		else: super().disabled(disable)
 
 	def addItem(self, name, label, position=None, selected=False):

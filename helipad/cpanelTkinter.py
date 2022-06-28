@@ -377,7 +377,7 @@ class logSlider(tk.Frame):
 class expandableFrame(tk.Frame):
 	def __init__(self, parent=None, text="", fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
 		tk.Frame.__init__(self, parent, bg=bg)
-		self.columnconfigure(0, weight=1)
+		self.columnconfigure(1, weight=1)
 
 		self.pady=pady
 		self.padx=padx
@@ -385,7 +385,39 @@ class expandableFrame(tk.Frame):
 		self.text = text
 		self.titleLabel = tk.Label(self, fg=fg, bg=bg, font=font, cursor='hand2')
 		self.titleLabel.bind('<Button-1>', self.toggle)
-		self.titleLabel.grid(row=0, column=0, sticky='we', pady=(pady, 2))
+		self.titleLabel.grid(row=0, column=1, sticky='we', pady=(pady, 2))
+
+		#Possibility of adding buttons on either side
+		class btn(tk.Label):
+			def __init__(self2, *args, **kwargs):
+				self2.active = False
+				self2.command = None
+				hoverbg = Color(bg).darken().hex
+				normalfg = Color(fg).lighten().hex
+				hoverfg = Color(fg).lighten(1).hex
+				super().__init__(*args, width=2, bg=bg, fg=normalfg, **kwargs)
+
+				def hover(event):
+					if self2.active: self2.config(bg=hoverbg, fg=hoverfg)
+				def leave(event):
+					if self2.active: self2.config(bg=bg, fg=normalfg)
+
+				self2.bind('<Button-1>', self2.execute, add='+')
+				self2.bind('<Enter>', hover, add='+')
+				self2.bind('<Leave>', leave, add='+')
+
+			def setup(self2, label, command, desc=None):
+				self2.command = command
+				self2.active = True
+				self2.config(text=label)
+				if desc: Tooltip(self2, desc)
+
+			def execute(self2, e=None):
+				if self2.active and self2.command is not None: self2.command()
+
+		self.buttons = { 'left': btn(self), 'right': btn(self) }
+		self.buttons['left'].grid(row=0, column=0, sticky='w', padx=5)
+		self.buttons['right'].grid(row=0, column=2, sticky='e', padx=5)
 
 		self.subframe = tk.Frame(self, padx=padx, pady=0, bg=bg)
 		self._open = tk.IntVar()
@@ -395,11 +427,11 @@ class expandableFrame(tk.Frame):
 
 	@property
 	def open(self): return bool(self._open.get())
-	
+
 	@open.setter
 	def open(self, val):
 		if val: #open
-			self.subframe.grid(row=1, column=0, padx=self.padx, pady=0, sticky='we')
+			self.subframe.grid(row=1, column=0, columnspan=3, padx=self.padx, pady=0, sticky='we')
 			self.titleLabel['text'] = self.text+' '+'▾'
 			self._open.set(1)
 		else: #close
@@ -417,15 +449,11 @@ class textCheck(tk.Label):
 		self.bg = (Color(bg[0]), Color(bg[1]))
 		self.fg = (Color(fg[0]), Color(fg[1]))
 
-		def darken(color):
-			hls = colorsys.rgb_to_hls(*color.rgb)
-			return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
-
 		#Generate disabled and hover colors
 		self.disabledbg = (self.bg[0], self.bg[1].lighten(2))
 		self.disabledfg = (self.fg[0].lighten(2), self.fg[1].lighten(2))
-		hoverbg = (darken(self.bg[0]), darken(self.bg[1]))
-		hoverfg = (darken(self.fg[0]), darken(self.fg[1]))
+		hoverbg = (self.bg[0].darken(), self.bg[1].darken())
+		hoverfg = (self.fg[0].darken(), self.fg[1].darken())
 
 		self.value = defaultValue
 		self.enabled = True
@@ -536,7 +564,8 @@ class checkGrid(expandableFrame):
 		self._index=0
 		self.callback = callback
 
-		for i in range(columns): self.subframe.columnconfigure(i,weight=1)
+		for i in range(columns): self.subframe.columnconfigure(i, weight=1)
+		self.buttons['right'].setup('✔︎', self.toggleAll)
 
 	def addCheck(self, var, text, defaultValue=True, desc=None):
 		if self.callback is not None:
@@ -546,6 +575,12 @@ class checkGrid(expandableFrame):
 		self.checks[var] = textCheck(self.subframe, text=text, anchor='w', defaultValue=defaultValue, bg=(self.bg, '#419BF9'), desc=desc, callback=cbWrap)
 		self.checks[var].grid(row=int(ceil(len(self.checks)/self.columns)), column=(len(self.checks)-1)%self.columns, sticky='we')
 		return self.checks[var]
+
+	def toggleAll(self):
+		if [True for c in self.checks.values() if c.get()]:
+			for c in self.checks.values(): c.set(False)
+		else:
+			for c in self.checks.values(): c.set(True)
 
 	def __getitem__(self, index): return self.checks[index].get()
 	def __setitem__(self, index, value): self.checks[index].set(value)

@@ -84,6 +84,18 @@ class Cpanel(VBox):
 					param.element[k] = interactive(param.setVar(k), val=param.vars[k])
 					param.element[k].children[0].description = v[0]
 					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
+
+				#Toggle-all button
+				#Would like to put it in .p-Collapse-header, but I don't think I can place an element in there
+				#So append it to the children and we'll absolutely position it to the right place
+				param.element['toggleAll'] = Button(icon='check')
+				def toggleAll(b=None):
+					v = False if [c.children[0].value for c in param.element.values() if  not isinstance(c, Button) and c.children[0].value] else True
+					for c in param.element.values():
+						if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
+				param.element['toggleAll'].on_click(toggleAll)
+				param.element['toggleAll'].add_class('helipad_toggleAll')
+
 				param.containerElement = HBox(list(param.element.values()))
 				i = Accordion(children=[param.containerElement])
 				i.set_title(0, title)
