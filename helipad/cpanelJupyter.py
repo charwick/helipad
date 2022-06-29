@@ -120,7 +120,7 @@ class Cpanel(VBox):
 
 			accordion = Accordion(children=[HBox(list(param.element.values()))])
 			accordion.set_title(0, param.title)
-			accordion.add_class('helipad_param_peritem')
+			accordion.add_class('helipad_param_peritem helipad_paramgroup')
 			return accordion
 
 		ctop = self.model.doHooks('CpanelTop', [self, None])
@@ -166,6 +166,7 @@ class Cpanel(VBox):
 				param.element = renderParam(param, param.setVar(), param.title, param.get())
 			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.open else None)
 			group.element.set_title(0, group.title)
+			group.element.add_class('helipad_paramgroup')
 			self.children += group.element,
 
 		#Checkgrids

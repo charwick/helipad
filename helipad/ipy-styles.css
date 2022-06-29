@@ -28,7 +28,7 @@
 	width: auto; height: auto;
 	margin: 0 2px 2px 0;
 }
-.helipad_checkgrid .widget-box, .helipad_param_peritem .widget-box {
+.helipad_checkgrid .widget-box, .helipad_paramgroup .widget-box {
 	overflow: visible;
 	display: block;
 	float: left;
