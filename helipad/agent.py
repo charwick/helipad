@@ -84,7 +84,7 @@ class baseAgent:
 			if self.overdraft == 'stop': raise ValueError(message)
 			if 'fail' in self.overdraft:
 				go = False
-				message += f' Cancelling trade…'
+				message += ' Cancelling trade…'
 			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
 
 		if go:
@@ -140,7 +140,7 @@ class baseAgent:
 			if self.overdraft == 'stop': raise ValueError(message)
 			if 'fail' in self.overdraft:
 				go = False
-				message += f' Cancelling trade…'
+				message += ' Cancelling trade…'
 			if 'warn' in self.overdraft:
 				# warnings.warn(message, None, 2) #Doesn't work?
 				print(message)

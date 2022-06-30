@@ -506,7 +506,7 @@ class Helipad:
 
 				elif getattr(self, 'cpanel', None):
 					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
-					else: self.cpanel.parent.update() #Make sure we don't hang the interface if plotless
+					else: self.cpanel.update() #Make sure we don't hang the interface if plotless
 
 				# Performance indicator
 				if self.timer:
@@ -756,7 +756,7 @@ class Helipad:
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
 			self.debugConsole()
-			self.cpanel.parent.mainloop()		#Launch the control panel
+			self.cpanel.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit
 			if getattr(self, 'cpanel', False): self.cpanel.invalidate('Control panel was redrawn in another cell.')

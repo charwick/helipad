@@ -10,10 +10,10 @@ from tkinter.ttk import Progressbar
 from helipad.helpers import Color
 from helipad.param import Param
 
-class Cpanel:
+class Cpanel(tk.Tk):
 	def __init__(self, model):
 		self.model = model
-		self.parent = tk.Tk()
+		super().__init__()
 
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 1
@@ -58,7 +58,7 @@ class Cpanel:
 				self2.config(mode='determinate' if det else 'indeterminate')
 				if det: super().stop()
 				elif self2.running: super().start()
-				if refresh: self.parent.update()
+				if refresh: self.update()
 			def update(self, n): self['value'] = n*100
 			def start(self):
 				if self.mode =='indeterminate': super().start()
@@ -187,7 +187,7 @@ class Cpanel:
 			ctop.pack(fill='x', side='top')
 			fnum += 1
 
-		frame1 = tk.Frame(self.parent, padx=10, pady=10, bg=bgcolors[fnum%2])
+		frame1 = tk.Frame(self, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
 		if not self.model.params['stopafter'].event: self.model.params['stopafter'].element.entryValue.set(10000)
@@ -205,7 +205,7 @@ class Cpanel:
 		fnum += 1
 
 		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
-		frame0 = tk.Frame(self.parent, padx=10, pady=0, bg=bgcolors[1])
+		frame0 = tk.Frame(self, padx=10, pady=0, bg=bgcolors[1])
 		self.progress = progressBar(root=frame0)
 		self.progress.grid(row=0, column=0)
 		frame0.columnconfigure(0,weight=1)
@@ -240,13 +240,13 @@ class Cpanel:
 		#Global parameters
 		for k, param in self.model.params.items():
 			if getattr(param, 'config', False) or k in groups: continue
-			e = renderParam(self.parent, param, bg=bgcolors[fnum%2])
+			e = renderParam(self, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill='x')
 		fnum += 1
 
 		#Param groups
 		for group in self.model.paramGroups:
-			group.element = expandableFrame(self.parent, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=font, startOpen=group.open)
+			group.element = expandableFrame(self, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=font, startOpen=group.open)
 			i=0
 			for p in group.members.values():
 				f = renderParam(group.element.subframe, p, bg=bgcolors[fnum%2])
@@ -258,7 +258,7 @@ class Cpanel:
 		#Checkgrid parameters
 		for p in self.model.params.values():
 			if p.type!='checkgrid' or p.name=='shocks': continue
-			cg = checkGrid(parent=self.parent, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
+			cg = checkGrid(parent=self, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
 			for k,v in p.opts.items():
 				if not isinstance(v, (tuple, list)): v = (v, None)
 				elif len(v) < 2: v = (v[0], None)
@@ -274,7 +274,7 @@ class Cpanel:
 
 		#Shock checkboxes and buttons
 		if self.model.shocks.number > 0:
-			frame8 = expandableFrame(self.parent, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			frame8 = expandableFrame(self, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			frame8.checks = {}
 			active = self.model.param('shocks')
 			self.model.params['shocks'].element = frame8
@@ -304,8 +304,8 @@ class Cpanel:
 			fnum += 1
 
 		#Set application name
-		self.parent.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
-		self.parent.resizable(0,0)
+		self.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
+		self.resizable(0,0)
 		self.setAppIcon()
 
 	#Separate function so we can call it again when MPL tries to override
@@ -313,8 +313,8 @@ class Cpanel:
 		try:
 			__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 			icon = os.path.join(__location__, 'Helipad.png')
-			pi = tk.PhotoImage(file=icon, master=self.parent)
-			self.parent.tk.call('wm','iconphoto', self.parent._w, pi)
+			pi = tk.PhotoImage(file=icon, master=self)
+			self.tk.call('wm','iconphoto', self._w, pi)
 		except: pass
 
 	#Step one period at a time and update the graph
@@ -652,7 +652,7 @@ class Tooltip:
 			if y_delta: y1 = mouse_y - self.tip_delta[1] - height
 		y1 = max(y1, 0)
 
-		self.tw.wm_geometry("+%d+%d" % (x1, y1))
+		self.tw.wm_geometry(f'+{x1}+{y1}')
 
 	def hide(self):
 		if self.tw: self.tw.destroy()

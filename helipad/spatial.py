@@ -17,7 +17,7 @@ from helipad.agent import Patch, baseAgent
 def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	# Backward compatibility. Remove in Helipad 1.6
 	if 'x' in kwargs:
-		dim = kwargs['x'] if not 'y' in kwargs else (kwargs['x'], kwargs['y'])
+		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
 		warnings.warn('Using x and y to set dimensions is deprecated. Use the dim argument instead.', FutureWarning, 3)
 
 	#Dimension parameters
