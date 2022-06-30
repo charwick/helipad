@@ -188,8 +188,8 @@ class Cpanel(tk.Tk):
 			fnum += 1
 
 		frame1 = tk.Frame(self, padx=10, pady=10, bg=bgcolors[fnum%2])
-		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3)
-		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3)
+		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3, sticky='w')
+		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3, sticky='w')
 		if not self.model.params['stopafter'].event: self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
@@ -494,8 +494,9 @@ class textCheck(tk.Label):
 
 # A checkbox that enables/disables a text box
 class checkEntry(tk.Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', type='string', command=None):
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', type='string', command=None, limits=(0, 10**100)):
 		tk.Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
+		self.callback = command
 
 		#If we're enforcing int, don't allow nonnumerical input
 		self.type=type
@@ -513,9 +514,12 @@ class checkEntry(tk.Frame):
 		self.enabled = True
 		self.entryValue = tk.StringVar()
 		self.entryValue.set(default)
-		self.textbox = tk.Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
+		if type=='string':
+			self.textbox = tk.Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
+		elif type=='int':
+			self.textbox = tk.Spinbox(self, from_=limits[0], to=limits[1], textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
+		else: raise ValueError('Invalid Checkentry type. Must be either "string" or "int"')
 		self.textbox.grid(row=0, column=1)
-		self.callback = command
 
 		self.checkVar = tk.BooleanVar()
 		self.checkbox = tk.Checkbutton(self, text=title, bg=bg, var=self.checkVar, onvalue=True, offvalue=False, command=self.disableTextfield)
