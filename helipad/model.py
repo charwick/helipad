@@ -21,13 +21,11 @@ class Helipad:
 		self.shocks = Shocks(self)
 		self.events = Events()
 		self.hooks = Hooks()
-		self.params = Params(self)	#Global parameters
-		
-		self.running = False
+		self.params = Params(self)
+		self.primitives = Primitives(self)
 
 		self.name = ''
 		self.agents = {}
-		self.primitives = {}
 		self.goods = {}				#List of goods
 		self.stages = 1
 		self.order = 'linear'
@@ -35,10 +33,12 @@ class Helipad:
 		self.moneyGood = None
 		self.timer = False
 		self.visual = None
+
+		self.running = False
 		self._cut = False
 
 		#Default parameters
-		self.addPrimitive('agent', Agent, dflt=50, low=1, high=100)
+		self.primitives.add('agent', Agent, dflt=50, low=1, high=100)
 
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
@@ -91,34 +91,6 @@ class Helipad:
 				if vcompare(available[0], __version__):
 					print('A Helipad update is available! Use `pip install -U helipad` to upgrade to version',available[0])
 			except: pass #Fail silently if we're not online
-
-	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
-		if name=='all': raise ValueError(f'{name} is a reserved name. Please choose another.')
-		if not plural: plural = name+'s'
-		class_.primitive = name
-		self.primitives[name] = Item(
-			class_=class_,
-			plural=plural,
-			priority=priority,
-			order=order,
-			breeds={},
-			breedParams={}
-		)
-		def popget(name, model):
-			prim = name.split('_')[1]
-			if not model.hasModel: return None
-			else: return len(model.agents[prim])
-
-		self.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.nUpdater, getter=popget)
-		self.agents[name] = []
-
-	def removePrimitive(self, name):
-		if isinstance(name, list): return [self.removePrimitive(n) for n in name]
-		if not name in self.primitives: return False
-		del self.primitives[name]
-		del self.agents[name]
-		del self.params['num_'+name]
-		return True
 
 	def addButton(self, text, func, desc=None):
 		self.shocks.add(text, None, func, 'button', True, desc)
@@ -751,6 +723,14 @@ class Helipad:
 	def clearHooks(self, place):
 		warnings.warn('Model.clearHooks(place) is deprecated and has been replaced with model.hooks.remove(place).', FutureWarning, 2)
 		return self.hooks.remove(place)
+	
+	def addPrimitive(self, *args, **kwargs):
+		warnings.warn('Model.addPrimitive() is deprecated and has been replaced with model.primitives.add().', FutureWarning, 2)
+		return self.primitives.add(*args, **kwargs)
+
+	def removePrimitive(self, name):
+		warnings.warn('Model.removePrimitive() is deprecated and has been replaced with model.primitives.remove().', FutureWarning, 2)
+		return self.primitives.remove(name)
 
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
@@ -768,9 +748,42 @@ class MultiLevel(baseAgent, Helipad):
 		warnings.warn('MultiLevel.dontStepAgents is deprecated. Use Multilevel.cutStep() instead.', FutureWarning, 2)
 		self._cut = val
 
-class Events(funcStore):
-	multi = False
+#==================
+# CONTAINER CLASSES
+#==================
 
+class Primitives(funcStore):
+	def __init__(self, model):
+		self.model = model
+		super().__init__()
+	
+	def add(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
+		if name=='all': raise ValueError(f'{name} is a reserved name. Please choose another.')
+		if not plural: plural = name+'s'
+		class_.primitive = name
+		self[name] = Item(
+			class_=class_,
+			plural=plural,
+			priority=priority,
+			order=order,
+			breeds={}
+		)
+		def popget(name, model):
+			prim = name.split('_')[1]
+			if not model.hasModel: return None
+			else: return len(model.agents[prim])
+
+		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.model.nUpdater, getter=popget)
+		self.model.agents[name] = []
+
+	def remove(self, name):
+		val = super().remove(name)
+		if val:
+			del self.model.agents[name]
+			del self.model.params['num_'+name]
+		return val
+
+class Events(funcStore):
 	def __init__(self):
 		super().__init__()
 		class Event:

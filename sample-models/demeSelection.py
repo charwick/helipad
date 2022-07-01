@@ -15,8 +15,8 @@ heli.name = 'Deme Selection'
 heli.order = ['linear', 'linear', 'match']
 heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, stage 3 for war
 
-heli.addPrimitive('deme', MultiLevel, dflt=20, priority=1)
-heli.removePrimitive('agent')
+heli.primitives.add('deme', MultiLevel, dflt=20, priority=1)
+heli.primitives.remove('agent')
 heli.params.add('b', 'Benefit conferred', 'slider', dflt=6, opts={'low': 0, 'high': 10, 'step': 1})
 heli.params.add('c', 'Cost incurred', 'slider', dflt=2, opts={'low': 0, 'high': 10, 'step': 1})
 heli.params.add('k', 'Likelihood of war', 'slider', dflt=0.25, opts={'low': 0, 'high': 1, 'step': 0.01})

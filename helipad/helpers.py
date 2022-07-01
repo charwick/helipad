@@ -41,6 +41,7 @@ class funcStore(dict):
 		return function
 
 	def remove(self, name, fname=None, removeall=False):
+		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 		if name not in self: return False
 		if self.multi and fname:
 			if isinstance(fname, (list, tuple)): return [self.remove(name, f, removeall) for f in fname]

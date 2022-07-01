@@ -81,7 +81,7 @@ class Store(baseAgent):
 #Stick this here so we can build on it with the OMO model
 def setup():
 	heli = Helipad()
-	heli.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
+	heli.primitives.add('store', Store, dflt=1, priority=2, hidden=True)
 
 	# Configure how many breeds there are and what good each consumes
 	# In this model, goods and breeds correspond, but they don't necessarily have to

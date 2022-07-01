@@ -196,7 +196,7 @@ class Loan():
 # CONFIGURATION
 #===============
 
-heli.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
+heli.primitives.add('bank', Bank, dflt=1, priority=1, hidden=True)
 heli.name = 'Helicopter/OMO'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected

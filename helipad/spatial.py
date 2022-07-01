@@ -33,7 +33,7 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 		model.params.add('y', 'Map Height', 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
 	else: raise TypeError('Invalid dimension.')
 
-	model.addPrimitive('patch', Patch, hidden=True, priority=-10)
+	model.primitives.add('patch', Patch, hidden=True, priority=-10)
 	model.params.add('square', 'Square', 'hidden', dflt=isinstance(dim, (list, tuple)))
 	model.params.add('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
 
