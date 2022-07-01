@@ -14,7 +14,7 @@ heli.name = 'Model Name'
 heli.order = 'random' #Can be changed to 'linear' or 'match'
 heli.stages = 1 #Change to create a multi-stage model
 
-# heli.addParameter('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
+# heli.params.add('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
 # heli.addGood('good1','hex color', lambda breed: endowment)
 # heli.addBreed('name1', 'hex color')
 # heli.addBreed('name2', 'hex color')

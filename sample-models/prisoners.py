@@ -1,4 +1,4 @@
-# An experiment to verify the logic in https://www.youtube.com/watch?v=iSNsgj1OCLA&t=18s
+# An experiment to verify the logic in https://www.youtube.com/watch?v=iSNsgj1OCLA
 # 100 prisoners, each with a number, enters a room with 100 numbered boxes, each with a
 # random number inside. Each may open only 50 boxes. If everyone finds their own number,
 # they are all freed. If anyone fails to find their number, they are all executed. There
@@ -17,7 +17,7 @@ heli = Helipad()
 heli.name = 'Prison Escape'
 heli.order = 'random'
 
-heli.addParameter('strategy', 'Optimal Strategy', 'check', dflt=True)
+heli.params.add('strategy', 'Optimal Strategy', 'check', dflt=True)
 heli.param('num_agent', 100)
 heli.params['num_agent'].type = 'hidden'
 heli.param('stopafter', 500)
@@ -27,6 +27,7 @@ heli.cumAvg = 0
 # BEHAVIOR
 #===============
 
+#Set up boxes. Index is the box number, value is the number inside.
 @heli.hook
 def modelPreStep(model):
 	model.boxes = [a.id for a in model.agents['agent']]

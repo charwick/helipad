@@ -28,6 +28,33 @@ class Item:
 		for k,v in kwargs.items():
 			setattr(self, k, v)
 
+class funcStore(dict):
+	multi = False
+	def __init__(self):
+		self.clear()
+
+	def add(self, name, function):
+		if self.multi:
+			if name not in self: self[name] = [function]
+			else: self[name].append(function)
+		else: self[name] = function
+		return function
+
+	def remove(self, name, fname=None, removeall=False):
+		if name not in self: return False
+		if self.multi and fname:
+			if isinstance(fname, (list, tuple)): return [self.remove(name, f, removeall) for f in fname]
+			did = False
+			for h in self[name]:
+				if h.__name__ == fname:
+					self[name].remove(h)
+					if not removeall: return True
+					else: did = True
+			return did
+		else:
+			del self[name]
+			return True
+
 #To handle deprecated parameter names
 class dictLike(dict):
 	def __getitem__(self, index): return super().__getitem__(self.normalize(index))

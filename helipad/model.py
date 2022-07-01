@@ -9,7 +9,7 @@ from numpy import random
 
 from helipad.visualize import BaseVisualization
 from helipad.helpers import *
-from helipad.param import *
+from helipad.param import Params, Shocks, ParamGroup
 from helipad.data import Data
 from helipad.agent import Agent, baseAgent
 
@@ -19,20 +19,19 @@ class Helipad:
 	def __init__(self):
 		self.data = Data(self)
 		self.shocks = Shocks(self)
+		self.events = Events()
+		self.hooks = Hooks()
+		self.params = Params(self)	#Global parameters
+		
 		self.running = False
 
 		self.name = ''
 		self.agents = {}
 		self.primitives = {}
-		self.params = {}		#Global parameters
-		self.paramGroups = []
-		self.goods = {}			#List of goods
-		self.goodParams = {}	#Per-good parameters
-		self.hooks = {}			#External functions to run
-		self.events = {}
+		self.goods = {}				#List of goods
 		self.stages = 1
 		self.order = 'linear'
-		self.hasModel = False	#Have we initialized?
+		self.hasModel = False		#Have we initialized?
 		self.moneyGood = None
 		self.timer = False
 		self.visual = None
@@ -43,9 +42,9 @@ class Helipad:
 
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
-		def hookdec(name, fn, kwargs): self.addHook(name, fn, **kwargs)
+		def hookdec(name, fn, kwargs): self.hooks.add(name, fn, **kwargs)
 		def buttondec(name, fn, kwargs): self.addButton(name, fn, **kwargs)
-		def eventdec(name, fn, kwargs): self.addEvent(name, fn, **kwargs)
+		def eventdec(name, fn, kwargs): self.events.add(name, fn, **kwargs)
 		self.reporter = self.genDecorator(repdec)
 		self.hook = self.genDecorator(hookdec)
 		self.button = self.genDecorator(buttondec)
@@ -62,10 +61,10 @@ class Helipad:
 				else:
 					self.cpanel.progress.determinate(True)
 					self.cpanel.progress.update(model.t/val)
-			self.addParameter('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
-			self.addParameter('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
-			self.addParameter('refresh', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
-			self.addParameter('shocks', 'Shocks', 'checkgrid', opts={}, dflt={}, runtime=True, config=True)
+			self.params.add('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
+			self.params.add('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
+			self.params.add('refresh', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
+			self.params.add('shocks', 'Shocks', 'checkgrid', opts={}, dflt={}, runtime=True, config=True)
 
 			#Check for updates
 			from helipad.__init__ import __version__
@@ -110,7 +109,7 @@ class Helipad:
 			if not model.hasModel: return None
 			else: return len(model.agents[prim])
 
-		self.addParameter('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.nUpdater, getter=popget)
+		self.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.nUpdater, getter=popget)
 		self.agents[name] = []
 
 	def removePrimitive(self, name):
@@ -122,94 +121,24 @@ class Helipad:
 		return True
 
 	def addButton(self, text, func, desc=None):
-		self.shocks.register(text, None, func, 'button', True, desc)
-
-	#Registers an adjustable parameter exposed in the control panel.
-	def addParameter(self, name, title, type, dflt, opts={}, runtime=True, callback=None, paramType=None, desc=None, prim=None, getter=None, setter=None, **args):
-		if paramType is None: params=self.params
-		elif paramType=='breed': params=self.primitives[prim].breedParams
-		elif paramType=='good': params=self.goodParams
-		else: raise ValueError(f'Invalid object \'{paramType}\'')
-
-		if name in params: warnings.warn(f'Parameter \'{name}\' already defined. Overriding…', None, 2)
-
-		if callable(getter):
-			args['getter'] = lambda item=None: getter(*([name, self] if paramType is None else [name, self, item]))
-
-		if callable(setter):
-			args['setter'] = lambda val, item=None: setter(*([val, name, self] if paramType is None else [val, name, self, item]))
-
-		args.update({
-			'name': name,
-			'title': title,
-			'default': dflt,
-			'opts': opts,
-			'runtime': runtime,
-			'callback': callback,
-			'desc': desc,
-			'obj': paramType
-		})
-		if paramType is not None:
-			args['keys'] = self.primitives[prim].breeds if paramType=='breed' else self.goods
-
-		if type.title()+'Param' in globals(): pclass = globals()[type.title()+'Param']
-		else:
-			pclass = Param
-			args['type'] = type
-		params[name] = pclass(**args)
-		if getattr(self, 'cpanel', False) and isIpy(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
-		return params[name]
-
-	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
-		if prim is None:
-			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
-
-	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
-		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
+		self.shocks.add(text, None, func, 'button', True, desc)
 
 	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
-
 		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
-		param = self.parseParamId(param)
+		param = self.params[param[0]] if isinstance(param, tuple) else self.params[param]
 
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
-	
-	def paramGroup(self, name, params, opened=True):
-		pg = ParamGroup(name, {p: self.params[p] for p in params}, opened)
-		self.paramGroups.append(pg)
-		return pg
-
-	@property
-	def allParams(self):
-		yield from self.params.values()
-		yield from self.goodParams.values()
-		for p in self.primitives.values(): yield from p.breedParams.values()
-
-	#Parses a parameter identifier tuple and returns a Param object
-	#For internal use only
-	def parseParamId(self, p):
-		if not isinstance(p, tuple): p = (p,)
-		if len(p)==1:		return self.params[p[0]]
-		elif p[1]=='good':	return self.goodParams[p[0]]
-		elif p[1]=='breed':
-			if len(p)<4 or p[3] is None:
-				if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-				else: raise KeyError('Breed parameter must specify which primitive it belongs to')
-			else: prim = p[3]
-			return self.primitives[prim].breedParams[p[0]]
 
 	#For adding breeds and goods. Should not be called directly
 	def addItem(self, obj, name, color, prim=None, **kwargs):
 		if obj=='good':
 			itemDict = self.goods
-			paramDict = self.goodParams
+			paramDict = self.params.perGood
 		elif obj=='breed':
 			itemDict = self.primitives[prim].breeds
-			paramDict = self.primitives[prim].breedParams
+			paramDict = self.params.perBreed
 		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'')
 
 		if name in itemDict:
@@ -254,37 +183,6 @@ class Helipad:
 	def nonMoneyGoods(self):
 		return {k:v for k,v in self.goods.items() if not v.money}
 
-	def addHook(self, place, func, prioritize=False):
-		deprec = {
-			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5
-			'spatialAgentClick': 'agentClick',	#1.3; can be removed in 1.5
-			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
-		}
-		if place in deprec:
-			warnings.warn(f'The {place} hook is deprecated and will be removed in a future version. Please use the {deprec[place]} hook instead.', FutureWarning, 2)
-			place = deprec[place]
-
-		if not place in self.hooks: self.hooks[place] = []
-		if prioritize: self.hooks[place].insert(0, func)
-		else: self.hooks[place].append(func)
-
-	def removeHook(self, place, fname, removeall=False):
-		if not place in self.hooks: return False
-		if isinstance(fname, list): return [self.removeHook(place, f, removeall) for f in fname]
-		did = False
-		for h in self.hooks[place]:
-			if h.__name__ == fname:
-				self.hooks[place].remove(h)
-				if not removeall: return True
-				else: did = True
-		return did
-
-	def clearHooks(self, place):
-		if isinstance(place, list): return [self.clearHooks(p) for p in place]
-		if not place in self.hooks or not self.hooks[place]: return False
-		self.hooks[place].clear()
-		return True
-
 	#Returns the value of the last function in the list
 	def doHooks(self, place, args):
 		#Take a list of hooks; go until we get a response
@@ -297,17 +195,6 @@ class Helipad:
 		if not place in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
 		return r
-
-	def addEvent(self, name, fn, **kwargs):
-		self.events[name] = Event(name, fn, **kwargs)
-		return self.events[name]
-
-	def removeEvent(self, name):
-		if not name in self.events: return False
-		del self.events[name]
-		return True
-
-	def clearEvents(self): self.events.clear()
 
 	def useVisual(self, viz):
 		if hasattr(self, 'breed'):
@@ -341,19 +228,16 @@ class Helipad:
 			def reporter(model): return param.get(item)
 			return reporter
 
-		#Add reporters for all parameters
-		for item in self.goods:							#Cycle through goods
-			for n,p in self.goodParams.items():			#Cycle through parameters
-				if p.type == 'hidden': continue			#Skip hidden parameters
-				self.data.addReporter(n+'-'+item, pReporter(p, item))
-		for prim, pdata in self.primitives.items():		#Cycle through primitives
-			for breed in pdata.breeds:					#Cycle through breeds
-				for n,p in pdata.breedParams.items():	#Cycle through parameters
-					if p.type == 'hidden': continue		#Skip hidden parameters
-					self.data.addReporter(prim+'-'+n+'-'+item, pReporter(p, breed))
-		for n,p in self.params.items():					#Cycle through parameters
+		#Add reporters for parameters
+		for n,p in self.params.items():
 			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
-			self.data.addReporter(n, pReporter(p))
+			if p.per is None: self.data.addReporter(n, pReporter(p))
+			elif p.per == 'good':
+				for good in p.keys:
+					self.data.addReporter(n+'-'+good, pReporter(p, good))
+			elif p.per == 'breed':
+				for breed in p.keys:
+					self.data.addReporter(p.prim+'-'+n+'-'+breed, pReporter(p, breed))
 
 		if self.moneyGood is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
@@ -388,7 +272,7 @@ class Helipad:
 			st = self.param('stopafter')
 			self.cpanel.progress.determinate(st and isinstance(st, int))
 
-		for param in self.allParams:
+		for param in self.params.values():
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 
 		#Patch our async functions for compatibility with Spyder's event loop
@@ -565,7 +449,7 @@ class Helipad:
 		elif getattr(self, 'visual', False) and getattr(self, 'root', False): self.root.destroy() #Quit if we're in cpanel-less mode
 
 		#Re-enable parameters
-		for param in self.allParams:
+		for param in self.params.values():
 			if param.type=='checkentry' and param.event: continue
 			if not param.runtime: param.enable()
 
@@ -591,7 +475,7 @@ class Helipad:
 		alldata = []
 		for i,run in enumerate(space):
 			print('Run',str(i+1)+'/'+str(len(space))+':',', '.join([k+'='+('\''+v+'\'' if isinstance(v, str) else str(v)) for k,v in run.items()])+'…')
-			for p in self.allParams:
+			for p in self.params.values():
 				if not getattr(p, 'config', False): p.reset()
 
 			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
@@ -815,50 +699,130 @@ class Helipad:
 			return rep1(func) if isDec else rep1
 		return dec
 
+	#===================
+	# DEPRECATED METHODS
+	#===================
+	
+	# DEPRECATED IN HELIPAD 1.4; REMOVE IN HELIPAD 1.6
+	
+	def addEvent(self, name, fn, **kwargs):
+		warnings.warn('Model.addEvent() is deprecated and has been replaced with model.events.add().', FutureWarning, 2)
+		return self.events.add(name, fn, **kwargs)
+
+	def removeEvent(self, name):
+		warnings.warn('Model.removeEvent() is deprecated and has been replaced with model.events.remove().', FutureWarning, 2)
+		return self.events.remove(name)
+
+	def clearEvents(self):
+		warnings.warn('Model.clearEvents() is deprecated and has been replaced with model.events.clear().', FutureWarning, 2)
+		self.events.clear()
+
+	def addParameter(self, *args, **kwargs):
+		warnings.warn('Model.addParameter() is deprecated and has been replaced with model.params.add().', FutureWarning, 2)
+		return self.params.add(*args, **kwargs)
+
+	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
+		if prim is None:
+			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
+			else: raise KeyError('Breed parameter must specify which primitive it belongs to')
+		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
+
+	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
+		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
+
+	@property
+	def goodParams(self):
+		warnings.warn('Model.goodParams is deprecated and has been replaced with model.params.perGood.', FutureWarning, 2)
+		return self.params.perGood
+
+	@property
+	def allParams(self):
+		warnings.warn('Model.allParams is deprecated. All parameters can be accessed using model.params.', FutureWarning, 2)
+		return self.params.values()
+
+	def addHook(self, place, func, prioritize=False):
+		warnings.warn('Model.addHook() is deprecated and has been replaced with model.hooks.add().', FutureWarning, 2)
+		return self.hooks.add(place, func, prioritize)
+
+	def removeHook(self, place, fname, removeall=False):
+		warnings.warn('Model.removeHook() is deprecated and has been replaced with model.hooks.remove().', FutureWarning, 2)
+		return self.hooks.remove(place, fname, removeall=False)
+
+	def clearHooks(self, place):
+		warnings.warn('Model.clearHooks(place) is deprecated and has been replaced with model.hooks.remove(place).', FutureWarning, 2)
+		return self.hooks.remove(place)
+
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
 		self.setup()
 
-class Event:
-	def __init__(self, name, trigger, repeat=False, **kwargs):
-		self.name = name
-		self.trigger = trigger
-		self.repeat = repeat
-		self.kwargs = kwargs
-		self.data = []
-		self.triggered = []
-		self.reset()
-
-	def check(self, model):
-		if self.triggered and not self.repeat: return False
-		if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
-			data = {k: v[0] for k,v in model.data.getLast(1).items()}
-			if self.repeat:
-				self.data.append(data)
-				self.triggered.append(model.t)
-			else:
-				self.data = data
-				self.triggered = model.t
-			return True
-
-	def reset(self):
-		if self.repeat:
-			self.data.clear()
-			self.triggered.clear()
-		else:
-			self.data = None
-			self.triggered = False
 	#Deprecated in Helipad 1.4; remove in Helipad 1.6
 	@property
 	def dontStepAgents(self):
 		warnings.warn('MultiLevel.dontStepAgents is deprecated. Use Multilevel.cutStep() instead.', FutureWarning, 2)
 		return self._cut
 
-	@setter
+	@dontStepAgents.setter
 	def dontStepAgents(self, val):
 		warnings.warn('MultiLevel.dontStepAgents is deprecated. Use Multilevel.cutStep() instead.', FutureWarning, 2)
 		self._cut = val
+
+class Events(funcStore):
+	multi = False
+
+	def __init__(self):
+		super().__init__()
+		class Event:
+			def __init__(self, name, trigger, repeat=False, **kwargs):
+				self.name = name
+				self.trigger = trigger
+				self.repeat = repeat
+				self.kwargs = kwargs
+				self.data = []
+				self.triggered = []
+				self.reset()
+
+			def check(self, model):
+				if self.triggered and not self.repeat: return False
+				if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
+					data = {k: v[0] for k,v in model.data.getLast(1).items()}
+					if self.repeat:
+						self.data.append(data)
+						self.triggered.append(model.t)
+					else:
+						self.data = data
+						self.triggered = model.t
+					return True
+
+			def reset(self):
+				if self.repeat:
+					self.data.clear()
+					self.triggered.clear()
+				else:
+					self.data = None
+					self.triggered = False
+		self.Event = Event
+
+	def add(self, name, fn, **kwargs):
+		return super().add(name, self.Event(name, fn, **kwargs))
+
+class Hooks(funcStore):
+	multi = True
+	
+	def add(self, name, function, prioritize=False):
+		deprec = {
+			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5
+			'spatialAgentClick': 'agentClick',	#1.3; can be removed in 1.5
+			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
+		}
+		if name in deprec:
+			warnings.warn(f'The name hook is deprecated and will be removed in a future version. Please use the {deprec[place]} hook instead.', FutureWarning, 2)
+			name = deprec[name]
+
+		if not name in self: self[name] = []
+		if prioritize: self[name].insert(0, function)
+		else: self[name].append(function)
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)

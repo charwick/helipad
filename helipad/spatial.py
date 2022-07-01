@@ -23,19 +23,19 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
 	if isinstance(dim, int):
-		model.addParameter('dimension', 'Map Size', 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
+		model.params.add('dimension', 'Map Size', 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
 		def dimget(name, model): return model.param('dimension')
 		def dimset(val, name, model): model.param('dimension', val)
-		model.addParameter('x', 'Map Width ', 'hidden', dflt=dim, setter=dimset, getter=dimget)
-		model.addParameter('y', 'Map Height', 'hidden', dflt=dim, setter=dimset, getter=dimget)
+		model.params.add('x', 'Map Width ', 'hidden', dflt=dim, setter=dimset, getter=dimget)
+		model.params.add('y', 'Map Height', 'hidden', dflt=dim, setter=dimset, getter=dimget)
 	elif isinstance(dim, (list, tuple)):
-		model.addParameter('x', 'Map Width ', 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
-		model.addParameter('y', 'Map Height', 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
+		model.params.add('x', 'Map Width ', 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
+		model.params.add('y', 'Map Height', 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
 	else: raise TypeError('Invalid dimension.')
 
 	model.addPrimitive('patch', Patch, hidden=True, priority=-10)
-	model.addParameter('square', 'Square', 'hidden', dflt=isinstance(dim, (list, tuple)))
-	model.addParameter('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
+	model.params.add('square', 'Square', 'hidden', dflt=isinstance(dim, (list, tuple)))
+	model.params.add('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
 
 	def npsetter(val, item): raise RuntimeError('Patch number cannot be set directly. Set the x and y parameters instead.')
 	model.params['num_patch'].getter = lambda item: model.param('x')*model.param('y')

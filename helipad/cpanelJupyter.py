@@ -25,7 +25,7 @@ class Cpanel(VBox):
 				else: param.set(val, item, updateGUI=False)
 
 				if callable(param.callback):
-					if param.obj is None:
+					if param.per is None:
 						pval = param.get(item) if param.type != 'checkgrid' else (item, param.get(item))
 						param.callback(self.model, param.name, pval)
 					else: param.callback(self.model, param.name, item, param.get(item))
@@ -66,7 +66,7 @@ class Cpanel(VBox):
 					(str(val) if isinstance(val, param.entryType) else '') if not (param.name=='stopafter' and param.event) else 'Event: '+val	#Str
 				)
 				i = interactive(func, b=defaults[0], s=defaults[1])
-				if param.obj is None:
+				if param.per is None:
 					i = HBox(i.children)
 					i.children[0].layout = Layout(width='150px')
 				if val==False: i.children[1].disabled = True
@@ -139,29 +139,28 @@ class Cpanel(VBox):
 		if caip: self.children += caip,
 
 		#Per-good parameters
-		for param in model.goodParams.values():
+		for param in model.params.perGood.values():
 			self.children += constructAccordion(param, model.nonMoneyGoods),
 
 		#Per-breed parameters
-		for prim in model.primitives.values():
-			for param in prim.breedParams.values():
-				self.children += constructAccordion(param, prim.breeds),
+		for param in model.params.perBreed.values():
+			self.children += constructAccordion(param, param.keys),
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
 		if cap: self.children += cap,
 
 		#Pull out grouped parameters
 		groups = []
-		for group in self.model.paramGroups: groups += list(group.members.keys())
+		for group in self.model.params.groups: groups += list(group.members.keys())
 
 		#Global parameters
-		for k, param in model.params.items():
+		for k, param in model.params.globals.items():
 			if getattr(param, 'config', False) or k in groups or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += param.element,
 
 		#Param groups
-		for group in model.paramGroups:
+		for group in model.params.groups:
 			for param in group.members.values():
 				param.element = renderParam(param, param.setVar(), param.title, param.get())
 			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.open else None)
@@ -179,7 +178,7 @@ class Cpanel(VBox):
 		if cas: self.children += cas,
 
 		#Shocks
-		if len(model.shocks.shocks):
+		if len(model.shocks):
 			def sfuncButton(slef, *args): slef.do(self.model)
 			model.shocks.Shock.setButton = sfuncButton
 			model.params['shocks'].element = {}
@@ -243,8 +242,8 @@ class Cpanel(VBox):
 					self.layout.visibility = 'hidden'
 
 			#Remove previous hooks so we don't double up when re-running launchCpanel()
-			model.removeHook('modelPreSetup', 'cpanel_visualPreLaunch')
-			model.removeHook('terminate', 'cpanel_terminate')
+			model.hooks.remove('modelPreSetup', 'cpanel_visualPreLaunch')
+			model.hooks.remove('terminate', 'cpanel_terminate')
 
 			#Model flow control: pause/run button and progress bar
 			@model.hook('modelPreSetup', prioritize=True)

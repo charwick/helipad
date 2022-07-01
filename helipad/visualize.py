@@ -42,7 +42,7 @@ class MPLVisualization(BaseVisualization):
 	def __init__(self, model):
 		self.model = model #Unhappy with this
 		self.plots = {}
-		self.selector = model.addParameter('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
+		self.selector = model.params.add('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.dim = None
 		self.pos = (400, 0)
 

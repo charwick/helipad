@@ -18,12 +18,12 @@ heli.order = 'match'
 heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
 #Initial parameter values match the payoffs in Table 1
-heli.addParameter('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.addParameter('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.addParameter('cd', 'C-D payoff', 'slider', dflt=0, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.addParameter('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.addParameter('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
-heli.addParameter('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
+heli.params.add('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
+heli.params.add('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 10, 'step': 0.5})
+heli.params.add('cd', 'C-D payoff', 'slider', dflt=0, opts={'low': 0, 'high': 10, 'step': 0.5})
+heli.params.add('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 0.5})
+heli.params.add('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
+heli.params.add('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
 
 @heli.button('Reset Wealth')
 def reset(model):
@@ -48,7 +48,7 @@ strategies = {
 }
 
 #Build the strategies toggle
-heli.addParameter('strategies', 'Strategies', 'checkgrid',
+heli.params.add('strategies', 'Strategies', 'checkgrid',
 	opts = {k: (k, v[2] if len(v)>2 else None) for k,v in strategies.items()},
 	dflt = [k for k,v in strategies.items() if v[0]],
 	runtime=False, columns=2

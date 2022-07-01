@@ -13,12 +13,12 @@ heli.name = 'Grass Eating'
 heli.order = 'random'
 heli.stages = 5
 
-heli.addParameter('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
-heli.addParameter('smart', 'Smart consumption', 'check', dflt=True, desc='Move to the neighboring patch with the most grass, rather than randomly')
-heli.addParameter('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
-heli.addParameter('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
-heli.addParameter('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})
-heli.addParameter('grassrate', 'Grass Rate', 'slider', dflt=10, opts={'low': 1, 'high': 100, 'step': 1})
+heli.params.add('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})
+heli.params.add('smart', 'Smart consumption', 'check', dflt=True, desc='Move to the neighboring patch with the most grass, rather than randomly')
+heli.params.add('e2reproduce', 'Energy to reproduce', 'slider', dflt=25, opts={'low': 0, 'high': 100, 'step': 5})
+heli.params.add('maleportion', 'Male portion reproduction', 'slider', dflt=40, opts={'low': 0, 'high': 100, 'step': 5})
+heli.params.add('maxLife', 'Max Lifespan', 'slider', dflt=200, opts={'low': 100, 'high': 1000, 'step': 10})
+heli.params.add('grassrate', 'Grass Rate', 'slider', dflt=10, opts={'low': 1, 'high': 100, 'step': 1})
 
 heli.params['num_agent'].opts = {'low': 1, 'high': 200, 'step': 1}
 heli.param('num_agent', 200)

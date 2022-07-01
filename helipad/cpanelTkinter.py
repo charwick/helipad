@@ -32,7 +32,7 @@ class Cpanel(tk.Tk):
 				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
 
 				if callable(param.callback):
-					if param.obj is None: param.callback(self.model, param.name, val)
+					if param.per is None: param.callback(self.model, param.name, val)
 					else: param.callback(self.model, param.name, item, val)
 			return sv
 		Param.setVar = setVar
@@ -99,7 +99,7 @@ class Cpanel(tk.Tk):
 			if param.type in ['hidden', 'checkgrid']: return
 
 			#Parent frame for per-item parameters
-			if param.obj is not None and item is None:
+			if param.per is not None and item is None:
 				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
 				efSub = expFrame.subframe
 				i=0
@@ -217,16 +217,14 @@ class Cpanel(tk.Tk):
 			fnum += 1
 
 		#Per-good and per-breed parameters
-		for k, param in model.goodParams.items():
+		for k, param in model.params.perGood.items():
 			e = renderParam(None, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill='x')
-		if model.goodParams != {}: fnum += 1 #Only increment the stripe counter if we had any good params to draw
-		for p,v in model.primitives.items():
-			if v.breedParams != {}:
-				for k, param in v.breedParams.items():
-					e = renderParam(None, param, bg=bgcolors[fnum%2])
-					if e is not None: e.pack(fill='x')
-				fnum += 1
+		if len(model.params.perGood): fnum += 1 #Only increment the stripe counter if we had any good params to draw
+		for k, param in model.params.perBreed.items():
+			e = renderParam(None, param, bg=bgcolors[fnum%2])
+			if e is not None: e.pack(fill='x')
+		if len(model.params.perBreed): fnum += 1
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
 		if cap:
@@ -235,17 +233,17 @@ class Cpanel(tk.Tk):
 
 		#Pull out grouped parameters
 		groups = []
-		for group in self.model.paramGroups: groups += list(group.members.keys())
+		for group in self.model.params.groups: groups += list(group.members.keys())
 
 		#Global parameters
-		for k, param in self.model.params.items():
+		for k, param in self.model.params.globals.items():
 			if getattr(param, 'config', False) or k in groups: continue
 			e = renderParam(self, param, bg=bgcolors[fnum%2])
 			if e is not None: e.pack(fill='x')
 		fnum += 1
 
 		#Param groups
-		for group in self.model.paramGroups:
+		for group in self.model.params.groups:
 			group.element = expandableFrame(self, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=font, startOpen=group.open)
 			i=0
 			for p in group.members.values():
@@ -273,7 +271,7 @@ class Cpanel(tk.Tk):
 			fnum += 1
 
 		#Shock checkboxes and buttons
-		if self.model.shocks.number > 0:
+		if len(self.model.shocks):
 			frame8 = expandableFrame(self, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			frame8.checks = {}
 			active = self.model.param('shocks')

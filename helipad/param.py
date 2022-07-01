@@ -5,14 +5,15 @@
 
 from itertools import combinations
 from helipad.helpers import *
+import warnings
 from numpy import arange
 from numpy import random
 
 class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
-		if not hasattr(self, 'obj'): self.obj=None
-		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']} if self.obj else self.defaultVal
+		if not hasattr(self, 'per'): self.per=None
+		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']} if self.per else self.defaultVal
 		self.reset() #Populate with default values
 
 	#Set values from defaults
@@ -20,7 +21,7 @@ class Param(Item):
 	#Per-breed universal generic:	int → dict{int}
 	#Per-breed specific generic:	dict{int} → dict{int}
 	def reset(self):
-		if self.obj is None: self.setSpecific(self.default)
+		if self.per is None: self.setSpecific(self.default)
 		else:
 			if isinstance(self.default, dict):
 				for i in self.keys:
@@ -30,11 +31,11 @@ class Param(Item):
 
 	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 
 		#Jupyter requires an explicit update for all parameter types.
 		if updateGUI and isIpy() and hasattr(self, 'element'):
-			if self.obj is None: self.element.children[0].value = val
+			if self.per is None: self.element.children[0].value = val
 			else: self.element[item].children[0].value = val
 
 	#Don't override this one
@@ -47,7 +48,7 @@ class Param(Item):
 	#A generic set method to be overridden
 	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, updateGUI)
-		if self.obj is None: self.value = val
+		if self.per is None: self.value = val
 		else: self.value[item] = val
 
 	#Don't override this one
@@ -58,11 +59,11 @@ class Param(Item):
 		return self.getSpecific(item)
 
 	def getSpecific(self, item=None):
-		return self.value if self.obj is None or item is None else self.value[item]
+		return self.value if self.per is None or item is None else self.value[item]
 
 	def disabled(self, disable):
 		if not hasattr(self, 'element'): return
-		for e in ([self.element] if self.obj is None else self.element.values()):
+		for e in ([self.element] if self.per is None else self.element.values()):
 			if isIpy():
 				for i in e.children: i.disabled = disable
 			else:
@@ -76,7 +77,7 @@ class Param(Item):
 
 	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
 	def addKey(self, key):
-		if self.obj is None: print('Can\'t add keys to a global parameter…')
+		if self.per is None: print('Can\'t add keys to a global parameter…')
 		elif not isinstance(self.default, dict):
 			self.value[key] = self.default
 		elif key in self.default:
@@ -87,13 +88,19 @@ class Param(Item):
 	@property
 	def defaultVal(self): return None
 
+	#Deprecated in Helipad 1.4, remove in Helipad 1.6
+	@property
+	def obj(self):
+		warnings.warn('Param.obj is deprecated and has been replaced with Param.per.', FutureWarning, 2)
+		return self.per
+
 class MenuParam(Param):
 	type = 'menu'
 
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 		if updateGUI and not isIpy() and hasattr(self, 'element'):
-			sv = self.element if self.obj is None else self.element[item]
+			sv = self.element if self.per is None else self.element[item]
 			sv.StringVar.set(self.opts[val]) #Saved the StringVar here
 		else: super().setParent(val, item, updateGUI)
 
@@ -109,9 +116,9 @@ class CheckParam(Param):
 	type='check'
 
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 		if updateGUI and not isIpy() and hasattr(self, 'element'):
-			sv = self.element if self.obj is None else self.element[item]
+			sv = self.element if self.per is None else self.element[item]
 			sv.BooleanVar.set(val) #Saved the BooleanVar here
 		else: super().setParent(val, item, updateGUI)
 
@@ -131,7 +138,7 @@ class SliderParam(Param):
 		#Because the slider tkinter widget doesn't use a Var() object like the others, we have
 		#to explicitly push the value to the slider if necessary
 		if updateGUI and hasattr(self, 'element') and not isIpy():
-			if self.obj is None: self.element.set(val)
+			if self.per is None: self.element.set(val)
 			else: self.element[item].set(val)
 
 	def getSpecific(self, item=None):
@@ -149,7 +156,7 @@ class SliderParam(Param):
 		return values
 
 	def addKey(self, key):
-		if super().addkey(key) is None: return
+		if super().addKey(key) is None: return
 		self.value[key] = 0
 
 	@property
@@ -157,10 +164,10 @@ class SliderParam(Param):
 
 	#Override in order to update log slider
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.obj is not None and item is None: raise KeyError('A '+self.obj+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 
-		if isIpy() and hasattr(self, 'element') and self.element is not None and (self.obj is None or item in self.element):
-			el = self.element if self.obj is None else self.element[item]
+		if isIpy() and hasattr(self, 'element') and self.element is not None and (self.per is None or item in self.element):
+			el = self.element if self.per is None else self.element[item]
 
 			#Regular slider update
 			if updateGUI and isinstance(self.opts, dict): el.children[0].value = val
@@ -176,8 +183,8 @@ class CheckentryParam(Param):
 	type='checkentry'
 
 	def __init__(self, **kwargs):
-		self.bvar = True if 'obj' not in kwargs or kwargs['obj'] is None else {k:True for k in kwargs['keys']}
-		self.svar = self.defaultVal if 'obj' not in kwargs or kwargs['obj'] is None else {k:self.defaultVal for k in kwargs['keys']}
+		self.bvar = True if 'per' not in kwargs or kwargs['per'] is None else {k:True for k in kwargs['keys']}
+		self.svar = self.defaultVal if 'per' not in kwargs or kwargs['per'] is None else {k:self.defaultVal for k in kwargs['keys']}
 		self.value = None
 		self.event = False
 		kwargs['entryType'] = int if 'entryType' in kwargs and kwargs['entryType']=='int' else str
@@ -185,7 +192,7 @@ class CheckentryParam(Param):
 
 	def getSpecific(self, item=None):
 		#Global parameter
-		if self.obj is None:
+		if self.per is None:
 			if self.name=='stopafter' and self.event: return self.svar
 			elif hasattr(self, 'element') and not isIpy(): return self.element.get()
 			else: return self.svar if self.bvar else False
@@ -200,7 +207,7 @@ class CheckentryParam(Param):
 
 	def setSpecific(self, val, item=None, updateGUI=True):
 		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
-		if self.obj is None:
+		if self.per is None:
 
 			#Manage setting stopafter to an event
 			if self.name == 'stopafter':
@@ -246,14 +253,14 @@ class CheckentryParam(Param):
 				self.svar[item] = val
 
 		if updateGUI and isIpy() and hasattr(self, 'element'):
-			els = self.element.children if self.obj is None else self.element[item].children
+			els = self.element.children if self.per is None else self.element[item].children
 			els[0].value = val != False
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 
 	#Only re-enable the textbox if the checkbox is checked
 	def disabled(self, disable):
 		if hasattr(self, 'element') and isIpy() and not disable:
-			for e in ([self.element] if self.obj is None else self.element.values()):
+			for e in ([self.element] if self.per is None else self.element.values()):
 				e.children[0].disabled = False
 				if e.children[0].value: e.children[1].disabled = False
 		else: super().disabled(disable)
@@ -263,7 +270,7 @@ class CheckgridParam(Param):
 	type='checkgrid'
 
 	def __init__(self, **kwargs):
-		if kwargs['obj'] is not None: raise ValueError('Cannot instantiate per-item checkgrid parameter')
+		if kwargs['per'] is not None: raise ValueError('Cannot instantiate per-item checkgrid parameter')
 		if 'default' not in kwargs or not isinstance(kwargs['default'], list): kwargs['default'] = []
 		if isinstance(kwargs['opts'], list): kwargs['opts'] = {k:k for k in kwargs['opts']}
 		for k,v in kwargs['opts'].items():
@@ -338,7 +345,7 @@ class ParamGroup:
 		self.open = opened
 
 		for p in members.values():
-			if p.obj is not None or p.type=='checkgrid': raise TypeError('Cannot add checkgrids or per-item parameters to groups')
+			if p.per is not None or p.type=='checkgrid': raise TypeError('Cannot add checkgrids or per-item parameters to groups')
 			p.group = name
 
 	def get(self):
@@ -356,10 +363,73 @@ class ParamGroup:
 			if isIpy(): self.element.selected_index = 0 if val else None
 			else: self.element.open = val
 
-#This object is instantiated once and lives in model.shocks
-class Shocks:
+#==================
+# CONTAINER CLASSES
+#==================
+
+class Params(funcStore):
+	multi = False
+
 	def __init__(self, model):
-		self.shocks = {}
+		super().__init__()
+		self.model = model
+		self.groups = []
+
+	def add(self, name, title, type, dflt, opts={}, runtime=True, callback=None, per=None, desc=None, prim=None, getter=None, setter=None, **args):
+		if name in self: warnings.warn(f'Parameter \'{name}\' already defined. Overriding…', None, 2)
+
+		if callable(getter):
+			args['getter'] = lambda item=None: getter(*([name, self.model] if per is None else [name, self.model, item]))
+
+		if callable(setter):
+			args['setter'] = lambda val, item=None: setter(*([val, name, self.model] if per is None else [val, name, self.model, item]))
+
+		args.update({
+			'name': name,
+			'title': title,
+			'default': dflt,
+			'opts': opts,
+			'runtime': runtime,
+			'callback': callback,
+			'desc': desc,
+			'per': per
+		})
+		if per is not None:
+			if per=='breed':
+				if prim is None:
+					if len(self.model.primitives)==1: prim = next(iter(self.model.primitives.keys()))
+					else: raise KeyError('Per-breed parameter must specify which primitive it belongs to')
+				args['prim'] = prim
+			args['keys'] = self.model.primitives[prim].breeds if per=='breed' else self.model.goods
+
+		if type.title()+'Param' in globals(): pclass = globals()[type.title()+'Param']
+		else:
+			pclass = Param
+			args['type'] = type
+		self[name] = pclass(**args)
+		if getattr(self, 'cpanel', False) and isIpy(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
+		return self[name]
+	
+	def group(self, name, params, opened=True):
+		pg = ParamGroup(name, {p: self[p] for p in params}, opened)
+		self.groups.append(pg)
+		return pg
+
+	@property
+	def globals(self): return {k:v for k,v in self.items() if v.per is None}
+	
+	@property
+	def perBreed(self): return {k:v for k,v in self.items() if v.per=='breed'}
+	
+	@property
+	def perGood(self): return {k:v for k,v in self.items() if v.per=='good'}
+
+#This object is instantiated once and lives in model.shocks
+class Shocks(funcStore):
+	multi = False
+
+	def __init__(self, model):
+		super().__init__()
 		self.model = model
 
 		class Shock(Item):
@@ -379,7 +449,7 @@ class Shocks:
 					newval = self.valFunc(self.param.get(self.item))	#Pass in current value
 					self.param.set(newval, self.item)
 					if hasattr(self.param, 'callback') and callable(self.param.callback):
-						if self.param.obj is not None and self.item is not None:
+						if self.param.per is not None and self.item is not None:
 							self.param.callback(model, self.param.name, self.item, newval)
 						else:
 							self.param.callback(model, self.param.name, newval)
@@ -395,22 +465,19 @@ class Shocks:
 				if callable(model.params['shocks'].callback): model.params['shocks'].callback(model, 'shocks', (self.name, val))
 		self.Shock = Shock
 
-	def __getitem__(self, index): return self.shocks[index]
-	def __setitem__(self, index, value): self.shocks[index] = value
-
 	#param is the name of the variable to shock.
 	#valFunc is a function that takes the current value and returns the new value.
 	#timerFunc is a function that takes the current tick value and returns true or false
 	#    or the string 'button' in which case it draws a button in the control panel that shocks on press
 	#The variable is shocked when timerFunc returns true
 	#Can pass in param=None to run an open-ended valFunc that takes the model as an object instead
-	def register(self, name, param, valFunc, timerFunc, active=True, desc=None):
+	def add(self, name, param, valFunc, timerFunc, active=True, desc=None):
 		if param is not None:
-			item = param[2] if isinstance(param, tuple) and len(param)>2 else None
-			param = self.model.parseParamId(param)
+			item = param[2] if isinstance(param, tuple) and len(param)>2 else None	#The good or breed whose parameter to shock
+			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]
 		else: item=None
 
-		self[name] = self.Shock(
+		super().add(name, self.Shock(
 			name=name,
 			desc=desc,
 			param=param,
@@ -418,23 +485,25 @@ class Shocks:
 			valFunc=valFunc,
 			timerFunc=timerFunc,
 			selected=active
-		)
+		))
 
 		if timerFunc != 'button': self.model.params['shocks'].addItem(name, name, selected=active)
 
+	#Deprecated. Remove in Helipad 1.6
+	def register(self, *args, **kwargs):
+		warnings.warn('Shocks.register() is deprecated and has been replaced with Shocks.add().', FutureWarning, 2)
+		self.add(*args, **kwargs)
+
 	def step(self):
-		for shock in self.shocks.values():
+		for shock in self.values():
 			if shock.selected and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
 				shock.do(self.model)
 
 	@property
-	def number(self): return len(self.shocks)
+	def buttons(self): return {k:s for k,s in self.items() if s.timerFunc=='button'}
 
 	@property
-	def buttons(self): return {k:s for k,s in self.shocks.items() if s.timerFunc=='button'}
-
-	@property
-	def shocksExceptButtons(self): return {k:s for k,s in self.shocks.items() if callable(s.timerFunc)}
+	def shocksExceptButtons(self): return {k:s for k,s in self.items() if callable(s.timerFunc)}
 
 	# ===============
 	# TIMER FUNCTIONS

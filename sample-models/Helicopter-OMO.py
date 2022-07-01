@@ -207,10 +207,10 @@ def bankChecks(model, val=None):
 	model.param('num_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		model.params['plots'].element.disabled(i, nobank)
-	for e in model.primitives['agent'].breedParams['liqPref'].element.values():
+	for e in model.params['liqPref'].element.values():
 		e.config(state='disabled' if nobank else 'normal')
 
-heli.addHook('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
+heli.hooks.add('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
 
 # UPDATE CALLBACKS
 
@@ -229,7 +229,7 @@ heli.params['dist'].opts = {
 heli.params['dist'].callback = lambda model, var, val: bankChecks(model, val)
 heli.param('dist','omo')
 
-heli.addBreedParam('liqPref', 'Demand for Liquidity', 'slider', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
+heli.params.add('liqPref', 'Demand for Liquidity', 'slider', per='breed', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
 
 heli.visual.addPlot('debt', 'Debt', selected=False)
 heli.visual.addPlot('rr', 'Reserve Ratio', selected=False)

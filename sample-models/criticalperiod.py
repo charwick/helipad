@@ -10,9 +10,9 @@ heli = Helipad()
 heli.name = 'Critical Period'
 heli.order = 'random'
 
-heli.addParameter('pleio', 'Pleiotropy', 'slider', dflt=7, opts={'low': 0, 'high': 10, 'step': 1}, runtime=False)
-heli.addParameter('acq', 'Acquisition from', 'menu', dflt='mother', opts={'mother': 'Mother', 'wholepop': 'Whole Population'})
-heli.addParameter('condition', 'Language affects', 'menu', dflt='rep', opts={'rep': 'Reproduction', 'srv': 'Survival'})
+heli.params.add('pleio', 'Pleiotropy', 'slider', dflt=7, opts={'low': 0, 'high': 10, 'step': 1}, runtime=False)
+heli.params.add('acq', 'Acquisition from', 'menu', dflt='mother', opts={'mother': 'Mother', 'wholepop': 'Whole Population'})
+heli.params.add('condition', 'Language affects', 'menu', dflt='rep', opts={'rep': 'Reproduction', 'srv': 'Survival'})
 
 heli.params['num_agent'].opts['step'] = 10 #Need it to be divisible by the number of life stages
 heli.params['num_agent'].opts['low'] = 10

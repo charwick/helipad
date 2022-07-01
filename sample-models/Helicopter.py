@@ -114,24 +114,24 @@ def setup():
 					a.utility.coeffs['rbal'] = beta
 					a.utility.coeffs['good'] = 1-beta
 
-	heli.addParameter('ngdpTarget', 'NGDP Target', 'check', dflt=False, callback=ngdpUpdater)
-	heli.addParameter('dist', 'Distribution', 'menu', dflt='prop', opts={
+	heli.params.add('ngdpTarget', 'NGDP Target', 'check', dflt=False, callback=ngdpUpdater)
+	heli.params.add('dist', 'Distribution', 'menu', dflt='prop', opts={
 		'prop': 'Proportional',
 		'lump': 'Lump Sum'
 	}, runtime=False)
 
-	heli.addParameter('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
-	heli.addParameter('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
-	heli.addParameter('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
-	heli.paramGroup('Environment', ('pSmooth', 'wStick', 'kImmob'), opened=False)
+	heli.params.add('pSmooth', 'Price Smoothness', 'slider', dflt=1.5, opts={'low': 1, 'high': 3, 'step': 0.05})
+	heli.params.add('wStick', 'Wage Stickiness', 'slider', dflt=10, opts={'low': 1, 'high': 50, 'step': 1})
+	heli.params.add('kImmob', 'Capital Immobility', 'slider', dflt=100, opts={'low': 1, 'high': 150, 'step': 1})
+	heli.params.group('Environment', ('pSmooth', 'wStick', 'kImmob'), opened=False)
 
 	#Low Es means the two are complements (0=perfect complements)
 	#High Es means the two are substitutes (infinity=perfect substitutes)
 	#Doesn't really affect anything though – even utility – so don't bother exposing it
-	heli.addParameter('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
+	heli.params.add('sigma', 'Elast. of substitution', 'hidden', dflt=.5, opts={'low': 0, 'high': 10, 'step': 0.1})
 
-	heli.addBreedParam('rbd', 'Demand for Real Balances', 'slider', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':1, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
-	heli.addGoodParam('prod', 'Productivity', 'slider', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
+	heli.params.add('rbd', 'Demand for Real Balances', 'slider', per='breed', dflt={'hobbit':7, 'dwarf': 35}, opts={'low':1, 'high': 50, 'step': 1}, prim='agent', callback=rbalUpdater)
+	heli.params.add('prod', 'Productivity', 'slider', per='good', dflt=1.75, opts={'low':0.1, 'high': 2, 'step': 0.1}) #If you shock productivity, make sure to call rbalupdater
 
 	#Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
 	def rbaltodemand(breed):
@@ -297,28 +297,27 @@ def setup():
 	def shock(v):
 		c = random.normal(v, 4)
 		return c if c >= 1 else 1
-	heli.shocks.register('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2), active=False)
+	heli.shocks.add('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2), active=False)
 
 	#Shock the money supply
 	def mshock(model):
-		# return v*2
 		pct = random.normal(3, 15) #High mean to counteract the downward bias of (1-%)(1+%)
 		m = model.cb.M0 * (1+pct/100)
 		m = max(m, 10000)		#Things get weird when there's a money shortage
 		model.cb.M0 = m
-	heli.shocks.register('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
+	heli.shocks.add('M0 (2% prob)', None, mshock, heli.shocks.randn(2), desc="Shocks the money supply a random percentage (µ=1, σ=15) with 2% probability each period")
 
 	#Only one shock at a time
-	def shocksCb(model, var, val):
+	def shocksCallback(model, var, val):
 		shocks = heli.param('shocks')
 		if len(shocks) > 1:
 			for s in shocks:
 				if s != val[0]:
 					model.shocks[s].active(False)
-		
+
 		if 'M0' in val[0] and val[1]: model.param('ngdpTarget', False)
 		elif 'Dwarf' in val[0] and val[1]: model.param('ngdpTarget', True)
-	heli.params['shocks'].callback = shocksCb
+	heli.params['shocks'].callback = shocksCallback
 
 	return heli
 

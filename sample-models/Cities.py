@@ -25,13 +25,13 @@ def constrain(model, var, val):
 		# 	model.param('fixed', 24.7777*val-.9284659)
 		# 	model.params['fixed'].disable()
 
-heli.addParameter('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city', runtime=False, callback=constrain)
-heli.addParameter('lockH', 'Lock human capital', 'check', False, desc='Maintains the distribution of human capital when checked')
-heli.addParameter('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
-heli.addParameter('movecost', 'Moving Cost (ω)', 'slider', dflt=10, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
-heli.addParameter('deathrate', 'Death Rate (θ)', 'slider', dflt=0.005, opts={'low':0, 'high': 0.05, 'step': 0.001})
-heli.addParameter('rent', 'Variable cost (ρ)', 'slider', dflt=.04, opts={'low':0.01, 'high': 0.1, 'step': 0.01}, desc='Per-period cost-of-living, proportional to human capital', callback=constrain)
-heli.addParameter('fixed', 'Fixed cost (χ)', 'slider', dflt=.4, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living', callback=constrain)
+heli.params.add('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city', runtime=False, callback=constrain)
+heli.params.add('lockH', 'Lock human capital', 'check', False, desc='Maintains the distribution of human capital when checked')
+heli.params.add('breedThresh', 'Breeding Threshold (φ)', 'slider', dflt=20, opts={'low':5, 'high': 500, 'step': 5}, desc='Proportional to the minimum wealth necessary to breed')
+heli.params.add('movecost', 'Moving Cost (ω)', 'slider', dflt=10, opts={'low':0, 'high': 150, 'step': 1}, desc='Cost incurred by moving location')
+heli.params.add('deathrate', 'Death Rate (θ)', 'slider', dflt=0.005, opts={'low':0, 'high': 0.05, 'step': 0.001})
+heli.params.add('rent', 'Variable cost (ρ)', 'slider', dflt=.04, opts={'low':0.01, 'high': 0.1, 'step': 0.01}, desc='Per-period cost-of-living, proportional to human capital', callback=constrain)
+heli.params.add('fixed', 'Fixed cost (χ)', 'slider', dflt=.4, opts={'low':0, 'high': 1, 'step': 0.1}, desc='Per-period cost-of-living', callback=constrain)
 
 heli.name = 'Cities'
 heli.stages = 2
@@ -90,7 +90,7 @@ def modelPreSetup(model):
 	model.deathrate = 0
 	
 	#Mark the different phases of the Malthusian model
-	model.clearEvents()
+	model.events.clear()
 	if not model.param('city'):
 		model.param('num_agent', 150)
 		@heli.event

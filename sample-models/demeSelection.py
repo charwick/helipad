@@ -17,9 +17,9 @@ heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, 
 
 heli.addPrimitive('deme', MultiLevel, dflt=20, priority=1)
 heli.removePrimitive('agent')
-heli.addParameter('b', 'Benefit conferred', 'slider', dflt=6, opts={'low': 0, 'high': 10, 'step': 1})
-heli.addParameter('c', 'Cost incurred', 'slider', dflt=2, opts={'low': 0, 'high': 10, 'step': 1})
-heli.addParameter('k', 'Likelihood of war', 'slider', dflt=0.25, opts={'low': 0, 'high': 1, 'step': 0.01})
+heli.params.add('b', 'Benefit conferred', 'slider', dflt=6, opts={'low': 0, 'high': 10, 'step': 1})
+heli.params.add('c', 'Cost incurred', 'slider', dflt=2, opts={'low': 0, 'high': 10, 'step': 1})
+heli.params.add('k', 'Likelihood of war', 'slider', dflt=0.25, opts={'low': 0, 'high': 1, 'step': 0.01})
 
 #===============
 # BEHAVIOR
@@ -42,7 +42,7 @@ def demeInit(deme, model):
 	deme.addBreed('altruist', '#009900')
 	deme.addBreed('selfish', '#990000')
 	deme.addGood('payoff', '#000099', 1)
-	deme.addHook('agentStep', agentStep)
+	deme.hooks.add('agentStep', agentStep)
 
 #Odds of winning follow a sigmoid distribution in the difference in strength
 @heli.hook('demeMatch')
