@@ -36,6 +36,7 @@ class Helipad:
 		self.moneyGood = None
 		self.timer = False
 		self.visual = None
+		self._cut = False
 
 		#Default parameters
 		self.addPrimitive('agent', Agent, dflt=50, low=1, high=100)
@@ -400,6 +401,8 @@ class Helipad:
 
 		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
+	
+	def cutStep(self): self._cut = True
 
 	def step(self, stage=1):
 		self.t += 1
@@ -418,6 +421,7 @@ class Helipad:
 			return sf
 
 		for self.stage in range(1, self.stages+1):
+			self._cut = False
 			self.doHooks('modelStep', [self, self.stage])
 
 			#Sort agents and step them
@@ -442,7 +446,7 @@ class Helipad:
 					matchN = order.split('-')
 					matchN = int(matchN[1]) if len(matchN) > 1 else 2
 					matchpool = self.agents[prim].copy()
-					while len(matchpool) > len(agentpool) % matchN:
+					while len(matchpool) > len(agentpool) % matchN and not self._cut:
 						agents = []
 						for a in range(matchN):
 							agent = choice(matchpool)
@@ -469,10 +473,14 @@ class Helipad:
 
 					#Step any remainder agents
 					for agent in matchpool: agent.step(self.stage)
+					for agent in matchpool:
+						if not self._cut: agent.step(self.stage)
 
 				#Activation model
 				else:
 					for a in agentpool: a.step(self.stage)
+					for a in agentpool:
+						if not self._cut: a.step(self.stage)
 
 		self.data.collect(self)
 		for e in self.events.values():
@@ -661,9 +669,8 @@ class Helipad:
 
 		#Add agents
 		if diff > 0:
-			maxid = 1
-			for a in self.allagents.values():
-				if a.id > maxid: maxid = a.id #Figure out maximum existing ID
+			ids = [a.id for a in self.allagents.values()]
+			maxid = max(ids) if ids else 0 #Figure out maximum existing ID
 			for aId in range(maxid+1, maxid+int(diff)+1):
 				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.primitives[prim].breeds.keys(), self])
 				if breed is None: breed = list(self.primitives[prim].breeds.keys())[aId%len(self.primitives[prim].breeds)]

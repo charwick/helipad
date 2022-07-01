@@ -132,7 +132,7 @@ class Cpanel(VBox):
 			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set('filename')
-			if n=='stopafter' and not param.event: param.element.children[1].value = '10000'
+			if n=='stopafter' and not param.event and not param.get(): param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and param.event): param.set(False)
 
 		caip = self.model.doHooks('CpanelAboveItemParams', [self, None])

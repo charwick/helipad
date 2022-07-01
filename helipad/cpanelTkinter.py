@@ -190,7 +190,7 @@ class Cpanel(tk.Tk):
 		frame1 = tk.Frame(self, padx=10, pady=10, bg=bgcolors[fnum%2])
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3, sticky='w')
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3, sticky='w')
-		if not self.model.params['stopafter'].event: self.model.params['stopafter'].element.entryValue.set(10000)
+		if not self.model.params['stopafter'].event and not self.model.param('stopafter'): self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set('filename')
 		self.model.params['csv'].set(False)
 
