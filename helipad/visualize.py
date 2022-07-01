@@ -52,7 +52,7 @@ class MPLVisualization(BaseVisualization):
 				else: model.start()
 		self.addKeypress(' ', pause)
 
-		if isIpy():
+		if isNotebook():
 			from IPython import get_ipython
 			get_ipython().magic('matplotlib widget')
 		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
@@ -60,14 +60,15 @@ class MPLVisualization(BaseVisualization):
 	#Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
 	def launch(self, title, dim=None, pos=None):
-		if not isIpy(): self.fig.canvas.manager.set_window_title(title)
+		if not isNotebook():
+			self.fig.canvas.manager.set_window_title(title)
+			if hasattr(self.model, 'cpanel'): self.model.cpanel.setAppIcon()
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
 		self.fig.canvas.mpl_connect('key_press_event', self.sendEvent)
 		self.fig.canvas.mpl_connect('pick_event', self.sendEvent)
 		self.fig.canvas.mpl_connect('button_press_event', self.sendEvent)
 		self.lastUpdate = 0
-		if not isIpy() and hasattr(self.model, 'cpanel'): self.model.cpanel.setAppIcon()
 
 		#Resize and position graph window if applicable
 		fm = self.fig.canvas.manager
@@ -153,14 +154,14 @@ class TimeSeries(MPLVisualization):
 		if not self.activePlots: return #Windowless mode
 
 		self.resolution = 1
-		if isIpy():
+		if isNotebook():
 			plt.close() #Clean up after any previous runs
 			matplotlib.rcParams['figure.figsize'] = [9, 7]
 
 		#fig is the figure, plots is a list of AxesSubplot objects
 		#The Tkinter way of setting the title doesn't work in Jupyter
 		#The Jupyter way works in Tkinter, but also serves as the figure id, so new graphs draw on top of old ones
-		self.fig, plots = plt.subplots(len(self.activePlots), sharex=True, num=title if isIpy() else None)
+		self.fig, plots = plt.subplots(len(self.activePlots), sharex=True, num=title if isNotebook() else None)
 		super().launch(title)
 
 		if not isinstance(plots, ndarray): plots = asanyarray([plots]) #.subplots() tries to be clever & returns a different data type if len(plots)==1
@@ -256,7 +257,7 @@ class Charts(MPLVisualization):
 		n = len(self.activePlots)
 		x = ceil(sqrt(n))
 		y = ceil(n/x)
-		if isIpy():
+		if isNotebook():
 			plt.close() #Clean up after any previous runs
 			matplotlib.rcParams['figure.figsize'] = [9, 7]
 
@@ -345,7 +346,7 @@ class ChartPlot(Item):
 
 	def active(self, val, updateGUI=True):
 		self.viz.model.params['plots'].set(self.name, bool(val))
-		if updateGUI and not isIpy() and hasattr(self, 'check'):
+		if updateGUI and not isNotebook() and hasattr(self, 'check'):
 			self.check.set(val)
 
 	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.

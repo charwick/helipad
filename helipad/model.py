@@ -248,7 +248,7 @@ class Helipad:
 			if not param.runtime: param.disable() #Disable parameters that can't be changed during runtime
 
 		#Patch our async functions for compatibility with Spyder's event loop
-		if isIpy(True) and not isIpy():
+		if isIpy() and not isNotebook():
 			try:
 				import nest_asyncio
 				nest_asyncio.apply()
@@ -366,7 +366,7 @@ class Helipad:
 					self.doHooks('visualRefresh', [self, self.visual])
 
 				elif getattr(self, 'cpanel', None):
-					if isIpy(): await asyncio.sleep(0.001) #Listen for keyboard input
+					if isNotebook(): await asyncio.sleep(0.001) #Listen for keyboard input
 					else: self.cpanel.update() #Make sure we don't hang the interface if plotless
 
 				# Performance indicator
@@ -395,7 +395,7 @@ class Helipad:
 		#that the statement in the try block doesn't get executed…?
 		with warnings.catch_warnings():
 			warnings.simplefilter("ignore")
-			if isIpy(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
+			if isNotebook(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
 			else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
 
 	def stop(self, *args):
@@ -611,7 +611,7 @@ class Helipad:
 				self.params['num_'+k].value = makeDivisible(self.params['num_'+k].value, l, 'max')
 				self.params['num_'+k].default = makeDivisible(self.params['num_'+k].default, l, 'max')
 
-		if not isIpy():
+		if not isNotebook():
 			from helipad.cpanelTkinter import Cpanel
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
@@ -646,7 +646,7 @@ class Helipad:
 		self.doHooks('visualLaunch', [self, self.visual])
 
 		#If we're running in cpanel-less mode, hook through a Tkinter loop so it doesn't exit on pause
-		if not hasattr(self, 'cpanel') and not self.visual.isNull and not isIpy():
+		if not hasattr(self, 'cpanel') and not self.visual.isNull and not isNotebook():
 			from tkinter import Tk
 			self.root = Tk()
 			self.root.after(1, self.start)
@@ -836,6 +836,3 @@ class Hooks(funcStore):
 		if not name in self: self[name] = []
 		if prioritize: self[name].insert(0, function)
 		else: self[name].append(function)
-
-def makeDivisible(n, div, c='min'):
-	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)
