@@ -63,7 +63,7 @@ def war(demes, primitive, model, stage):
 
 @heli.hook
 def demeStep(deme, model, stage):
-	if stage > 1: deme.dontStepAgents = True
+	if stage > 1: deme.cutStep()
 
 	#Reproduce
 	if stage==2:

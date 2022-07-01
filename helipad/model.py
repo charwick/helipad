@@ -406,7 +406,6 @@ class Helipad:
 
 	def step(self, stage=1):
 		self.t += 1
-		if hasattr(self, 'dontStepAgents') and self.dontStepAgents: return self.t
 		self.doHooks('modelPreStep', [self])
 
 		#Reset per-period variables
@@ -472,13 +471,11 @@ class Helipad:
 						self.doHooks([prim+'Match', 'match'], [agents, prim, self, self.stage])
 
 					#Step any remainder agents
-					for agent in matchpool: agent.step(self.stage)
 					for agent in matchpool:
 						if not self._cut: agent.step(self.stage)
 
 				#Activation model
 				else:
-					for a in agentpool: a.step(self.stage)
 					for a in agentpool:
 						if not self._cut: a.step(self.stage)
 
@@ -822,11 +819,6 @@ class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
 		self.setup()
-		self.dontStepAgents = False
-
-	def step(self, stage):
-		self.dontStepAgents = False
-		super().step(stage)
 
 class Event:
 	def __init__(self, name, trigger, repeat=False, **kwargs):
@@ -857,6 +849,16 @@ class Event:
 		else:
 			self.data = None
 			self.triggered = False
+	#Deprecated in Helipad 1.4; remove in Helipad 1.6
+	@property
+	def dontStepAgents(self):
+		warnings.warn('MultiLevel.dontStepAgents is deprecated. Use Multilevel.cutStep() instead.', FutureWarning, 2)
+		return self._cut
+
+	@setter
+	def dontStepAgents(self, val):
+		warnings.warn('MultiLevel.dontStepAgents is deprecated. Use Multilevel.cutStep() instead.', FutureWarning, 2)
+		self._cut = val
 
 def makeDivisible(n, div, c='min'):
 	return n-n%div if c=='min' else n+(div-n%div if n%div!=0 else 0)
