@@ -23,14 +23,13 @@ class Helipad:
 		self.hooks = Hooks()
 		self.params = Params(self)
 		self.primitives = Primitives(self)
+		self.goods = Goods(self)				#List of goods
 
 		self.name = ''
 		self.agents = {}
-		self.goods = {}				#List of goods
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False		#Have we initialized?
-		self.moneyGood = None
 		self.timer = False
 		self.visual = None
 
@@ -103,57 +102,11 @@ class Helipad:
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
 
-	#For adding breeds and goods. Should not be called directly
-	def addItem(self, obj, name, color, prim=None, **kwargs):
-		if obj=='good':
-			itemDict = self.goods
-			paramDict = self.params.perGood
-		elif obj=='breed':
-			itemDict = self.primitives[prim].breeds
-			paramDict = self.params.perBreed
-		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'')
-
-		if name in itemDict:
-			warnings.warn(f'{obj} \'{name}\' already defined. Overriding…', None, 2)
-
-		cobj = color if isinstance(color, Color) else Color(color)
-		cobj2 = cobj.lighten()
-		itemDict[name] = Item(color=cobj, color2=cobj2, **kwargs)
-
-		#Make sure the parameter lists keep up with our items
-		for p in paramDict.values(): p.addKey(name)
-
-		return itemDict[name]
-
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
 			else: raise KeyError('Breed must specify which primitive it belongs to')
-		return self.addItem('breed', name, color, prim=prim)
-
-	def addGood(self, name, color, endowment=None, money=False, props={}):
-		if money:
-			if self.moneyGood is not None: print(f'Money good already specified as {self.moneyGood}. Overriding…')
-			self.moneyGood = name
-
-			#Add the M0 plot once we have a money good
-			if (self.visual is None or self.visual.isNull) and hasattr(self.visual, 'plots'):
-				try:
-					if not 'money' in self.visual.plots: self.visual.addPlot('money', 'Money', selected=False)
-				except: pass #Can't add plot if re-drawing the cpanel
-
-		#Add demand plot once we have at least 2 goods
-		if len(self.goods) == 1 and (self.visual is None or self.visual.isNull) and hasattr(self.visual, 'plots'):
-			try:
-				if not 'demand' in self.visual.plots: self.visual.addPlot('demand', 'Demand', selected=False)
-			except: pass
-
-		props['quantity'] = endowment
-		return self.addItem('good', name, color, money=money, props=props)
-
-	@property
-	def nonMoneyGoods(self):
-		return {k:v for k,v in self.goods.items() if not v.money}
+		return self.primitives[prim].breeds.add(name, color)
 
 	#Returns the value of the last function in the list
 	def doHooks(self, place, args):
@@ -187,7 +140,7 @@ class Helipad:
 
 		#Blank breeds for any primitives not otherwise specified
 		for k,p in self.primitives.items():
-			if len(p.breeds)==0: self.addBreed('', '#000000', prim=k)
+			if not len(p.breeds): p.breeds.add('', '#000000')
 
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
@@ -211,10 +164,10 @@ class Helipad:
 				for breed in p.keys:
 					self.data.addReporter(p.prim+'-'+n+'-'+breed, pReporter(p, breed))
 
-		if self.moneyGood is not None:
-			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.moneyGood, stat='sum'))
+		if self.goods.money is not None:
+			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
 			if self.visual is not None and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
-				self.visual.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.moneyGood].color)
+				self.visual.plots['money'].addSeries('M0', 'Monetary Base', self.goods[self.goods.money].color)
 
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
@@ -227,7 +180,7 @@ class Helipad:
 				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' Utility', b.color)
 
 		if len(self.goods) >= 2:
-			for good, g in self.nonMoneyGoods.items():
+			for good, g in self.goods.nonmonetary.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 				if self.visual is not None and hasattr(self.visual, 'plots'):
 					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' Demand', g.color)
@@ -731,6 +684,20 @@ class Helipad:
 	def removePrimitive(self, name):
 		warnings.warn('Model.removePrimitive() is deprecated and has been replaced with model.primitives.remove().', FutureWarning, 2)
 		return self.primitives.remove(name)
+	
+	def addGood(self, *args, **kwargs):
+		warnings.warn('Model.addGood() is deprecated and has been replaced with model.goods.add().', FutureWarning, 2)
+		return self.goods.add(*args, **kwargs)
+
+	@property
+	def moneyGood(self):
+		warnings.warn('Model.moneyGood is deprecated and has been replaced with model.goods.money.', FutureWarning, 2)
+		return self.goods.money
+
+	@property
+	def nonMoneyGoods(self):
+		warnings.warn('Model.nonMoneyGoods is deprecated and has been replaced with model.goods.nonmonetary.', FutureWarning, 2)
+		return self.goods.nonmonetary
 
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
@@ -752,6 +719,68 @@ class MultiLevel(baseAgent, Helipad):
 # CONTAINER CLASSES
 #==================
 
+#For adding breeds and goods. Should not be called directly
+class gandb(funcStore):
+	def __init__(self, model):
+		self.model = model
+	
+	def add(self, obj, name, color, prim=None, **kwargs):
+		if name in self:
+			warnings.warn(f'{obj} \'{name}\' already defined. Overriding…', None, 2)
+
+		cobj = color if isinstance(color, Color) else Color(color)
+		cobj2 = cobj.lighten()
+		self[name] = Item(color=cobj, color2=cobj2, **kwargs)
+
+		#Make sure the parameter lists keep up with our items
+		if obj=='good': paramDict = self.model.params.perGood
+		elif obj=='breed': paramDict = {k:v for k,v in self.model.params.perBreed.items() if v.prim==self.primitive}
+		else: raise ValueError('addItem obj parameter can only take either \'good\' or \'breed\'')
+		for p in paramDict.values(): p.addKey(name)
+
+		return self[name]
+
+class Goods(gandb):	
+	def add(self, name, color, endowment=None, money=False, props={}):
+		if money:
+			if self.money is not None:
+				print(f'Money good already specified as {self.money}. Overriding…')
+				self[self.money].money = False
+
+			#Add the M0 plot once we have a money good, only if we haven't done it before
+			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
+				try:
+					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', 'Money', selected=False)
+				except: pass #Can't add plot if re-drawing the cpanel
+
+		props['quantity'] = endowment
+		item = super().add('good', name, color, money=money, props=props)
+		
+		#Add demand plot once we have at least 2 goods
+		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
+			try:
+				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', 'Demand', selected=False)
+			except: pass
+		
+		return item
+
+	@property
+	def money(self):
+		for name,good in self.items():
+			if good.money: return name
+		return None
+
+	@property
+	def nonmonetary(self):
+		return {k:v for k,v in self.items() if not v.money}
+
+class Breeds(gandb):
+	def __init__(self, model, primitive):
+		self.primitive = primitive
+		super().__init__(model)
+
+	def add(self, name, color): return super().add('breed', name, color)
+
 class Primitives(funcStore):
 	def __init__(self, model):
 		self.model = model
@@ -766,7 +795,7 @@ class Primitives(funcStore):
 			plural=plural,
 			priority=priority,
 			order=order,
-			breeds={}
+			breeds=Breeds(self.model, name)
 		)
 		def popget(name, model):
 			prim = name.split('_')[1]

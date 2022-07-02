@@ -92,6 +92,13 @@
 	font-style: normal;
 	margin-right: 8px;
 }
+.helipad_info .widget-html-content { display: inline; }
+.helipad_info code {
+	background-color: rgba(0,0,0,0.075);
+	padding: 1px 5px;
+	font-size: 95%;
+}
+
 .helipad_cpanel.invalid > * {
 	opacity: 0.25;
 	pointer-events: none;

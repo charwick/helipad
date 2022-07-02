@@ -1,4 +1,5 @@
 # A model of the relative price effects of monetary shocks via helicopter drop vs. by open market operations.
+# Includes a banking system to distribute OMOs. Requires the basic Helicopter.py in the same folder.
 # Download the paper at https://ssrn.com/abstract=2545488
 
 from numpy import isnan, mean, array
@@ -37,7 +38,7 @@ class Bank(baseAgent):
 	#Any difference gets disbursed as interest on deposits
 	@property
 	def assets(self):
-		return self.stocks[self.model.moneyGood] + sum(l.owe for l in self.credit.values()) #Reserves
+		return self.stocks[self.model.goods.money] + sum(l.owe for l in self.credit.values()) #Reserves
 
 	@property
 	def liabilities(self):
@@ -45,13 +46,13 @@ class Bank(baseAgent):
 
 	@property
 	def loans(self):
-		return self.assets - self.stocks[self.model.moneyGood]
+		return self.assets - self.stocks[self.model.goods.money]
 
 	@property
 	def reserveRatio(self):
 		l = self.liabilities
 		if l == 0: return 1
-		else: return self.stocks[self.model.moneyGood] / l
+		else: return self.stocks[self.model.goods.money] / l
 
 	@property
 	def realInterest(self): return self.i - self.inflation
@@ -140,11 +141,11 @@ class Bank(baseAgent):
 		#Adjust in proportion to the rate of reserve change
 		#Positive deltaReserves indicates falling reserves; negative deltaReserves rising inventory
 		if self.model.t > 2:
-			deltaReserves = (self.lastReserves - self.stocks[self.model.moneyGood])/self.model.cb.P
+			deltaReserves = (self.lastReserves - self.stocks[self.model.goods.money])/self.model.cb.P
 			targeti *= (1 + deltaReserves/(20 ** self.model.param('pSmooth')))
 		self.i = (self.i * 24 + targeti)/25										#Interest rate stickiness
 
-		self.lastReserves = self.stocks[self.model.moneyGood]
+		self.lastReserves = self.stocks[self.model.goods.money]
 
 		#Upper and lower interest rate bounds
 		self.i = min(self.i, 1+self.inflation)		#interest rate cap at 100%
@@ -207,7 +208,7 @@ def bankChecks(model, val=None):
 	model.param('num_bank', 0 if nobank else 1)
 	for i in ['debt', 'rr', 'i']:
 		model.params['plots'].element.disabled(i, nobank)
-	for e in model.params['liqPref'].element.values():
+	for e in model.params['liqPref'].elements.values():
 		e.config(state='disabled' if nobank else 'normal')
 
 heli.hooks.add('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
@@ -303,7 +304,7 @@ def agentStep(agent, model, stage):
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
 		tCash = agent.liqPref*agent.balance
-		agent.bank.deposit(agent, agent.stocks[agent.model.moneyGood]-tCash)
+		agent.bank.deposit(agent, agent.stocks[agent.model.goods.money]-tCash)
 
 #Use the bank if the bank exists
 @heli.hook
@@ -346,7 +347,7 @@ def checkBalance(agent, balance, model):
 def cbstep(self):
 	#Record macroeconomic vars at the end of the last stage
 	#Getting demand has it lagged one period…
-	self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods)
+	self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.goods.nonmonetary)
 	if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 	self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
 
@@ -361,17 +362,17 @@ def expand(self, amount):
 
 	#Deposit with each bank in proportion to their liabilities
 	if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
-		self.stocks[self.model.moneyGood] += amount
+		self.stocks[self.model.goods.money] += amount
 		self.model.agents['bank'][0].deposit(self, amount) #Budget constraint taken care of in .pay()
 
 	elif self.model.param('dist') == 'lump':
 		amt = amount/self.model.param('num_agent')
 		for a in self.model.agents['agent']:
-			a.stocks[self.model.moneyGood] += amt
+			a.stocks[self.model.goods.money] += amt
 	else:
 		M0 = self.M0
 		for a in self.model.allagents.values():
-			a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
+			a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
 CentralBank.expand = expand
 
 def M2(self):

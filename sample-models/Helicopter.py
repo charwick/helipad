@@ -19,11 +19,11 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.nonMoneyGoods) * M0/(model.param('num_agent')*(len(model.nonMoneyGoods)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds)))
-		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.nonMoneyGoods}
+		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds)))
+		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.goods.nonmonetary}
 
-		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.nonMoneyGoods}
-		self.portion = {g:1/(len(model.nonMoneyGoods)) for g in model.nonMoneyGoods} #Capital allocation
+		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent') for g in model.goods.nonmonetary}
+		self.portion = {g:1/(len(model.goods.nonmonetary)) for g in model.goods.nonmonetary} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
 
@@ -47,9 +47,9 @@ class Store(baseAgent):
 			self.pay(a, wage)
 			labor += 1
 
-		tPrice = sum(self.price[good] for good in self.model.nonMoneyGoods)
+		tPrice = sum(self.price[good] for good in self.model.goods.nonmonetary)
 		avg, stdev = {},{} #Hang onto these for use with credit calculations
-		for i in self.model.nonMoneyGoods:
+		for i in self.model.goods.nonmonetary:
 
 			#Keep track of typical demand
 			#Target sufficient inventory to handle 1.5 standard deviations above mean demand for the last 50 periods
@@ -93,9 +93,9 @@ def setup():
 	AgentGoods = {}
 	for b in breeds:
 		heli.addBreed(b[0], b[2], prim='agent')
-		heli.addGood(b[1], b[2])
+		heli.goods.add(b[1], b[2])
 		AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
-	heli.addGood('cash', '#009900', money=True)
+	heli.goods.add('cash', '#009900', money=True)
 
 	heli.name = 'Helicopter'
 	heli.order = 'random'
@@ -186,7 +186,7 @@ def setup():
 		# viz.plots['wage'].addSeries('expWage', 'Expected Wage', '#999999')
 
 	#Do this one separately so it draws on top
-	for good, g in heli.nonMoneyGoods.items():
+	for good, g in heli.goods.nonmonetary.items():
 		heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
 		viz.plots['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
 		heli.data.addReporter('price-'+good, heli.data.agentReporter('price', 'store', good=good))
@@ -200,7 +200,7 @@ def setup():
 	viz.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
 	viz.plots['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 
-	for r in combinations(heli.nonMoneyGoods.keys(), 2):
+	for r in combinations(heli.goods.nonmonetary.keys(), 2):
 		heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
 		c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
 		viz.plots['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
@@ -255,7 +255,7 @@ def setup():
 		agent.expCons = model.param(('prod', 'good', agent.item))
 
 		#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
-		agent.stocks[model.moneyGood] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
+		agent.stocks[model.goods.money] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
 
 	@heli.hook
 	def agentStep(agent, model, stage):
@@ -265,7 +265,7 @@ def setup():
 		basicq = q						#Save this for later since we adjust q
 		bought = agent.buy(agent.store, agent.item, q, itemPrice)
 		if bought < q: model.shortages[agent.item] += q-bought #Record shortages
-		if agent.stocks[model.moneyGood] < 0: agent.stocks[model.moneyGood] = 0	#Floating point error gives infinitessimaly negative cash sometimes
+		if agent.stocks[model.goods.money] < 0: agent.stocks[model.goods.money] = 0	#Floating point error gives infinitessimaly negative cash sometimes
 		agent.utils = agent.utility.calculate({'good': agent.stocks[agent.item], 'rbal': agent.balance/itemPrice}) if hasattr(agent,'utility') else 0	#Get utility
 		agent.stocks[agent.item] = 0 #Consume goods
 
@@ -281,7 +281,7 @@ def setup():
 
 	@heli.hook
 	def modelPreStep(model):
-		model.shortages = {g:0 for g in model.nonMoneyGoods}
+		model.shortages = {g:0 for g in model.goods.nonmonetary}
 
 	@heli.hook
 	def modelPostSetup(model): model.cb = CentralBank(0, model)
@@ -334,7 +334,7 @@ class CentralBank(baseAgent):
 		super().__init__(None, id, model)
 		self.id = id
 		self.model = model
-		self.stocks[self.model.moneyGood] = M0 #Has to have assets in order to contract
+		self.stocks[self.model.goods.money] = M0 #Has to have assets in order to contract
 
 		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
 
@@ -342,7 +342,7 @@ class CentralBank(baseAgent):
 
 		#Record macroeconomic vars at the end of the last stage
 		#Getting demand has it lagged one period…
-		self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.nonMoneyGoods)
+		self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.goods.nonmonetary)
 		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
 		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
 
@@ -355,15 +355,15 @@ class CentralBank(baseAgent):
 		if self.model.param('dist') == 'lump':
 			amt = amount/self.model.param('num_agent')
 			for a in self.model.agents['agent']:
-				a.stocks[self.model.moneyGood] += amt
+				a.stocks[self.model.goods.money] += amt
 		else:
 			M0 = self.M0
 			for a in self.model.allagents.values():
-				a.stocks[self.model.moneyGood] += a.stocks[self.model.moneyGood]/M0 * amount
+				a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
 
 	@property
 	def M0(self):
-		return self.model.data.agentReporter('stocks', 'all', good=self.model.moneyGood, stat='sum')(self.model)
+		return self.model.data.agentReporter('stocks', 'all', good=self.model.goods.money, stat='sum')(self.model)
 
 	@M0.setter
 	def M0(self, value): self.expand(value - self.M0)

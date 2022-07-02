@@ -41,7 +41,7 @@ def demeInit(deme, model):
 	deme.param('num_agent', 20)
 	deme.addBreed('altruist', '#009900')
 	deme.addBreed('selfish', '#990000')
-	deme.addGood('payoff', '#000099', 1)
+	deme.goods.add('payoff', '#000099', 1)
 	deme.hooks.add('agentStep', agentStep)
 
 #Odds of winning follow a sigmoid distribution in the difference in strength

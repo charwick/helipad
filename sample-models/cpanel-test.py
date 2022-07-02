@@ -17,7 +17,7 @@ breeds = [
 AgentGoods = {}
 for b in breeds:
 	heli.addBreed(b[0], b[2], prim='agent')
-	heli.addGood(b[1], b[2])
+	heli.goods.add(b[1], b[2])
 
 def gcallback(model, name, val):
 	print(name, '=', val)
@@ -47,7 +47,7 @@ heli.params.add('imenu', 'Item Menu', 'menu', per='breed', dflt={'hobbit': 'thre
 	'three': 'Option three'
 }, callback=icallback, desc="A per-breed menu")
 heli.params.add('icheckentry', 'Item Checkentry', 'checkentry', per='good', dflt={'jam': False, 'axe': 'wood'}, callback=icallback, desc="A per-good checkentry")
-# heli.addGoodParam('ilogslider', 'Item Logslider', 'slider', dflt={'axe': 5, 'lembas': 21}, opts=[1,2,3,5,8,13,21,34], callback=icallback, desc="A per-item logslider")
+# heli.params.add('ilogslider', 'Item Logslider', 'slider', per='good', dflt={'axe': 5, 'lembas': 21}, opts=[1,2,3,5,8,13,21,34], callback=icallback, desc="A per-item logslider")
 
 heli.params.add('gcheckgrid', 'Global Checkgrid', 'checkgrid',
 	opts={'gondor':('Gondor', 'Currently calling for aid'), 'isengard':'Isengard', 'rohan':'Rohan', 'rivendell':'Rivendell', 'khazad':('Khazad-dûm', 'Nice diacritic')},

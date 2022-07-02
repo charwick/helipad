@@ -29,7 +29,7 @@ heli.params.add('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'h
 def reset(model):
 	for a in model.agents['agent']: a.stocks['payoff'] = 0
 
-heli.addGood('payoff','#009900')
+heli.goods.add('payoff','#009900')
 
 #Store associated colors and default-checked state to cycle over later
 strategies = {
@@ -155,7 +155,7 @@ def modelPreSetup(model):
 	#Clear breeds from the previous run
 	for b in model.primitives['agent'].breeds:
 		model.data.removeReporter(b+'-proportion')
-	model.primitives['agent'].breeds = {}
+	model.primitives['agent'].breeds.clear()
 
 	for k in model.param('strategies'):
 		model.addBreed(k, strategies[k][1])

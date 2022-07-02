@@ -25,7 +25,7 @@ heli.param('num_agent', 200)
 
 heli.addBreed('male', 'blue')
 heli.addBreed('female', 'pink')
-heli.addGood('energy', 'red', 5)
+heli.goods.add('energy', 'red', 5)
 
 #===============
 # BEHAVIOR

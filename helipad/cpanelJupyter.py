@@ -140,7 +140,7 @@ class Cpanel(VBox):
 
 		#Per-good parameters
 		for param in model.params.perGood.values():
-			param.element = constructAccordion(param, model.nonMoneyGoods)
+			param.element = constructAccordion(param, model.goods.nonmonetary)
 			self.children += param.element,
 
 		#Per-breed parameters
@@ -183,6 +183,7 @@ class Cpanel(VBox):
 		if len(model.shocks):
 			def sfuncButton(slef, *args): slef.do(self.model)
 			model.shocks.Shock.setButton = sfuncButton
+			model.params['shocks'].elements = {}
 			children = []
 			for shock in model.shocks.shocksExceptButtons.values():
 				shock.element = interactive(shock.setCallback, val=shock.selected)
@@ -205,7 +206,7 @@ class Cpanel(VBox):
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += cbot,
 
-		self.postinstruct = self.displayAlert('After setting parameter values, run launchVisual() or start() to start the model.')
+		self.postinstruct = self.displayAlert('After setting parameter values, run <code>launchVisual()</code> or <code>start()</code> to start the model.')
 		if not redraw:
 			display(self)
 
@@ -267,9 +268,9 @@ class Cpanel(VBox):
 				self.stopbutton.layout.visibility = 'hidden'
 
 	def displayAlert(self, text, inCpanel=True):
-		element = Label(value=text)
-		element.add_class('helipad_info')
-		if inCpanel: self.children += (element,)
+		element = HTML(value=text)
+		element.add_class('helipad_info') #Latter applies some built-in styles to the contents
+		if inCpanel: self.children += element,
 		else: display(element)
 		return element
 
@@ -278,7 +279,7 @@ class Cpanel(VBox):
 		self.add_class('invalid')
 		warning = Label(value=message)
 		warning.add_class('helipad_modal')
-		self.children += (warning,)
+		self.children += warning,
 		for p in self.model.allParams: del p.element
 		return warning
 
