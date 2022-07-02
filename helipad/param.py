@@ -370,13 +370,20 @@ class ParamGroup:
 #Also delete any interface elements
 class fStoreWithInterface(funcStore):
 	def remove(self, name):
-		element = self[name].element if isinstance(name, str) and name in self and getattr(self.model, 'cpanel', False) else None
-		val = super().remove(name)
+		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
+
+		if name not in self: return False
+		if getattr(self[name], 'config', False): raise ValueError('Cannot remove built-in parameters.')
+		self._destroy(self[name])
+
+		del self[name]
+		return True
+
+	def _destroy(self, item):
+		element = item.element if getattr(item, 'element', False) else None
 		if element:
 			if not isNotebook(): element.forget()
 			else: element.close()
-			del(element)
-		return val
 
 class Params(fStoreWithInterface):
 	multi = False
@@ -420,11 +427,20 @@ class Params(fStoreWithInterface):
 		self[name] = pclass(**args)
 		if getattr(self, 'cpanel', False) and isNotebook(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
 		return self[name]
-	
+
 	def group(self, name, params, opened=True):
 		pg = ParamGroup(name, {p: self[p] for p in params}, opened)
 		self.groups.append(pg)
 		return pg
+
+	#Save the configuration parameters
+	def clear(self):
+		for p in self.values():
+			if getattr(p, 'config', False): continue
+			self._destroy(p)
+		configs = {k:v for k,v in self.items() if getattr(v, 'config', False)}
+		super().clear()
+		self.update(configs)
 
 	@property
 	def globals(self): return {k:v for k,v in self.items() if v.per is None}
@@ -499,6 +515,10 @@ class Shocks(fStoreWithInterface):
 		))
 
 		if timerFunc != 'button': self.model.params['shocks'].addItem(name, name, selected=active)
+
+	def clear(self):
+		if getattr(self, 'element'): self._destroy(self)
+		super().clear()
 
 	#Deprecated. Remove in Helipad 1.6
 	def register(self, *args, **kwargs):

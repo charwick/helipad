@@ -198,6 +198,7 @@ class Cpanel(VBox):
 				buttons.append(shock.element)
 			children.append(HBox(buttons))
 			model.params['shocks'].element = Accordion(children=[VBox(children)])
+			model.shocks.element = model.params['shocks'].element
 			model.params['shocks'].element.set_title(0, 'Shocks')
 			self.children += model.params['shocks'].element,
 

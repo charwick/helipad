@@ -30,8 +30,6 @@ class Item:
 
 class funcStore(dict):
 	multi = False
-	def __init__(self):
-		self.clear()
 
 	def add(self, name, function):
 		if self.multi:

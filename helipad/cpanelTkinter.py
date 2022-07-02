@@ -271,21 +271,21 @@ class Cpanel(tk.Tk):
 
 		#Shock checkboxes and buttons
 		if len(self.model.shocks):
-			frame8 = expandableFrame(self, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
-			frame8.checks = {}
+			self.model.shocks.element = expandableFrame(self, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			self.model.shocks.element.checks = {}
 			active = self.model.param('shocks')
-			self.model.params['shocks'].element = frame8
+			self.model.params['shocks'].element = self.model.shocks.element
 			for shock in self.model.shocks.shocksExceptButtons.values():
 				bv = tk.BooleanVar(value=shock.name in active)
-				shock.element = tk.Checkbutton(frame8.subframe, text=shock.name, var=bv, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor='w', command=shock.setCallback)
+				shock.element = tk.Checkbutton(self.model.shocks.element.subframe, text=shock.name, var=bv, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor='w', command=shock.setCallback)
 				shock.element.BooleanVar = bv #To set via the shock object
-				frame8.checks[shock.name] = bv #To set via the shock parameter
+				self.model.shocks.element.checks[shock.name] = bv #To set via the shock parameter
 				if shock.desc is not None: Tooltip(shock.element, shock.desc)
 				shock.element.pack(fill='both')
 
 			b=0
 			if len(self.model.shocks.buttons):
-				bframe = tk.Frame(frame8.subframe, bg=bgcolors[fnum%2])
+				bframe = tk.Frame(self.model.shocks.element.subframe, bg=bgcolors[fnum%2])
 				for c in range(2): bframe.columnconfigure(c ,weight=1)
 				for shock in self.model.shocks.buttons.values():
 					shock.element = tk.Button(bframe, text=shock.name, command=shockCallback(shock.name), padx=10, pady=10, highlightbackground=bgcolors[fnum%2])
@@ -293,7 +293,7 @@ class Cpanel(tk.Tk):
 					if shock.desc is not None: Tooltip(shock.element, shock.desc)
 					b+=1
 				bframe.pack(fill='both')
-			frame8.pack(fill='x', side='top')
+			self.model.shocks.element.pack(fill='x', side='top')
 
 		cbot = self.model.doHooks('CpanelBottom', [self, bgcolors[fnum%2]])
 		if cbot:
