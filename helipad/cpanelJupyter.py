@@ -34,7 +34,7 @@ class Cpanel(VBox):
 			#Have to return a different function since Ipywidgets bases the interactive off the function signature
 			if param.type=='checkentry':
 				def sv2(b,s):
-					els = param.element if item is None else param.element[item]
+					els = param.element if item is None else param.elements[item]
 					els.children[1].disabled = not b
 					#Coercing an int can fail, so if there's an exception, reset the textbox content
 					try:
@@ -77,26 +77,26 @@ class Cpanel(VBox):
 					i.children[1].disabled = True
 					i.add_class('helipad_checkentry_func')
 			elif param.type=='checkgrid':
-				param.element = {}
+				param.elements = {}
 				for k,v in param.opts.items():
 					if not isinstance(v, (tuple, list)): v = (v, None)
 					elif len(v) < 2: v = (v[0], None)
-					param.element[k] = interactive(param.setVar(k), val=param.vars[k])
-					param.element[k].children[0].description = v[0]
-					param.element[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
+					param.elements[k] = interactive(param.setVar(k), val=param.vars[k])
+					param.elements[k].children[0].description = v[0]
+					param.elements[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
 
 				#Toggle-all button
 				#Would like to put it in .p-Collapse-header, but I don't think I can place an element in there
 				#So append it to the children and we'll absolutely position it to the right place
-				param.element['toggleAll'] = Button(icon='check')
+				param.elements['toggleAll'] = Button(icon='check')
 				def toggleAll(b=None):
 					v = False if [c.children[0].value for c in param.element.values() if  not isinstance(c, Button) and c.children[0].value] else True
 					for c in param.element.values():
 						if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
-				param.element['toggleAll'].on_click(toggleAll)
-				param.element['toggleAll'].add_class('helipad_toggleAll')
+				param.elements['toggleAll'].on_click(toggleAll)
+				param.elements['toggleAll'].add_class('helipad_toggleAll')
 
-				param.containerElement = HBox(list(param.element.values()))
+				param.containerElement = HBox(list(param.elements.values()))
 				i = Accordion(children=[param.containerElement])
 				i.set_title(0, title)
 				i.add_class('helipad_checkgrid')
@@ -114,11 +114,11 @@ class Cpanel(VBox):
 			return i
 
 		def constructAccordion(param, itemList):
-			param.element = {}
+			param.elements = {}
 			for item, good in itemList.items():
-				param.element[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
+				param.elements[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
 
-			accordion = Accordion(children=[HBox(list(param.element.values()))])
+			accordion = Accordion(children=[HBox(list(param.elements.values()))])
 			accordion.set_title(0, param.title)
 			accordion.add_class('helipad_param_peritem helipad_paramgroup')
 			return accordion
@@ -140,11 +140,13 @@ class Cpanel(VBox):
 
 		#Per-good parameters
 		for param in model.params.perGood.values():
-			self.children += constructAccordion(param, model.nonMoneyGoods),
+			param.element = constructAccordion(param, model.nonMoneyGoods)
+			self.children += param.element,
 
 		#Per-breed parameters
 		for param in model.params.perBreed.values():
-			self.children += constructAccordion(param, param.keys),
+			param.element = constructAccordion(param, param.keys)
+			self.children += param.element,
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
 		if cap: self.children += cap,
@@ -171,8 +173,8 @@ class Cpanel(VBox):
 		#Checkgrids
 		for param in model.params.values():
 			if param.type!='checkgrid' or param.name=='shocks': continue
-			acc = renderParam(param, None, param.title, None)
-			if acc is not None: self.children += acc,
+			param.element = renderParam(param, None, param.title, None)
+			if param.element is not None: self.children += param.element,
 
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
 		if cas: self.children += cas,
@@ -181,14 +183,13 @@ class Cpanel(VBox):
 		if len(model.shocks):
 			def sfuncButton(slef, *args): slef.do(self.model)
 			model.shocks.Shock.setButton = sfuncButton
-			model.params['shocks'].element = {}
 			children = []
 			for shock in model.shocks.shocksExceptButtons.values():
 				shock.element = interactive(shock.setCallback, val=shock.selected)
 				shock.element.children[0].description = shock.name
 				shock.element.children[0].description_tooltip = shock.desc if shock.desc is not None else ''
 				children.append(shock.element)
-				model.params['shocks'].element[shock.name] = shock.element #For setting via model.param()
+				model.params['shocks'].elements[shock.name] = shock.element #For setting via model.param()
 			buttons = []
 			for shock in model.shocks.buttons.values():
 				shock.element = Button(description=shock.name, icon='bolt')
@@ -196,9 +197,9 @@ class Cpanel(VBox):
 				shock.element.description_tooltip = shock.desc if shock.desc is not None else ''
 				buttons.append(shock.element)
 			children.append(HBox(buttons))
-			sacc = Accordion(children=[VBox(children)])
-			sacc.set_title(0, 'Shocks')
-			self.children += sacc,
+			model.params['shocks'].element = Accordion(children=[VBox(children)])
+			model.params['shocks'].element.set_title(0, 'Shocks')
+			self.children += model.params['shocks'].element,
 
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += cbot,

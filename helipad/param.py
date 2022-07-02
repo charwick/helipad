@@ -36,7 +36,7 @@ class Param(Item):
 		#Jupyter requires an explicit update for all parameter types.
 		if updateGUI and isNotebook() and hasattr(self, 'element'):
 			if self.per is None: self.element.children[0].value = val
-			else: self.element[item].children[0].value = val
+			else: self.elements[item].children[0].value = val
 
 	#Don't override this one
 	def set(self, val, item=None, updateGUI=True):
@@ -63,7 +63,7 @@ class Param(Item):
 
 	def disabled(self, disable):
 		if not hasattr(self, 'element'): return
-		for e in ([self.element] if self.per is None else self.element.values()):
+		for e in ([self.element] if self.per is None else self.elements.values()):
 			if isNotebook():
 				for i in e.children: i.disabled = disable
 			else:
@@ -100,7 +100,7 @@ class MenuParam(Param):
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 		if updateGUI and not isNotebook() and hasattr(self, 'element'):
-			sv = self.element if self.per is None else self.element[item]
+			sv = self.element if self.per is None else self.elements[item]
 			sv.StringVar.set(self.opts[val]) #Saved the StringVar here
 		else: super().setParent(val, item, updateGUI)
 
@@ -118,7 +118,7 @@ class CheckParam(Param):
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 		if updateGUI and not isNotebook() and hasattr(self, 'element'):
-			sv = self.element if self.per is None else self.element[item]
+			sv = self.element if self.per is None else self.elements[item]
 			sv.BooleanVar.set(val) #Saved the BooleanVar here
 		else: super().setParent(val, item, updateGUI)
 
@@ -139,7 +139,7 @@ class SliderParam(Param):
 		#to explicitly push the value to the slider if necessary
 		if updateGUI and hasattr(self, 'element') and not isNotebook():
 			if self.per is None: self.element.set(val)
-			else: self.element[item].set(val)
+			else: self.elements[item].set(val)
 
 	def getSpecific(self, item=None):
 		v = super().getSpecific(item)
@@ -166,8 +166,8 @@ class SliderParam(Param):
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
 
-		if isNotebook() and hasattr(self, 'element') and self.element is not None and (self.per is None or item in self.element):
-			el = self.element if self.per is None else self.element[item]
+		if isNotebook() and hasattr(self, 'element') and self.element is not None and (self.per is None or item in self.elements):
+			el = self.element if self.per is None else self.elements[item]
 
 			#Regular slider update
 			if updateGUI and isinstance(self.opts, dict): el.children[0].value = val
@@ -198,11 +198,11 @@ class CheckentryParam(Param):
 			else: return self.svar if self.bvar else False
 		#Per-item parameter, get all
 		elif item is None:
-			if hasattr(self, 'element') and not isNotebook(): return {k: v.get() for k,v in self.element.items()}
+			if hasattr(self, 'elements') and not isNotebook(): return {k: v.get() for k,v in self.elements.items()}
 			else: return {k: self.svar[k] if self.bvar[k] else False for k in self.keys}
 		#Per-item parameter, get one
 		else:
-			if hasattr(self, 'element') and item in self.element and not isNotebook(): return self.element[item].get()
+			if hasattr(self, 'elements') and item in self.elements and not isNotebook(): return self.elements[item].get()
 			else: return self.svar[item] if self.bvar[item] else False
 
 	def setSpecific(self, val, item=None, updateGUI=True):
@@ -246,21 +246,21 @@ class CheckentryParam(Param):
 				self.svar = val
 				if isNotebook() and hasattr(self, 'element'): self.element.children[1].disabled = False
 		else:
-			if hasattr(self, 'element') and not isNotebook(): self.element[item].set(val)
+			if hasattr(self, 'elements') and not isNotebook(): self.elements[item].set(val)
 			elif isinstance(val, bool): self.bvar[item] = val
 			elif isinstance(val, self.entryType):
 				self.bvar[item] = True
 				self.svar[item] = val
 
 		if updateGUI and isNotebook() and hasattr(self, 'element'):
-			els = self.element.children if self.per is None else self.element[item].children
+			els = self.element.children if self.per is None else self.elements[item].children
 			els[0].value = val != False
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 
 	#Only re-enable the textbox if the checkbox is checked
 	def disabled(self, disable):
 		if hasattr(self, 'element') and isNotebook() and not disable:
-			for e in ([self.element] if self.per is None else self.element.values()):
+			for e in ([self.element] if self.per is None else self.elements.values()):
 				e.children[0].disabled = False
 				if e.children[0].value: e.children[1].disabled = False
 		else: super().disabled(disable)
@@ -282,8 +282,8 @@ class CheckgridParam(Param):
 	def keys(self): return list(self.vars.keys())
 
 	def getSpecific(self, item=None):
-		useElement = hasattr(self, 'element') and not isNotebook() and self.name!='shocks'
-		vals = self.element if useElement else self.vars
+		useElement = hasattr(self, 'elements') and not isNotebook() and self.name!='shocks'
+		vals = self.elements if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 
@@ -301,7 +301,7 @@ class CheckgridParam(Param):
 			if hasattr(self, 'element') and not isNotebook(): self.element.checks[item].set(val)
 			self.vars[item] = val
 
-			if updateGUI and isNotebook() and hasattr(self, 'element'): self.element[item].children[0].value = val
+			if updateGUI and isNotebook() and hasattr(self, 'elements'): self.elements[item].children[0].value = val
 
 	@property
 	def range(self):
@@ -310,8 +310,8 @@ class CheckgridParam(Param):
 		return combos
 
 	def disabled(self, disable):
-		if hasattr(self, 'element') and isNotebook():
-			for e in self.element.values():
+		if hasattr(self, 'elements') and isNotebook():
+			for e in self.elements.values():
 				if hasattr(e, 'children'): e.children[0].disabled = disable
 		else: super().disabled(disable)
 
@@ -330,10 +330,10 @@ class CheckgridParam(Param):
 		#Refresh
 		if getattr(self, 'containerElement', False):
 			from ipywidgets import interactive
-			self.element[name] = interactive(self.setVar(name), val=selected)
-			self.element[name].children[0].description = label
-			if position is None or position > len(self.vars): self.containerElement.children += (self.element[name],)
-			else: self.containerElement.children = self.containerElement.children[:position-1] + (self.element[name],) + self.containerElement.children[position-1:]
+			self.elements[name] = interactive(self.setVar(name), val=selected)
+			self.elements[name].children[0].description = label
+			if position is None or position > len(self.vars): self.containerElement.children += (self.elements[name],)
+			else: self.containerElement.children = self.containerElement.children[:position-1] + (self.elements[name],) + self.containerElement.children[position-1:]
 
 		self.vars[name] = selected
 		if selected: self.default.append(name)
@@ -367,7 +367,18 @@ class ParamGroup:
 # CONTAINER CLASSES
 #==================
 
-class Params(funcStore):
+#Also delete any interface elements
+class fStoreWithInterface(funcStore):
+	def remove(self, name):
+		element = self[name].element if isinstance(name, str) and name in self and getattr(self.model, 'cpanel', False) else None
+		val = super().remove(name)
+		if element:
+			if not isNotebook(): element.forget()
+			else: element.close()
+			del(element)
+		return val
+
+class Params(fStoreWithInterface):
 	multi = False
 
 	def __init__(self, model):
@@ -425,7 +436,7 @@ class Params(funcStore):
 	def perGood(self): return {k:v for k,v in self.items() if v.per=='good'}
 
 #This object is instantiated once and lives in model.shocks
-class Shocks(funcStore):
+class Shocks(fStoreWithInterface):
 	multi = False
 
 	def __init__(self, model):

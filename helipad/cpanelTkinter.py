@@ -26,7 +26,7 @@ class Cpanel(tk.Tk):
 				#Different widgets send different things to the callback…
 				if param.type=='slider': val = float(val)
 				elif param.type=='menu': val = {y:x for x,y in param.opts.items()}[val]
-				elif param.type=='check': val = (param.element if item is None else param.element[item]).BooleanVar.get()
+				elif param.type=='check': val = (param.element if item is None else param.elements[item]).BooleanVar.get()
 
 				#Parameters that don't update automatically
 				if param.type in ['slider', 'menu', 'check']: param.set(val, item, updateGUI=False)
@@ -100,10 +100,10 @@ class Cpanel(tk.Tk):
 
 			#Parent frame for per-item parameters
 			if param.per is not None and item is None:
-				expFrame = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
-				efSub = expFrame.subframe
+				param.element = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
+				efSub = param.element.subframe
 				i=0
-				param.element = {}
+				param.elements = {}
 				for name, b in param.keys.items():
 					if hasattr(b, 'money') and b.money: continue
 
@@ -119,7 +119,7 @@ class Cpanel(tk.Tk):
 						for c in range(2): efSub.columnconfigure(c, weight=1)
 
 					i+=1
-				return expFrame
+				return param.element
 
 			#Single parameters, including the individual per-item parameters
 			else:
@@ -177,9 +177,8 @@ class Cpanel(tk.Tk):
 
 				if param.desc is not None: Tooltip(wrap, param.desc)
 
-				if item is None:
-					param.element = el
-				else: param.element[item] = el
+				if item is None: param.element = el
+				else: param.elements[item] = el
 				return wrap
 
 		ctop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
