@@ -63,7 +63,7 @@ class Helipad:
 			self.params.add('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.params.add('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.params.add('refresh', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
-			self.params.add('shocks', 'Shocks', 'checkgrid', opts={}, dflt={}, runtime=True, config=True)
+			self.params['shocks'] = self.shocks
 
 			#Check for updates
 			from helipad.__init__ import __version__
@@ -158,10 +158,10 @@ class Helipad:
 			if p.type == 'hidden' or getattr(p, 'config', False): continue	#Skip hidden and config parameters
 			if p.per is None: self.data.addReporter(n, pReporter(p))
 			elif p.per == 'good':
-				for good in p.keys:
+				for good in p.pKeys:
 					self.data.addReporter(n+'-'+good, pReporter(p, good))
 			elif p.per == 'breed':
-				for breed in p.keys:
+				for breed in p.pKeys:
 					self.data.addReporter(p.prim+'-'+n+'-'+breed, pReporter(p, breed))
 
 		if self.goods.money is not None:

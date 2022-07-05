@@ -104,17 +104,17 @@ class baseAgent:
 	#Price is per-unit
 	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
 	def buy(self, partner, good, q, p):
-		if self.model.moneyGood is None: raise RuntimeError('Buy function requires a monetary good to be specified')
+		if self.model.goods.money is None: raise RuntimeError('Buy function requires a monetary good to be specified')
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
 
 		before = self.stocks[good]
-		self.trade(partner, self.model.moneyGood, p*q, good, q)
+		self.trade(partner, self.model.goods.money, p*q, good, q)
 		return self.stocks[good] - before
 
 	#Unilateral
 	def pay(self, recipient, amount):
-		if self.model.moneyGood is None: raise RuntimeError('Pay function requires a monetary good to be specified')
+		if self.model.goods.money is None: raise RuntimeError('Pay function requires a monetary good to be specified')
 		go = True
 
 		#Do hooks before budget constraints
@@ -146,15 +146,15 @@ class baseAgent:
 				print(message)
 
 		if go and amount:
-			recipient.stocks[self.model.moneyGood] += amount
-			self.stocks[self.model.moneyGood] -= amount
+			recipient.stocks[self.model.goods.money] += amount
+			self.stocks[self.model.goods.money] -= amount
 			return amount
 		else: return 0
 
 	@property
 	def balance(self):
-		if self.model.moneyGood is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
-		bal = self.stocks[self.model.moneyGood]
+		if self.model.goods.money is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
+		bal = self.stocks[self.model.goods.money]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
 		if bal_ is not None: bal = bal_
 

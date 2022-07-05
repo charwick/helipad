@@ -44,6 +44,7 @@ The following libraries are optional but recommended:
 
 ## Version History
 
+* [1.4](https://helipad.dev/2022/07/helipad-1-4/): More consistent container API, miscellaneous interface improvements
 * [1.3](https://helipad.dev/2021/06/helipad-1-3/): Allow mixing time series and other plots, display networks on spatial maps, goods API improvements
 * [1.2](https://helipad.dev/2021/02/helipad-1-2/): Extensible visualization API, events, performance profiling, Jupyterlab support
 * [1.1](https://helipad.dev/2020/10/helipad-1-1/): Virtual parameters, improved Jupyter flexibility, spatial pre-alpha, misc improvements

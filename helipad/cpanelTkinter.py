@@ -104,7 +104,7 @@ class Cpanel(tk.Tk):
 				efSub = param.element.subframe
 				i=0
 				param.elements = {}
-				for name, b in param.keys.items():
+				for name, b in param.pKeys.items():
 					if hasattr(b, 'money') and b.money: continue
 
 					#Do this separately because they should all be stacked
@@ -149,7 +149,7 @@ class Cpanel(tk.Tk):
 
 					if item is not None:
 						el.grid(row=0, column=1)
-						drawCircle(wrap, param.keys[item].color.hex, bg).grid(row=0, column=0)
+						drawCircle(wrap, param.pKeys[item].color.hex, bg).grid(row=0, column=0)
 					else: el.pack(anchor='center' if param.type=='check' else 'w')
 
 				#These need a separate label
@@ -171,7 +171,7 @@ class Cpanel(tk.Tk):
 					else:
 						lframe = tk.Frame(wrap, bg=bg, padx=0, pady=0)
 						tk.Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
-						drawCircle(lframe, param.keys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
+						drawCircle(lframe, param.pKeys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
 						lframe.grid(row=1, column=0)
 						el.grid(row=0,column=0)
 
@@ -255,12 +255,11 @@ class Cpanel(tk.Tk):
 		#Checkgrid parameters
 		for p in self.model.params.values():
 			if p.type!='checkgrid' or p.name=='shocks': continue
-			cg = checkGrid(parent=self, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
+			p.element = checkGrid(parent=self, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
 			for k,v in p.opts.items():
 				if not isinstance(v, (tuple, list)): v = (v, None)
 				elif len(v) < 2: v = (v[0], None)
-				cg.addCheck(k, v[0], p.vars[k], v[1])
-			p.element = cg
+				p.element.addCheck(k, v[0], p.vars[k], v[1])
 			p.element.pack(fill='both')
 			fnum += 1
 
@@ -273,10 +272,9 @@ class Cpanel(tk.Tk):
 		if len(self.model.shocks):
 			self.model.shocks.element = expandableFrame(self, text='Shocks', padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			self.model.shocks.element.checks = {}
-			active = self.model.param('shocks')
 			self.model.params['shocks'].element = self.model.shocks.element
 			for shock in self.model.shocks.shocksExceptButtons.values():
-				bv = tk.BooleanVar(value=shock.name in active)
+				bv = tk.BooleanVar(value=shock.selected)
 				shock.element = tk.Checkbutton(self.model.shocks.element.subframe, text=shock.name, var=bv, onvalue=True, offvalue=False, bg=bgcolors[fnum%2], anchor='w', command=shock.setCallback)
 				shock.element.BooleanVar = bv #To set via the shock object
 				self.model.shocks.element.checks[shock.name] = bv #To set via the shock parameter

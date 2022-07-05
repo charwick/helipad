@@ -13,7 +13,7 @@ class Param(Item):
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		if not hasattr(self, 'per'): self.per=None
-		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['keys']} if self.per else self.defaultVal
+		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['pKeys']} if self.per else self.defaultVal
 		self.reset() #Populate with default values
 
 	#Set values from defaults
@@ -24,10 +24,10 @@ class Param(Item):
 		if self.per is None: self.setSpecific(self.default)
 		else:
 			if isinstance(self.default, dict):
-				for i in self.keys:
+				for i in self.pKeys:
 					self.setSpecific(self.default[i] if i in self.default else self.defaultVal, i)
 			else:
-				for i in self.keys: self.setSpecific(self.default, i)
+				for i in self.pKeys: self.setSpecific(self.default, i)
 
 	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI=True):
@@ -183,8 +183,8 @@ class CheckentryParam(Param):
 	type='checkentry'
 
 	def __init__(self, **kwargs):
-		self.bvar = True if 'per' not in kwargs or kwargs['per'] is None else {k:True for k in kwargs['keys']}
-		self.svar = self.defaultVal if 'per' not in kwargs or kwargs['per'] is None else {k:self.defaultVal for k in kwargs['keys']}
+		self.bvar = True if 'per' not in kwargs or kwargs['per'] is None else {k:True for k in kwargs['pKeys']}
+		self.svar = self.defaultVal if 'per' not in kwargs or kwargs['per'] is None else {k:self.defaultVal for k in kwargs['pKeys']}
 		self.value = None
 		self.event = False
 		kwargs['entryType'] = int if 'entryType' in kwargs and kwargs['entryType']=='int' else str
@@ -199,7 +199,7 @@ class CheckentryParam(Param):
 		#Per-item parameter, get all
 		elif item is None:
 			if hasattr(self, 'elements') and not isNotebook(): return {k: v.get() for k,v in self.elements.items()}
-			else: return {k: self.svar[k] if self.bvar[k] else False for k in self.keys}
+			else: return {k: self.svar[k] if self.bvar[k] else False for k in self.pKeys}
 		#Per-item parameter, get one
 		else:
 			if hasattr(self, 'elements') and item in self.elements and not isNotebook(): return self.elements[item].get()
@@ -279,11 +279,11 @@ class CheckgridParam(Param):
 		super().__init__(**kwargs)
 
 	@property
-	def keys(self): return list(self.vars.keys())
+	def pKeys(self): return list(self.vars.keys())
 
 	def getSpecific(self, item=None):
-		useElement = hasattr(self, 'elements') and not isNotebook() and self.name!='shocks'
-		vals = self.elements if useElement else self.vars
+		useElement = hasattr(self, 'element') and not isNotebook() and not isinstance(self, Shocks)
+		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 
@@ -296,7 +296,7 @@ class CheckgridParam(Param):
 	#Takes a list of strings, or a key-bool pair
 	def setSpecific(self, item, val=True, updateGUI=True):
 		if isinstance(item, list):
-			for i in self.keys: self.set(i, i in item)
+			for i in self.pKeys: self.set(i, i in item)
 		else:
 			if hasattr(self, 'element') and not isNotebook(): self.element.checks[item].set(val)
 			self.vars[item] = val
@@ -306,7 +306,7 @@ class CheckgridParam(Param):
 	@property
 	def range(self):
 		combos = []
-		for i in range(len(self.vars)): combos += list(combinations(self.keys, i+1))
+		for i in range(len(self.vars)): combos += list(combinations(self.pKeys, i+1))
 		return combos
 
 	def disabled(self, disable):
@@ -418,7 +418,7 @@ class Params(fStoreWithInterface):
 					if len(self.model.primitives)==1: prim = next(iter(self.model.primitives.keys()))
 					else: raise KeyError('Per-breed parameter must specify which primitive it belongs to')
 				args['prim'] = prim
-			args['keys'] = self.model.primitives[prim].breeds if per=='breed' else self.model.goods
+			args['pKeys'] = self.model.primitives[prim].breeds if per=='breed' else self.model.goods
 
 		if type.title()+'Param' in globals(): pclass = globals()[type.title()+'Param']
 		else:
@@ -452,22 +452,23 @@ class Params(fStoreWithInterface):
 	def perGood(self): return {k:v for k,v in self.items() if v.per=='good'}
 
 #This object is instantiated once and lives in model.shocks
-class Shocks(fStoreWithInterface):
+class Shocks(CheckgridParam, fStoreWithInterface):
 	multi = False
 
 	def __init__(self, model):
-		super().__init__()
+		dict.__init__(self)
+		CheckgridParam.__init__(self, name='shocks', title='Shocks', type='checkgrid', opts={}, dflt={}, runtime=True, config=True, per=None)
 		self.model = model
 
 		class Shock(Item):
 			@property
-			def selected(self2): return self.model.params['shocks'].get(self2.name)
+			def selected(self2): return self.get(self2.name)
 
 			@selected.setter
 			def selected(self, val): self.active(val)
 
 			def active(self2, val, updateGUI=True):
-				self.model.params['shocks'].set(self2.name, bool(val))
+				self.set(self2.name, bool(val))
 				if updateGUI and not isNotebook() and hasattr(self2, 'element'):
 					self2.element.BooleanVar.set(val)
 
@@ -514,7 +515,7 @@ class Shocks(fStoreWithInterface):
 			selected=active
 		))
 
-		if timerFunc != 'button': self.model.params['shocks'].addItem(name, name, selected=active)
+		if timerFunc != 'button': self.addItem(name, name, selected=active)
 
 	def clear(self):
 		if getattr(self, 'element'): self._destroy(self)

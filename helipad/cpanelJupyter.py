@@ -145,7 +145,7 @@ class Cpanel(VBox):
 
 		#Per-breed parameters
 		for param in model.params.perBreed.values():
-			param.element = constructAccordion(param, param.keys)
+			param.element = constructAccordion(param, param.pKeys)
 			self.children += param.element,
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
@@ -280,7 +280,7 @@ class Cpanel(VBox):
 		warning = Label(value=message)
 		warning.add_class('helipad_modal')
 		self.children += warning,
-		for p in self.model.allParams: del p.element
+		for p in self.model.params: del p.element
 		return warning
 
 #https://stackoverflow.com/questions/24005221/ipython-notebook-early-exit-from-cell
