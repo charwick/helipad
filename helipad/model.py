@@ -740,6 +740,20 @@ class gandb(funcStore):
 
 		return self[name]
 
+	def remove(self, name):
+		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
+		if not name in self: return False
+
+		#Also delete per-item parameters
+		pdict = self.model.params.perBreed if isinstance(self, Breeds) else self.model.params.perGood
+		for param in pdict.values():
+			del param.value[name]
+			if getattr(param, 'elements', False):
+				if not isNotebook(): param.elements[name].destroy()
+				else: param.elements[name].close()
+				del param.elements[name]
+		return super().remove(name)
+
 class Goods(gandb):	
 	def add(self, name, color, endowment=None, money=False, props={}):
 		if money:
