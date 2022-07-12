@@ -344,12 +344,8 @@ class Helipad:
 		if not self.hasModel: self.setup()
 		self.running = True
 
-		#Suppress the 'coroutine never awaited' warning, because the interpreter doesn't like the fact
-		#that the statement in the try block doesn't get executed…?
-		with warnings.catch_warnings():
-			warnings.simplefilter("ignore")
-			if isNotebook(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
-			else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
+		if isNotebook(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
+		else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
 
 	def stop(self, *args):
 		self.running = False

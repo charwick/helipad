@@ -10,7 +10,7 @@ heli = setup()
 # BANK CLASS
 #===============
 
-baseAgent.overdraft = 'continue-warn'
+# baseAgent.overdraft = 'continue-warn'
 class Bank(baseAgent):
 	def __init__(self, breed, id, model):
 		super().__init__(breed, id, model)

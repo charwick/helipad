@@ -58,6 +58,10 @@ class Store(baseAgent):
 			itt = (1 if isnan(avg[i]) else avg[i]) + 1.5 * (1 if isnan(stdev[i]) else stdev[i])
 			self.invTarget[i] = (self.invTarget[i] + itt)/2 #Smooth it a bit
 
+			#Produce stuff
+			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
+			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
+
 			#Set prices
 			#Change in the direction of hitting the inventory target
 			# self.price[i] += log(self.invTarget[i] / (self.inventory[i][0] + self.lastShortage[i])) #Jim's pricing rule?
@@ -69,10 +73,6 @@ class Store(baseAgent):
 			deltaInv = lasti - self.stocks[i]
 			self.price[i] *= (1 + deltaInv/(50 ** self.model.param('pSmooth')))
 			if self.price[i] < 0: self.price[i] = 1
-
-			#Produce stuff
-			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
-			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
 
 #===============
 # CONFIGURATION
@@ -237,7 +237,7 @@ def setup():
 		results = model.fit(50)
 		irf = results.irf(50)
 		irf.plot(orth=False, impulse='M0', response='ratio-jam-axe')
-		plt.show()
+		plt.show(block=False)
 
 #================
 # AGENT BEHAVIOR
