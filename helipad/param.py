@@ -425,7 +425,7 @@ class Params(fStoreWithInterface):
 			pclass = Param
 			args['type'] = type
 		self[name] = pclass(**args)
-		if getattr(self, 'cpanel', False) and isNotebook(): self.cpanel.__init__(self, redraw=True) #Redraw if necessary
+		if self.model.cpanel and isNotebook(): self.model.cpanel.__init__(self, redraw=True) #Redraw if necessary
 		return self[name]
 
 	def group(self, name, params, opened=True):

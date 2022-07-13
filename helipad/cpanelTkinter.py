@@ -15,6 +15,11 @@ class Cpanel(tk.Tk):
 		self.model = model
 		super().__init__()
 
+		#Set application name
+		self.setAppIcon()
+		self.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
+		self.resizable(0,0)
+
 		bgcolors = ('#FFFFFF','#EEEEEE')
 		fnum = 1
 
@@ -68,6 +73,7 @@ class Cpanel(tk.Tk):
 					self.update(1)
 			def done(self):
 				self.stop()
+				self.config(mode='determinate')
 				self.update(0)
 
 		class runButton(tk.Button):
@@ -297,11 +303,6 @@ class Cpanel(tk.Tk):
 		if cbot:
 			cbot.pack(fill='x', side='top')
 			fnum += 1
-
-		#Set application name
-		self.title(self.model.name+(' ' if self.model.name!='' else '')+'Control Panel')
-		self.resizable(0,0)
-		self.setAppIcon()
 
 	#Separate function so we can call it again when MPL tries to override
 	def setAppIcon(self):

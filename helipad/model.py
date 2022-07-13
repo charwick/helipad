@@ -32,6 +32,7 @@ class Helipad:
 		self.hasModel = False		#Have we initialized?
 		self.timer = False
 		self.visual = None
+		self.cpanel = None
 
 		self.running = False
 		self._cut = False
@@ -55,7 +56,7 @@ class Helipad:
 			#Privileged parameters
 			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
 			def switchPbar(model, name, val):
-				if not model.hasModel or not getattr(model, 'cpanel', False) or not getattr(model.cpanel, 'progress', False): return
+				if not model.hasModel or not self.cpanel or not getattr(model.cpanel, 'progress', False): return
 				if not val: self.cpanel.progress.determinate(False)
 				else:
 					self.cpanel.progress.determinate(True)
@@ -193,7 +194,7 @@ class Helipad:
 
 		#Start progress bar
 		#Put this here and not in .start() because it'll flash on unpause otherwise
-		if getattr(self, 'cpanel', None):
+		if self.cpanel:
 			st = self.param('stopafter')
 			self.cpanel.progress.determinate(st and isinstance(st, int))
 
@@ -305,8 +306,7 @@ class Helipad:
 
 			if t%self.param('refresh')==0:
 				if self.timer: t2 = time.time()
-
-				if getattr(self, 'cpanel', False) and st and isinstance(st, int): self.cpanel.progress.update(t/st)
+				if self.cpanel and st and isinstance(st, int): self.cpanel.progress.update(t/st)
 
 				#Update graph
 				if self.visual is not None and not self.visual.isNull:
@@ -318,7 +318,7 @@ class Helipad:
 
 					self.doHooks('visualRefresh', [self, self.visual])
 
-				elif getattr(self, 'cpanel', None):
+				elif self.cpanel:
 					if isNotebook(): await asyncio.sleep(0.001) #Listen for keyboard input
 					else: self.cpanel.update() #Make sure we don't hang the interface if plotless
 
@@ -336,7 +336,7 @@ class Helipad:
 	def start(self, *args):
 
 		#Start the progress bar
-		if getattr(self, 'cpanel', None):
+		if self.cpanel:
 			self.cpanel.progress.start()
 			self.cpanel.runButton.run()
 
@@ -349,7 +349,7 @@ class Helipad:
 
 	def stop(self, *args):
 		self.running = False
-		if getattr(self, 'cpanel', None):
+		if self.cpanel:
 			self.cpanel.progress.stop()
 			self.cpanel.runButton.pause()
 		self.doHooks('modelStop', [self])
@@ -364,10 +364,10 @@ class Helipad:
 		if remainder > 0 and self.visual is not None and not self.visual.isNull: self.visual.update(self.data.getLast(remainder)) #Last update at the end
 
 		if self.param('csv'): self.data.saveCSV(self.param('csv'))
-		if getattr(self, 'cpanel', False):
+		if self.cpanel:
 			self.cpanel.progress.done()
 			self.cpanel.runButton.terminate()
-		elif getattr(self, 'visual', False) and getattr(self, 'root', False): self.root.destroy() #Quit if we're in cpanel-less mode
+		elif self.visual and getattr(self, 'root', False): self.root.destroy() #Quit if we're in cpanel-less mode
 
 		#Re-enable parameters
 		for param in self.params.values():
@@ -568,7 +568,7 @@ class Helipad:
 			self.cpanel.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit
-			if getattr(self, 'cpanel', False): self.cpanel.invalidate('Control panel was redrawn in another cell.')
+			if self.cpanel: self.cpanel.invalidate('Control panel was redrawn in another cell.')
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
 			raise SilentExit() #Don't blow past the cpanel if doing "run all"
@@ -577,7 +577,7 @@ class Helipad:
 
 	def launchVisual(self):
 		if self.visual is None or self.visual.isNull:
-			if not getattr(self, 'cpanel', False):
+			if not self.cpanel:
 				print('No visualizations available. To run the model with no GUI, use model.start() instead.')
 				return
 			if not self.param('stopafter') or not (self.param('csv') or 'terminate' in self.hooks):
@@ -595,7 +595,7 @@ class Helipad:
 		self.doHooks('visualLaunch', [self, self.visual])
 
 		#If we're running in cpanel-less mode, hook through a Tkinter loop so it doesn't exit on pause
-		if not hasattr(self, 'cpanel') and not self.visual.isNull and not isNotebook():
+		if not self.cpanel and not self.visual.isNull and not isNotebook():
 			from tkinter import Tk
 			self.root = Tk()
 			self.root.after(1, self.start)

@@ -62,7 +62,7 @@ class MPLVisualization(BaseVisualization):
 	def launch(self, title, dim=None, pos=None):
 		if not isNotebook():
 			self.fig.canvas.manager.set_window_title(title)
-			if hasattr(self.model, 'cpanel'): self.model.cpanel.setAppIcon()
+			if self.model.cpanel: self.model.cpanel.setAppIcon()
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
 		self.fig.canvas.mpl_connect('key_press_event', self.sendEvent)
@@ -216,7 +216,7 @@ class TimeSeries(MPLVisualization):
 		return plot
 
 	def removePlot(self, name, reassign=None):
-		if getattr(self.model, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if self.model.cpanel: raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
 			return
@@ -310,7 +310,7 @@ class Charts(MPLVisualization):
 		self.plotTypes[clss.type] = clss
 
 	def removePlot(self, name):
-		if getattr(self.model, 'cpanel', False): raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if self.model.cpanel: raise RuntimeError('Cannot remove plots after control panel is drawn')
 		if isinstance(name, list):
 			for p in name: self.removePlot(p)
 			return
