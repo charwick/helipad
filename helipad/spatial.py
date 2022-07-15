@@ -8,6 +8,7 @@ import warnings
 from random import randint
 from math import sqrt, degrees, radians, sin, cos, atan2, pi
 from helipad.agent import Patch, baseAgent
+from helipad.visualize import Charts
 
 #===============
 # SETUP
@@ -170,7 +171,6 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 						patch.newEdge(d, 'space', weight=float(diag))
 
 	#Don't reset the visualizer if charts is already registered
-	from helipad.visualize import Charts
 	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 

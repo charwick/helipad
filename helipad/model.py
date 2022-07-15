@@ -9,7 +9,7 @@ from numpy import random
 
 from helipad.visualize import BaseVisualization
 from helipad.helpers import *
-from helipad.param import Params, Shocks, ParamGroup
+from helipad.param import Params, Shocks
 from helipad.data import Data
 from helipad.agent import Agent, baseAgent
 
@@ -56,11 +56,11 @@ class Helipad:
 			#Privileged parameters
 			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
 			def switchPbar(model, name, val):
-				if not model.hasModel or not self.cpanel or not getattr(model.cpanel, 'progress', False): return
-				if not val: self.cpanel.progress.determinate(False)
+				if not model.hasModel or not model.cpanel or not getattr(model.cpanel, 'progress', False): return
+				if not val: model.cpanel.progress.determinate(False)
 				else:
-					self.cpanel.progress.determinate(True)
-					self.cpanel.progress.update(model.t/val)
+					model.cpanel.progress.determinate(True)
+					model.cpanel.progress.update(model.t/val)
 			self.params.add('stopafter', 'Stop on period', 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
 			self.params.add('csv', 'CSV?', 'checkentry', False, runtime=True, config=True)
 			self.params.add('refresh', 'Refresh Every __ Periods', 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
@@ -141,7 +141,7 @@ class Helipad:
 
 		#Blank breeds for any primitives not otherwise specified
 		for k,p in self.primitives.items():
-			if not len(p.breeds): p.breeds.add('', '#000000')
+			if not p.breeds: p.breeds.add('', '#000000')
 
 		#SERIES AND REPORTERS
 		#Breeds and goods should already be registered at this point
@@ -211,7 +211,7 @@ class Helipad:
 
 		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
-	
+
 	def cutStep(self): self._cut = True
 
 	def step(self, stage=1):
@@ -623,9 +623,9 @@ class Helipad:
 	#===================
 	# DEPRECATED METHODS
 	#===================
-	
+
 	# DEPRECATED IN HELIPAD 1.4; REMOVE IN HELIPAD 1.6
-	
+
 	def addEvent(self, name, fn, **kwargs):
 		warnings.warn('Model.addEvent() is deprecated and has been replaced with model.events.add().', FutureWarning, 2)
 		return self.events.add(name, fn, **kwargs)
@@ -672,7 +672,7 @@ class Helipad:
 	def clearHooks(self, place):
 		warnings.warn('Model.clearHooks(place) is deprecated and has been replaced with model.hooks.remove(place).', FutureWarning, 2)
 		return self.hooks.remove(place)
-	
+
 	def addPrimitive(self, *args, **kwargs):
 		warnings.warn('Model.addPrimitive() is deprecated and has been replaced with model.primitives.add().', FutureWarning, 2)
 		return self.primitives.add(*args, **kwargs)
@@ -680,7 +680,7 @@ class Helipad:
 	def removePrimitive(self, name):
 		warnings.warn('Model.removePrimitive() is deprecated and has been replaced with model.primitives.remove().', FutureWarning, 2)
 		return self.primitives.remove(name)
-	
+
 	def addGood(self, *args, **kwargs):
 		warnings.warn('Model.addGood() is deprecated and has been replaced with model.goods.add().', FutureWarning, 2)
 		return self.goods.add(*args, **kwargs)
@@ -719,7 +719,7 @@ class MultiLevel(baseAgent, Helipad):
 class gandb(funcStore):
 	def __init__(self, model):
 		self.model = model
-	
+
 	def add(self, obj, name, color, prim=None, **kwargs):
 		if name in self:
 			warnings.warn(f'{obj} \'{name}\' already defined. Overriding…', None, 2)
@@ -750,7 +750,7 @@ class gandb(funcStore):
 				del param.elements[name]
 		return super().remove(name)
 
-class Goods(gandb):	
+class Goods(gandb):
 	def add(self, name, color, endowment=None, money=False, props={}):
 		if money:
 			if self.money is not None:
@@ -765,13 +765,13 @@ class Goods(gandb):
 
 		props['quantity'] = endowment
 		item = super().add('good', name, color, money=money, props=props)
-		
+
 		#Add demand plot once we have at least 2 goods
 		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 			try:
 				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', 'Demand', selected=False)
 			except: pass
-		
+
 		return item
 
 	@property
@@ -795,7 +795,7 @@ class Primitives(funcStore):
 	def __init__(self, model):
 		self.model = model
 		super().__init__()
-	
+
 	def add(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
 		if name=='all': raise ValueError(f'{name} is a reserved name. Please choose another.')
 		if not plural: plural = name+'s'
@@ -861,7 +861,7 @@ class Events(funcStore):
 
 class Hooks(funcStore):
 	multi = True
-	
+
 	def add(self, name, function, prioritize=False):
 		deprec = {
 			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5

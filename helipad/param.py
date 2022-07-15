@@ -4,8 +4,8 @@
 # ==========
 
 from itertools import combinations
-from helipad.helpers import *
 import warnings
+from helipad.helpers import *
 from numpy import arange
 from numpy import random
 

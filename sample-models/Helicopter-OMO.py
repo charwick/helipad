@@ -2,7 +2,7 @@
 # Includes a banking system to distribute OMOs. Requires the basic Helicopter.py in the same folder.
 # Download the paper at https://ssrn.com/abstract=2545488
 
-from numpy import isnan, mean, array
+from numpy import isnan, mean, array #, std
 from Helicopter import * #Building on the basic Helicopter model
 heli = setup()
 
@@ -123,7 +123,7 @@ class Bank(baseAgent):
 		# # Set target reserve ratio
 		# if self.model.t > 2:
 		# 	wd = self.model.data.getLast('withdrawals', 50)
-		# 	mn, st = mean(wd), stdev(wd)
+		# 	mn, st = mean(wd), std(wd)
 		# 	if isnan(mn) or isnan(st): mn, st = .1, .1
 		# 	ttargetRR = (mn + 2 * st) / lia
 		# 	self.targetRR = (49*self.targetRR + ttargetRR)/50

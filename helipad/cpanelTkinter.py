@@ -4,7 +4,7 @@
 # ==========
 
 import tkinter as tk
-import os, sys, colorsys
+import os, sys
 from math import ceil
 from tkinter.ttk import Progressbar
 from helipad.helpers import Color
