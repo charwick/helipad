@@ -42,7 +42,7 @@ class MPLVisualization(BaseVisualization):
 	def __init__(self, model):
 		self.model = model #Unhappy with this
 		self.plots = {}
-		self.selector = model.params.add('plots', 'Plots', 'checkgrid', [], opts={}, runtime=False, config=True)
+		self.selector = model.params.add('plots', _('Plots'), 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.dim = None
 		self.pos = (400, 0)
 
@@ -118,8 +118,8 @@ class TimeSeries(MPLVisualization):
 		#Plot categories
 		self.addPlot('utility', 'Utility', selected=False)
 
-		if len(model.goods) >= 2: self.addPlot('demand', 'Demand', selected=False)
-		if model.goods.money is not None: self.addPlot('money', 'Money', selected=False)
+		if len(model.goods) >= 2: self.addPlot('demand', _('Demand'), selected=False)
+		if model.goods.money is not None: self.addPlot('money', _('Money'), selected=False)
 
 		#Toggle legend boxes all at once
 		#Use event.canvas.figure and not self.fig so it pertains to the current window
@@ -216,13 +216,13 @@ class TimeSeries(MPLVisualization):
 		return plot
 
 	def removePlot(self, name, reassign=None):
-		if self.model.cpanel: raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if self.model.cpanel: raise RuntimeError(_('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
 			return
 
 		if not name in self.plots:
-			warnings.warn('No plot \''+name+'\' to remove', None, 2)
+			warnings.warn(_('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
 		if reassign is not None: self.plots[reassign].series += self.plots[name].series
@@ -301,22 +301,22 @@ class Charts(MPLVisualization):
 	def addPlot(self, name, label, type=None, selected=True, **kwargs):
 		self.selector.addItem(name, label, selected)
 		self.type = type if type is not None else 'bar'
-		if self.type not in self.plotTypes: raise KeyError(f'\'{self.type}\' is not a registered plot visualizer.')
+		if self.type not in self.plotTypes: raise KeyError(_('\'{}\' is not a registered plot visualizer.').format(self.type))
 		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
 		return self.plots[name]
 
 	def addPlotType(self, clss):
-		if not issubclass(clss, ChartPlot): raise TypeError('New plot types must subclass ChartPlot.')
+		if not issubclass(clss, ChartPlot): raise TypeError(_('New plot types must subclass ChartPlot.'))
 		self.plotTypes[clss.type] = clss
 
 	def removePlot(self, name):
-		if self.model.cpanel: raise RuntimeError('Cannot remove plots after control panel is drawn')
+		if self.model.cpanel: raise RuntimeError(_('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p)
 			return
 
 		if not name in self.plots:
-			warnings.warn('No plot \''+name+'\' to remove', None, 2)
+			warnings.warn(_('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
 		del self.plots[name]
@@ -388,7 +388,7 @@ class TimeSeriesPlot(ChartPlot):
 
 		#Check against columns and not reporters so subseries work
 		if not callable(reporter) and not reporter in self.viz.model.data.columns:
-			raise KeyError(f'Reporter \'{reporter}\' does not exist. Be sure to register reporters before adding series.')
+			raise KeyError(_('Reporter \'{}\' does not exist. Be sure to register reporters before adding series.').format(reporter))
 
 		#Add subsidiary series (e.g. percentile bars)
 		subseries = []

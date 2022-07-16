@@ -23,14 +23,14 @@ class Data:
 	def addReporter(self, key, func, **kwargs):
 		func, children = func if isinstance(func, tuple) else (func, {})
 
-		if not callable(func): raise TypeError('Second argument of addReporter must be callable')
+		if not callable(func): raise TypeError(_('Second argument of addReporter must be callable.'))
 		self.reporters[key] = Reporter(name=key, func=func, children=children, **kwargs)
 		return self.reporters[key]
 
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
 	def removeReporter(self, key):
 		if self.model.hasModel:
-			raise RuntimeError('removeReporter cannot be called while a model is active.')
+			raise RuntimeError(_('removeReporter cannot be called while a model is active.'))
 		self.model.doHooks('removeReporter', [self, key])
 		del self.reporters[key]
 
@@ -109,7 +109,7 @@ class Data:
 				coef = float(coef)
 				if op=='p': return np.mean(u) + coef * np.std(u)
 				else: return np.mean(u) - coef * np.std(u)
-			else: raise ValueError('Invalid statistic '+stat)
+			else: raise ValueError(_('Invalid statistic {}.').format(stat))
 		return (reporter, subplots) if subplots is not None else reporter
 
 	#
@@ -125,7 +125,7 @@ class Data:
 			return data if n>1 else data[0]
 		elif isinstance(key, int):
 			return {k: v[-key:] for k,v in self.all.items()}
-		else: raise TypeError('First argument of getLast must be either a key name or an int')
+		else: raise TypeError(_('First argument of Data.getLast() must be either a key name or an int.'))
 
 	def saveCSV(self, filename='data'):
 		file = filename + '.csv'

@@ -19,26 +19,26 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	# Backward compatibility. Remove in Helipad 1.6
 	if 'x' in kwargs:
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
-		warnings.warn('Using x and y to set dimensions is deprecated. Use the dim argument instead.', FutureWarning, 3)
+		warnings.warn(_('Using x and y to set dimensions is deprecated. Use the dim argument instead.'), FutureWarning, 3)
 
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
 	if isinstance(dim, int):
-		model.params.add('dimension', 'Map Size', 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
+		model.params.add('dimension', _('Map Size'), 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
 		def dimget(name, model): return model.param('dimension')
 		def dimset(val, name, model): model.param('dimension', val)
-		model.params.add('x', 'Map Width ', 'hidden', dflt=dim, setter=dimset, getter=dimget)
-		model.params.add('y', 'Map Height', 'hidden', dflt=dim, setter=dimset, getter=dimget)
+		model.params.add('x', _('Map Width'), 'hidden', dflt=dim, setter=dimset, getter=dimget)
+		model.params.add('y', _('Map Height'), 'hidden', dflt=dim, setter=dimset, getter=dimget)
 	elif isinstance(dim, (list, tuple)):
-		model.params.add('x', 'Map Width ', 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
-		model.params.add('y', 'Map Height', 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
-	else: raise TypeError('Invalid dimension.')
+		model.params.add('x', _('Map Width'), 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
+		model.params.add('y', _('Map Height'), 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
+	else: raise TypeError(_('Invalid dimension.'))
 
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
-	model.params.add('square', 'Square', 'hidden', dflt=isinstance(dim, (list, tuple)))
-	model.params.add('wrap', 'Wrap', 'hidden', dflt=wrap) #Only checked at the beginning of a model
+	model.params.add('square', _('Square'), 'hidden', dflt=isinstance(dim, (list, tuple)))
+	model.params.add('wrap', _('Wrap'), 'hidden', dflt=wrap) #Only checked at the beginning of a model
 
-	def npsetter(val, item): raise RuntimeError('Patch number cannot be set directly. Set the x and y parameters instead.')
+	def npsetter(val, item): raise RuntimeError(_('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: model.param('x')*model.param('y')
 	model.params['num_patch'].setter = npsetter
 
@@ -56,7 +56,7 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	def NotPatches(function):
 		def np2(self, *args, **kwargs):
 			if self.primitive != 'patch': return function(self, *args, **kwargs)
-			else: raise RuntimeError('Patches cannot move.')
+			else: raise RuntimeError(_('Patches cannot move.'))
 		return np2
 
 	def setx(self, val): self.position[0] = val

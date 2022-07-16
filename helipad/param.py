@@ -6,8 +6,7 @@
 from itertools import combinations
 import warnings
 from helipad.helpers import *
-from numpy import arange
-from numpy import random
+from numpy import arange, random
 
 class Param(Item):
 	def __init__(self, **kwargs):
@@ -31,7 +30,7 @@ class Param(Item):
 
 	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError(_('A {} whose parameter value to set must be specified.').format(self.per))
 
 		#Jupyter requires an explicit update for all parameter types.
 		if updateGUI and isNotebook() and hasattr(self, 'element'):
@@ -77,7 +76,7 @@ class Param(Item):
 
 	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
 	def addKey(self, key):
-		if self.per is None: print('Can\'t add keys to a global parameter…')
+		if self.per is None: warnings.warn(_('Can\'t add keys to a global parameter…'), None, 2)
 		elif not isinstance(self.default, dict):
 			self.value[key] = self.default
 		elif key in self.default:
@@ -91,14 +90,14 @@ class Param(Item):
 	#Deprecated in Helipad 1.4, remove in Helipad 1.6
 	@property
 	def obj(self):
-		warnings.warn('Param.obj is deprecated and has been replaced with Param.per.', FutureWarning, 2)
+		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Param.obj', 'Param.per'), FutureWarning, 2)
 		return self.per
 
 class MenuParam(Param):
 	type = 'menu'
 
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError(_('A {} whose parameter value to set must be specified.').format(self.per))
 		if updateGUI and not isNotebook() and hasattr(self, 'element'):
 			sv = self.element if self.per is None else self.elements[item]
 			sv.StringVar.set(self.opts[val]) #Saved the StringVar here
@@ -116,7 +115,7 @@ class CheckParam(Param):
 	type='check'
 
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError(_('A {} whose parameter value to set must be specified.').format(self.per))
 		if updateGUI and not isNotebook() and hasattr(self, 'element'):
 			sv = self.element if self.per is None else self.elements[item]
 			sv.BooleanVar.set(val) #Saved the BooleanVar here
@@ -164,7 +163,7 @@ class SliderParam(Param):
 
 	#Override in order to update log slider
 	def setParent(self, val, item=None, updateGUI=True):
-		if self.per is not None and item is None: raise KeyError('A '+self.per+' whose parameter value to set must be specified')
+		if self.per is not None and item is None: raise KeyError(_('A {} whose parameter value to set must be specified.').format(self.per))
 
 		if isNotebook() and hasattr(self, 'element') and self.element is not None and (self.per is None or item in self.elements):
 			el = self.element if self.per is None else self.elements[item]
@@ -270,7 +269,7 @@ class CheckgridParam(Param):
 	type='checkgrid'
 
 	def __init__(self, **kwargs):
-		if kwargs['per'] is not None: raise ValueError('Cannot instantiate per-item checkgrid parameter')
+		if kwargs['per'] is not None: raise ValueError(_('Cannot instantiate per-item checkgrid parameter.'))
 		if 'default' not in kwargs or not isinstance(kwargs['default'], list): kwargs['default'] = []
 		if isinstance(kwargs['opts'], list): kwargs['opts'] = {k:k for k in kwargs['opts']}
 		for k,v in kwargs['opts'].items():
@@ -316,7 +315,7 @@ class CheckgridParam(Param):
 		else: super().disabled(disable)
 
 	def addItem(self, name, label, position=None, selected=False):
-		if getattr(self, 'element', False) and not isNotebook(): raise RuntimeError('Cannot add checkgrid items after control panel is drawn')
+		if getattr(self, 'element', False) and not isNotebook(): raise RuntimeError(_('Cannot add checkgrid items after control panel is drawn.'))
 
 		if position is None or position > len(self.vars): self.opts[name] = label
 		else:		#Reconstruct opts because there's no insert method
@@ -345,7 +344,7 @@ class ParamGroup:
 		self.open = opened
 
 		for p in members.values():
-			if p.per is not None or p.type=='checkgrid': raise TypeError('Cannot add checkgrids or per-item parameters to groups')
+			if p.per is not None or p.type=='checkgrid': raise TypeError(_('Cannot add checkgrids or per-item parameters to groups.'))
 			p.group = name
 
 	def get(self):
@@ -373,7 +372,7 @@ class fStoreWithInterface(funcStore):
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 
 		if name not in self: return False
-		if getattr(self[name], 'config', False): raise ValueError('Cannot remove built-in parameters.')
+		if getattr(self[name], 'config', False): raise ValueError(_('Cannot remove built-in parameters.'))
 		self._destroy(self[name])
 
 		del self[name]
@@ -394,7 +393,7 @@ class Params(fStoreWithInterface):
 		self.groups = []
 
 	def add(self, name, title, type, dflt, opts={}, runtime=True, callback=None, per=None, desc=None, prim=None, getter=None, setter=None, **args):
-		if name in self: warnings.warn(f'Parameter \'{name}\' already defined. Overriding…', None, 2)
+		if name in self: warnings.warn(_('Parameter \'{}\' already defined. Overriding…').format(name), None, 2)
 
 		if callable(getter):
 			args['getter'] = lambda item=None: getter(*([name, self.model] if per is None else [name, self.model, item]))
@@ -416,7 +415,7 @@ class Params(fStoreWithInterface):
 			if per=='breed':
 				if prim is None:
 					if len(self.model.primitives)==1: prim = next(iter(self.model.primitives.keys()))
-					else: raise KeyError('Per-breed parameter must specify which primitive it belongs to')
+					else: raise KeyError(_('Per-breed parameter must specify which primitive it belongs to.'))
 				args['prim'] = prim
 			args['pKeys'] = self.model.primitives[prim].breeds if per=='breed' else self.model.goods
 
@@ -523,7 +522,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 	#Deprecated. Remove in Helipad 1.6
 	def register(self, *args, **kwargs):
-		warnings.warn('Shocks.register() is deprecated and has been replaced with Shocks.add().', FutureWarning, 2)
+		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Shocks.register()', 'Shocks.add()'), FutureWarning, 2)
 		self.add(*args, **kwargs)
 
 	def step(self):
@@ -544,7 +543,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 	#With n% probability each period
 	def randn(self, n):
-		if n<0 or n>100: raise ValueError('randn() argument can only be between 0 and 100')
+		if n<0 or n>100: raise ValueError(_('randn() argument must be between 0 and 100.'))
 		def fn(t): return random.randint(0,100) < n
 		return fn
 

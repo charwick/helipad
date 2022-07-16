@@ -1,0 +1,373 @@
+# Translations template for Helipad
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 1.4\n"
+"POT-Creation-Date: 2022-07-16 01:01-0400\n"
+"PO-Revision-Date: 2022-07-16 01:01-0400\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.10.3\n"
+
+#: agent.py:60 agent.py:66 agent.py:72 agent.py:78
+msgid "{0} {1} does not have sufficient {2} to give {3} {4}."
+msgstr ""
+
+#: agent.py:62 agent.py:68 agent.py:74 agent.py:80
+msgid " Continuing with available {0} of {1}…"
+msgstr ""
+
+#: agent.py:88 agent.py:144
+msgid " Cancelling trade…"
+msgstr ""
+
+#: agent.py:108 agent.py:118
+msgid "{} requires a monetary good to be specified."
+msgstr ""
+
+#: agent.py:129 agent.py:135
+msgid "{0} {1} does not have sufficient funds to pay {2} {3}."
+msgstr ""
+
+#: agent.py:133 agent.py:138
+msgid " Continuing with available balance of {}…"
+msgstr ""
+
+#: agent.py:156
+msgid "Balance checking requires a monetary good to be specified."
+msgstr ""
+
+#: agent.py:168
+msgid "Fixed primitives cannot reproduce."
+msgstr ""
+
+#: agent.py:202 data.py:112
+msgid "Invalid statistic {}."
+msgstr ""
+
+#: agent.py:229
+msgid "Fixed primitives cannot die."
+msgstr ""
+
+#: agent.py:254 agent.py:263
+msgid "Object must be specified either 'agent' or 'edge'."
+msgstr ""
+
+#: agent.py:354
+msgid "Direction must select one of the agents as an endpoint."
+msgstr ""
+
+#: agent.py:357
+msgid "Direction must be either int, bool, or agent."
+msgstr ""
+
+#: agent.py:377
+msgid "Agent {} is not connected to this edge."
+msgstr ""
+
+#: cpanelJupyter.py:134 cpanelTkinter.py:199
+msgid "filename"
+msgstr ""
+
+#: cpanelJupyter.py:203 cpanelTkinter.py:279
+msgid "Shocks"
+msgstr ""
+
+#: cpanelJupyter.py:209
+msgid ""
+"After setting parameter values, run <code>launchVisual()</code> or "
+"<code>start()</code> to start the model."
+msgstr ""
+
+#: cpanelJupyter.py:236 cpanelJupyter.py:254 cpanelTkinter.py:84
+msgid "Pause"
+msgstr ""
+
+#: cpanelJupyter.py:241 cpanelTkinter.py:88
+msgid "Run"
+msgstr ""
+
+#: cpanelJupyter.py:258
+msgid "Stop"
+msgstr ""
+
+#: cpanelJupyter.py:277
+msgid ""
+"Model parameters changed, please re-launch the control panel with "
+"launchCpanel()."
+msgstr ""
+
+#: cpanelTkinter.py:20
+msgid "{}Control Panel"
+msgstr ""
+
+#: cpanelTkinter.py:92
+msgid "New Model"
+msgstr ""
+
+#: cpanelTkinter.py:517
+msgid "Invalid Checkentry type. Must be either \"string\" or \"int\""
+msgstr ""
+
+#: data.py:26
+msgid "Second argument of addReporter must be callable."
+msgstr ""
+
+#: data.py:33
+msgid "removeReporter cannot be called while a model is active."
+msgstr ""
+
+#: data.py:128
+msgid "First argument of Data.getLast() must be either a key name or an int."
+msgstr ""
+
+#: helpers.py:66
+msgid "The {0} parameter is deprecated and has been renamed to {1}."
+msgstr ""
+
+#: model.py:66
+msgid "Stop on period"
+msgstr ""
+
+#: model.py:67
+msgid "CSV?"
+msgstr ""
+
+#: model.py:68
+msgid "Refresh Every __ Periods"
+msgstr ""
+
+#: model.py:94
+msgid ""
+"A Helipad update is available! Use `pip install -U helipad` to upgrade to"
+" version {}."
+msgstr ""
+
+#: model.py:111
+msgid "Breed must specify which primitive it belongs to."
+msgstr ""
+
+#: model.py:129
+msgid "Visualizations can only be registered on the top-level model."
+msgstr ""
+
+#: model.py:133
+msgid "Visualization class must inherit from BaseVisualization."
+msgstr ""
+
+#: model.py:173
+msgid "Monetary Base"
+msgstr ""
+
+#: model.py:183
+msgid "Utility"
+msgstr ""
+
+#: model.py:189 model.py:773 visualize.py:121
+msgid "Demand"
+msgstr ""
+
+#: model.py:212
+msgid "nest_asyncio is required to run Helipad from Spyder."
+msgstr ""
+
+#: model.py:276
+msgid "matchSelect did not return the correct number of agents."
+msgstr ""
+
+#: model.py:330
+msgid "Period {0}: {1} periods/second ({2}% model, {3}% visuals)"
+msgstr ""
+
+#: model.py:383
+msgid ""
+"Can't do a parameter sweep without the value of the 'stopafter' parameter"
+" set."
+msgstr ""
+
+#: model.py:418
+msgid "Network density must take a value between 0 and 1."
+msgstr ""
+
+#: model.py:428
+msgid "Network export requires Networkx."
+msgstr ""
+
+#: model.py:482
+msgid "Breed '{0}' is not registered for the '{1}' primitive."
+msgstr ""
+
+#: model.py:515
+msgid "Use pip to install readline and code for a debug console."
+msgstr ""
+
+#: model.py:549
+msgid "Control panel can only be launched on the top-level model."
+msgstr ""
+
+#: model.py:573
+msgid "Control panel was redrawn in another cell."
+msgstr ""
+
+#: model.py:583
+msgid ""
+"No visualizations available. To run the model with no GUI, use "
+"model.start() instead."
+msgstr ""
+
+#: model.py:586
+msgid ""
+"Running from the control panel with no visualization requires a stop "
+"condition, and either CSV export or a terminate hook."
+msgstr ""
+
+#: model.py:592
+msgid "{}Data Plots"
+msgstr ""
+
+#: model.py:632 model.py:636 model.py:640 model.py:644 model.py:658
+#: model.py:667 model.py:671 model.py:675 model.py:679 model.py:683
+#: model.py:687 model.py:692 model.py:697 model.py:708 model.py:713 param.py:93
+#: param.py:525
+msgid "{0} is deprecated and has been replaced with {1}."
+msgstr ""
+
+#: model.py:650
+msgid "Breed parameter must specify which primitive it belongs to."
+msgstr ""
+
+#: model.py:663
+msgid ""
+"Model.allParams is deprecated. All parameters can be accessed using "
+"model.params."
+msgstr ""
+
+#: model.py:727
+msgid "{0} '{1}' already defined. Overriding…"
+msgstr ""
+
+#: model.py:758
+msgid "Money good already specified as {}. Overriding…"
+msgstr ""
+
+#: model.py:764 visualize.py:122
+msgid "Money"
+msgstr ""
+
+#: model.py:801
+msgid "{} is a reserved name. Please choose another."
+msgstr ""
+
+#: model.py:873
+msgid "The {0} hook is deprecated and has been replaced with {1}."
+msgstr ""
+
+#: param.py:33 param.py:100 param.py:118 param.py:166
+msgid "A {} whose parameter value to set must be specified."
+msgstr ""
+
+#: param.py:79
+msgid "Can't add keys to a global parameter…"
+msgstr ""
+
+#: param.py:272
+msgid "Cannot instantiate per-item checkgrid parameter."
+msgstr ""
+
+#: param.py:318
+msgid "Cannot add checkgrid items after control panel is drawn."
+msgstr ""
+
+#: param.py:347
+msgid "Cannot add checkgrids or per-item parameters to groups."
+msgstr ""
+
+#: param.py:375
+msgid "Cannot remove built-in parameters."
+msgstr ""
+
+#: param.py:396
+msgid "Parameter '{}' already defined. Overriding…"
+msgstr ""
+
+#: param.py:418
+msgid "Per-breed parameter must specify which primitive it belongs to."
+msgstr ""
+
+#: param.py:546
+msgid "randn() argument must be between 0 and 100."
+msgstr ""
+
+#: spatial.py:22
+msgid ""
+"Using x and y to set dimensions is deprecated. Use the dim argument "
+"instead."
+msgstr ""
+
+#: spatial.py:27
+msgid "Map Size"
+msgstr ""
+
+#: spatial.py:30 spatial.py:33
+msgid "Map Width"
+msgstr ""
+
+#: spatial.py:31 spatial.py:34
+msgid "Map Height"
+msgstr ""
+
+#: spatial.py:35
+msgid "Invalid dimension."
+msgstr ""
+
+#: spatial.py:38
+msgid "Square"
+msgstr ""
+
+#: spatial.py:39
+msgid "Wrap"
+msgstr ""
+
+#: spatial.py:41
+msgid "Patch number cannot be set directly. Set the dim parameter instead."
+msgstr ""
+
+#: spatial.py:59
+msgid "Patches cannot move."
+msgstr ""
+
+#: utility.py:26 utility.py:38
+msgid "Quantities argument doesn't match initialized list of goods."
+msgstr ""
+
+#: visualize.py:45
+msgid "Plots"
+msgstr ""
+
+#: visualize.py:219
+msgid "Cannot remove plots after control panel is drawn."
+msgstr ""
+
+#: visualize.py:225 visualize.py:319
+msgid "No plot '{}' to remove."
+msgstr ""
+
+#: visualize.py:304
+msgid "'{}' is not a registered plot visualizer."
+msgstr ""
+
+#: visualize.py:309
+msgid "New plot types must subclass ChartPlot."
+msgstr ""
+
+#: visualize.py:313
+msgid "Cannot remove plots after control panel is drawn."
+msgstr ""
+
+#: visualize.py:391
+msgid ""
+"Reporter '{}' does not exist. Be sure to register reporters before adding"
+" series."
+msgstr ""
+

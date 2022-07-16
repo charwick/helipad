@@ -56,27 +56,27 @@ class baseAgent:
 		prim1, prim2 = self.primitive.title(), partner.primitive.title()
 		if amt2 != 0: price = amt1 / amt2
 		if amt1 > self.stocks[good1]:
-			message = f'{prim1} {self.id} does not have sufficient {good1} to give {prim2} {partner.id}.'
+			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good1, prim2, partner.id)
 			if 'continue' in self.overdraft:
-				message += f' Continuing with available {good1} of {self.stocks[good1]}…'
+				message += _(' Continuing with available {0} of {1}…').format(good1, self.stocks[good1])
 				amt1 = self.stocks[good1]
 				if amt2 != 0: amt2 = amt1 / price
 		elif -amt1 > partner.stocks[good1]:
-			message = f'{prim2} {partner.id} does not have sufficient {good1} to give {prim1} {self.id}.'
+			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good1, prim1, self.id)
 			if 'continue' in self.overdraft:
-				message += f' Continuing with available {good1} of {partner.stocks[good1]}…'
+				message += _(' Continuing with available {0} of {1}…').format(good1, partner.stocks[good1])
 				amt1 = -partner.stocks[good1]
 				if amt2 != 0: amt2 = amt1 / price
 		if amt2 > partner.stocks[good2]:
-			message = f'{prim2} {partner.id} does not have sufficient {good2} to give {prim1} {self.id}.'
+			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good2, prim1, self.id)
 			if 'continue' in self.overdraft:
-				message += f' Continuing with available {good2} of {partner.stocks[good2]}…'
+				message += _(' Continuing with available {0} of {1}…').format(good2, partner.stocks[good2])
 				amt2 = partner.stocks[good2]
 				amt1 = price * amt2
 		elif -amt2 > self.stocks[good2]:
-			message = f'{prim1} {self.id} does not have sufficient {good2} to give {prim2} {partner.id}.'
+			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good2, prim2, partner.id)
 			if 'continue' in self.overdraft:
-				message += f' Continuing with available {good2} of {self.stocks[good2]}…'
+				message += _(' Continuing with available {0} of {1}…').format(good2, self.stocks[good2])
 				amt2 = -self.stocks[good2]
 				amt1 = price * amt2
 
@@ -84,7 +84,7 @@ class baseAgent:
 			if self.overdraft == 'stop': raise ValueError(message)
 			if 'fail' in self.overdraft:
 				go = False
-				message += ' Cancelling trade…'
+				message += _(' Cancelling trade…')
 			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
 
 		if go:
@@ -104,7 +104,7 @@ class baseAgent:
 	#Price is per-unit
 	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
 	def buy(self, partner, good, q, p):
-		if self.model.goods.money is None: raise RuntimeError('Buy function requires a monetary good to be specified')
+		if self.model.goods.money is None: raise RuntimeError(_('{} requires a monetary good to be specified.').format('Agent.buy()'))
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
 
@@ -114,7 +114,7 @@ class baseAgent:
 
 	#Unilateral
 	def pay(self, recipient, amount):
-		if self.model.goods.money is None: raise RuntimeError('Pay function requires a monetary good to be specified')
+		if self.model.goods.money is None: raise RuntimeError(_('{} requires a monetary good to be specified.').format('Agent.pay()'))
 		go = True
 
 		#Do hooks before budget constraints
@@ -125,22 +125,22 @@ class baseAgent:
 		prim1, prim2 = self.primitive.title(), recipient.primitive.title()
 		message = None
 		if amount > self.balance:
-			message = f'{prim1} {self.id} does not have sufficient funds to pay {prim2} {recipient.id}.'
+			message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim1, self.id, prim2, recipient.id)
 			if self.overdraft == 'stop': raise ValueError(message)
 			if 'continue' in self.overdraft:
 				amount = self.balance
-				message += f' Continuing with available balance of {self.balance}…'
+				message += _(' Continuing with available balance of {}…').format(self.balance)
 		elif -amount > recipient.balance:
-			message = f'{prim2} {recipient.id} does not have sufficient funds to pay {prim1} {self.id}.'
+			message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim2, recipient.id, prim1, self.id)
 			if 'continue' in self.overdraft:
 				amount = -recipient.balance
-				message += f' Continuing with available balance of {recipient.balance}…'
+				message += _(' Continuing with available balance of {}…').format(recipient.balance)
 
 		if message is not None:
 			if self.overdraft == 'stop': raise ValueError(message)
 			if 'fail' in self.overdraft:
 				go = False
-				message += ' Cancelling trade…'
+				message += _(' Cancelling trade…')
 			if 'warn' in self.overdraft:
 				warnings.warn(message, None, 2)
 
@@ -152,7 +152,7 @@ class baseAgent:
 
 	@property
 	def balance(self):
-		if self.model.goods.money is None: raise RuntimeError('Balance checking requires a monetary good to be specified')
+		if self.model.goods.money is None: raise RuntimeError(_('Balance checking requires a monetary good to be specified.'))
 		bal = self.stocks[self.model.goods.money]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
 		if bal_ is not None: bal = bal_
@@ -164,7 +164,7 @@ class baseAgent:
 	#==================
 
 	def reproduce(self, inherit=[], mutate={}, partners=[]):
-		if self.fixed: raise NotImplementedError('Fixed primitives cannot reproduce.')
+		if self.fixed: raise NotImplementedError(_('Fixed primitives cannot reproduce.'))
 
 		maxid = 0
 		for a in self.model.allagents.values():
@@ -198,7 +198,7 @@ class baseAgent:
 			elif stat=='max': n = max(v)
 			elif stat=='min': n = min(v)
 			elif callable(stat): n = stat(v)
-			else: raise ValueError("Invalid statistic in reproduction function.")
+			else: raise ValueError(_('Invalid statistic {}.').format(stat))
 
 			setattr(newagent, a, n)
 
@@ -225,7 +225,7 @@ class baseAgent:
 		return newagent
 
 	def die(self, updateGUI=True):
-		if self.fixed: raise NotImplementedError('Fixed primitives cannot die.')
+		if self.fixed: raise NotImplementedError(_('Fixed primitives cannot die.'))
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.alledges: edge.cut()
 		self.dead = True
@@ -250,7 +250,7 @@ class baseAgent:
 		return Edge(self, partner, kind, direction, weight)
 
 	def outbound(self, kind='edge', undirected=False, obj='edge'):
-		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
+		if obj not in ['agent', 'edge']: raise ValueError(_('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.alledges
 		else:
 			if kind not in self.edges: return []
@@ -259,7 +259,7 @@ class baseAgent:
 		return ob if obj=='edge' else [e.partner(self) for e in ob]
 
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
-		if obj not in ['agent', 'edge']: raise ValueError('Object must be specified either \'agent\' or \'edge\'.')
+		if obj not in ['agent', 'edge']: raise ValueError(_('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.alledges
 		else:
 			if kind not in self.edges: return []
@@ -350,10 +350,10 @@ class Edge:
 				self.directed = direction
 				if direction: self.startpoint, self.endpoint = (agent1, agent2)
 			elif isinstance(direction, baseAgent):
-				if direction not in self.vertices: raise ValueError('Direction must select one of the agents as an endpoint.')
+				if direction not in self.vertices: raise ValueError(_('Direction must select one of the agents as an endpoint.'))
 				self.endpoint = direction
 				self.startpoint = agent1 if direction==agent2 else agent2
-			else: raise ValueError('Direction must be either int, bool, or agent.')
+			else: raise ValueError(_('Direction must be either int, bool, or agent.'))
 		if not self.directed:
 			self.endpoint, self.startpoint, self.directed = (None, None, False)
 
@@ -373,7 +373,7 @@ class Edge:
 	def partner(self, agent):
 		if agent==self.vertices[0]: return self.vertices[1]
 		elif agent==self.vertices[1]: return self.vertices[0]
-		else: raise ValueError('Agent',agent.id,'is not connected to this edge.')
+		else: raise ValueError(_('Agent {} is not connected to this edge.').format(agent.id))
 
 	def reassign(self, oldagent, newagent):
 		self.vertices = (self.partner(oldagent), newagent)
