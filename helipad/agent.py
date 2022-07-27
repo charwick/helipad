@@ -55,37 +55,38 @@ class baseAgent:
 		message = None
 		prim1, prim2 = self.primitive.title(), partner.primitive.title()
 		if amt2 != 0: price = amt1 / amt2
-		if amt1 > self.stocks[good1]:
-			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good1, prim2, partner.id)
-			if 'continue' in self.overdraft:
-				message += _(' Continuing with available {0} of {1}…').format(good1, self.stocks[good1])
-				amt1 = self.stocks[good1]
-				if amt2 != 0: amt2 = amt1 / price
-		elif -amt1 > partner.stocks[good1]:
-			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good1, prim1, self.id)
-			if 'continue' in self.overdraft:
-				message += _(' Continuing with available {0} of {1}…').format(good1, partner.stocks[good1])
-				amt1 = -partner.stocks[good1]
-				if amt2 != 0: amt2 = amt1 / price
-		if amt2 > partner.stocks[good2]:
-			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good2, prim1, self.id)
-			if 'continue' in self.overdraft:
-				message += _(' Continuing with available {0} of {1}…').format(good2, partner.stocks[good2])
-				amt2 = partner.stocks[good2]
-				amt1 = price * amt2
-		elif -amt2 > self.stocks[good2]:
-			message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good2, prim2, partner.id)
-			if 'continue' in self.overdraft:
-				message += _(' Continuing with available {0} of {1}…').format(good2, self.stocks[good2])
-				amt2 = -self.stocks[good2]
-				amt1 = price * amt2
+		if self.overdraft != 'allow':
+			if amt1 > self.stocks[good1]:
+				message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good1, prim2, partner.id)
+				if 'continue' in self.overdraft:
+					message += _(' Continuing with available {0} of {1}…').format(good1, self.stocks[good1])
+					amt1 = self.stocks[good1]
+					if amt2 != 0: amt2 = amt1 / price
+			elif -amt1 > partner.stocks[good1]:
+				message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good1, prim1, self.id)
+				if 'continue' in self.overdraft:
+					message += _(' Continuing with available {0} of {1}…').format(good1, partner.stocks[good1])
+					amt1 = -partner.stocks[good1]
+					if amt2 != 0: amt2 = amt1 / price
+			if amt2 > partner.stocks[good2]:
+				message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim2, partner.id, good2, prim1, self.id)
+				if 'continue' in self.overdraft:
+					message += _(' Continuing with available {0} of {1}…').format(good2, partner.stocks[good2])
+					amt2 = partner.stocks[good2]
+					amt1 = price * amt2
+			elif -amt2 > self.stocks[good2]:
+				message = _('{0} {1} does not have sufficient {2} to give {3} {4}.').format(prim1, self.id, good2, prim2, partner.id)
+				if 'continue' in self.overdraft:
+					message += _(' Continuing with available {0} of {1}…').format(good2, self.stocks[good2])
+					amt2 = -self.stocks[good2]
+					amt1 = price * amt2
 
-		if message is not None:
-			if self.overdraft == 'stop': raise ValueError(message)
-			if 'fail' in self.overdraft:
-				go = False
-				message += _(' Cancelling trade…')
-			elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
+			if message is not None:
+				if self.overdraft == 'stop': raise ValueError(message)
+				if 'fail' in self.overdraft:
+					go = False
+					message += _(' Cancelling trade…')
+				elif 'warn' in self.overdraft: warnings.warn(message, None, 2)
 
 		if go:
 			self.stocks[good1] -= amt1
@@ -124,25 +125,26 @@ class baseAgent:
 		#Budget constraints
 		prim1, prim2 = self.primitive.title(), recipient.primitive.title()
 		message = None
-		if amount > self.balance:
-			message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim1, self.id, prim2, recipient.id)
-			if self.overdraft == 'stop': raise ValueError(message)
-			if 'continue' in self.overdraft:
-				amount = self.balance
-				message += _(' Continuing with available balance of {}…').format(self.balance)
-		elif -amount > recipient.balance:
-			message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim2, recipient.id, prim1, self.id)
-			if 'continue' in self.overdraft:
-				amount = -recipient.balance
-				message += _(' Continuing with available balance of {}…').format(recipient.balance)
+		if self.overdraft != 'allow':
+			if amount > self.balance:
+				message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim1, self.id, prim2, recipient.id)
+				if self.overdraft == 'stop': raise ValueError(message)
+				if 'continue' in self.overdraft:
+					amount = self.balance
+					message += _(' Continuing with available balance of {}…').format(self.balance)
+			elif -amount > recipient.balance:
+				message = _('{0} {1} does not have sufficient funds to pay {2} {3}.').format(prim2, recipient.id, prim1, self.id)
+				if 'continue' in self.overdraft:
+					amount = -recipient.balance
+					message += _(' Continuing with available balance of {}…').format(recipient.balance)
 
-		if message is not None:
-			if self.overdraft == 'stop': raise ValueError(message)
-			if 'fail' in self.overdraft:
-				go = False
-				message += _(' Cancelling trade…')
-			if 'warn' in self.overdraft:
-				warnings.warn(message, None, 2)
+			if message is not None:
+				if self.overdraft == 'stop': raise ValueError(message)
+				if 'fail' in self.overdraft:
+					go = False
+					message += _(' Cancelling trade…')
+				if 'warn' in self.overdraft:
+					warnings.warn(message, None, 2)
 
 		if go and amount:
 			recipient.stocks[self.model.goods.money] += amount

@@ -276,7 +276,7 @@ class Cpanel(tk.Tk):
 
 		#Shock checkboxes and buttons
 		if len(self.model.shocks):
-			self.model.shocks.element = expandableFrame(self, text=_('Shocks'), padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			self.model.shocks.element = expandableFrame(self, text=self.model.shocks.title, padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
 			self.model.shocks.element.checks = {}
 			self.model.params['shocks'].element = self.model.shocks.element
 			for shock in self.model.shocks.shocksExceptButtons.values():

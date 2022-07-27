@@ -9,7 +9,7 @@ import gettext
 from random import shuffle, choice
 from numpy import random
 
-from helipad.visualize import BaseVisualization
+from helipad.visualize import BaseVisualization, Charts, TimeSeries
 from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
@@ -19,11 +19,15 @@ class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
 
 	def __init__(self, locale='en'):
+		#Have to do this first so that _() is available early
+		if not hasattr(self, 'breed'):
+			gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).install()
+		
 		self.data = Data(self)
+		self.params = Params(self)
 		self.shocks = Shocks(self)
 		self.events = Events()
 		self.hooks = Hooks()
-		self.params = Params(self)
 		self.primitives = Primitives(self)
 		self.goods = Goods(self)				#List of goods
 
@@ -54,7 +58,6 @@ class Helipad:
 
 		#A few things that only make sense to do if it's the topmost model
 		if not hasattr(self, 'breed'):
-			gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).install()
 
 			#Privileged parameters
 			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
@@ -170,7 +173,7 @@ class Helipad:
 
 		if self.goods.money is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
-			if self.visual is not None and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
+			if self.visual is not None and isinstance(self.visual, TimeSeries) and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
 				self.visual.plots['money'].addSeries('M0', _('Monetary Base'), self.goods[self.goods.money].color)
 
 		#Unconditional variables to report

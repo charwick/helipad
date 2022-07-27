@@ -200,7 +200,7 @@ class Cpanel(VBox):
 			children.append(HBox(buttons))
 			model.params['shocks'].element = Accordion(children=[VBox(children)])
 			model.shocks.element = model.params['shocks'].element
-			model.params['shocks'].element.set_title(0, _('Shocks'))
+			model.params['shocks'].element.set_title(0, model.params['shocks'].title)
 			self.children += model.params['shocks'].element,
 
 		cbot = self.model.doHooks('CpanelBottom', [self, None])

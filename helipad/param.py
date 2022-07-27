@@ -456,7 +456,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 	def __init__(self, model):
 		dict.__init__(self)
-		CheckgridParam.__init__(self, name='shocks', title='Shocks', type='checkgrid', opts={}, dflt={}, runtime=True, config=True, per=None)
+		CheckgridParam.__init__(self, name='shocks', title=_('Shocks'), type='checkgrid', opts={}, dflt={}, runtime=True, config=True, per=None)
 		self.model = model
 
 		class Shock(Item):
