@@ -13,9 +13,11 @@ Helipad is an agent-based modeling framework for Python with powerful visualizat
 
 ## How to use
 
-You can install Helipad using Pip.
+You can install Helipad using either Pip or Conda, depending on your preferred package manager.
 
 	pip install helipad
+
+	conda install -c charwick helipad
 
 Once installed, getting started with a model is very simple. 
 
