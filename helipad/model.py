@@ -4,8 +4,8 @@
 # ==========
 
 import os, sys, warnings, asyncio, time
-import pandas
 import gettext
+import pandas
 from random import shuffle, choice
 from numpy import random
 
@@ -22,7 +22,7 @@ class Helipad:
 		#Have to do this first so that _() is available early
 		if not hasattr(self, 'breed'):
 			gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).install()
-		
+
 		self.data = Data(self)
 		self.params = Params(self)
 		self.shocks = Shocks(self)
@@ -428,8 +428,7 @@ class Helipad:
 		return self.network(kind, prim)
 
 	def network(self, kind='edge', prim=None, excludePatches=False):
-		try: import networkx as nx
-		except: warnings.warn(_('Network export requires Networkx.'), None, 2)
+		import networkx as nx
 
 		#Have to use DiGraph in order to draw any arrows
 		G = nx.DiGraph(name=kind)

@@ -190,10 +190,6 @@ msgstr ""
 msgid "Network density must take a value between 0 and 1."
 msgstr ""
 
-#: model.py:428
-msgid "Network export requires Networkx."
-msgstr ""
-
 #: model.py:482
 msgid "Breed '{0}' is not registered for the '{1}' primitive."
 msgstr ""

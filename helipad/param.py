@@ -443,10 +443,10 @@ class Params(fStoreWithInterface):
 
 	@property
 	def globals(self): return {k:v for k,v in self.items() if v.per is None}
-	
+
 	@property
 	def perBreed(self): return {k:v for k,v in self.items() if v.per=='breed'}
-	
+
 	@property
 	def perGood(self): return {k:v for k,v in self.items() if v.per=='good'}
 

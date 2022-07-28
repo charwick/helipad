@@ -34,17 +34,17 @@ Helipad requires Python 3.7 or higher. The following libraries are also required
 
 * [Matplotlib](https://matplotlib.org/) for visualization
 * [Pandas](https://pandas.pydata.org/) for data collection
+* [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
 
 The following libraries are optional but recommended:
 
 * [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) to run Helipad in Jupyter notebooks
-* [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
 * [Readline](https://pypi.org/project/readline/) and Code for the debug console
 * [Nest-asyncio](https://pypi.org/project/nest-asyncio/) to run Helipad from Spyder
 
 ## Version History
 
-* [1.4](https://helipad.dev/2022/07/helipad-1-4/): More consistent container API, miscellaneous interface improvements
+* [1.4](https://helipad.dev/2022/07/helipad-1-4/): More consistent container API, localization, miscellaneous interface improvements
 * [1.3](https://helipad.dev/2021/06/helipad-1-3/): Allow mixing time series and other plots, display networks on spatial maps, goods API improvements
 * [1.2](https://helipad.dev/2021/02/helipad-1-2/): Extensible visualization API, events, performance profiling, Jupyterlab support
 * [1.1](https://helipad.dev/2020/10/helipad-1-1/): Virtual parameters, improved Jupyter flexibility, spatial pre-alpha, misc improvements

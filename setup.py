@@ -20,11 +20,12 @@ setuptools.setup(
 	packages=setuptools.find_packages(),
 	package_dir={'helipad': 'helipad'},
 	include_package_data=True,
-	package_data={'': ['*.css']},
+	package_data={'': ['*.css', '*.mo', '*.po', '*.pot', '*.png']},
 	license='MIT',
 	install_requires=[
 		'matplotlib',
-		'pandas'
+		'pandas',
+		'networkx'
 	],
 	classifiers=[
 		"Programming Language :: Python :: 3",

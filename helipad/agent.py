@@ -397,8 +397,8 @@ class Stocks:
 		if isinstance(key, str): return self.goods[key]['quantity']
 		elif isinstance(key, tuple):
 			if isinstance(key[1], str): return self.goods[key[0]][key[1]]
-			elif key[1]==True: return self.goods[key[0]]
-			elif key[1]==False: return self.goods[key]['quantity']
+			elif key[1] is True: return self.goods[key[0]]
+			elif key[1] is False: return self.goods[key]['quantity']
 		raise KeyError
 
 	def __setitem__(self, key, val):

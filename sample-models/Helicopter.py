@@ -54,13 +54,6 @@ class Store(baseAgent):
 			#Just have a fixed inventory target, but update if params do
 			self.invTarget = {g:self.model.param(('prod','good',g))*self.model.param('num_agent')*2 for g in self.model.goods.nonmonetary}
 
-			#Keep track of typical demand
-			#Target sufficient inventory to handle 2 standard deviations above mean demand for the last 100 periods
-			# history = pandas.Series(self.model.data.getLast('demand-'+i, 100)) + pandas.Series(self.model.data.getLast('shortage-'+i, 100))
-			# avg[i], stdev[i] = history.mean(), history.std()
-			# itt = (1 if isnan(avg[i]) else avg[i]) + 2 * (1 if isnan(stdev[i]) else stdev[i])
-			# self.invTarget[i] = (self.invTarget[i] + itt)/2 #Smooth it a bit
-
 			#Produce stuff
 			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
 			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
