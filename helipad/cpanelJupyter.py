@@ -1,4 +1,5 @@
 import os
+from collections import ChainMap
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
 from IPython.display import display
 from helipad.param import Param
@@ -16,6 +17,11 @@ class Cpanel(VBox):
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css'), encoding='UTF-8') as c: css = c.read()
+		
+		#CSS for goods and breeds, since Ipywidgets ≥8.0 oversanitizes HTML in description attributes
+		for n,c in ChainMap(*[{f'breed_{p}_{k}': v.color.hex for k,v in d.breeds.items()} for p,d in model.primitives.items()]+[{'good_'+k: v.color.hex for k,v in model.goods.items()}]).items():
+			css += f'.helipad_{n} .widget-label::before {{ background: {c} }}'
+			
 		self.children += HTML(value='<style type="text/css">'+css+'</style>'),
 
 		#Callback function generator for Jupyter elements
@@ -34,7 +40,10 @@ class Cpanel(VBox):
 			#Have to return a different function since Ipywidgets bases the interactive off the function signature
 			if param.type=='checkentry':
 				def sv2(b,s):
-					els = param.element if item is None else param.elements[item]
+					#Ipywidgets ≥8.0 runs the callback before the element is assigned
+					try: els = param.element if item is None else param.elements[item]
+					except (AttributeError, KeyError): return
+					
 					els.children[1].disabled = not b
 					#Coercing an int can fail, so if there's an exception, reset the textbox content
 					try:
@@ -90,23 +99,27 @@ class Cpanel(VBox):
 				#So append it to the children and we'll absolutely position it to the right place
 				param.elements['toggleAll'] = Button(icon='check')
 				def toggleAll(b=None):
-					v = False if [c.children[0].value for c in param.element.values() if  not isinstance(c, Button) and c.children[0].value] else True
-					for c in param.element.values():
+					v = False if [c.children[0].value for c in param.element.children[0].children if  not isinstance(c, Button) and c.children[0].value] else True
+					for c in param.element.children[0].children:
 						if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
 				param.elements['toggleAll'].on_click(toggleAll)
 				param.elements['toggleAll'].add_class('helipad_toggleAll')
 
 				param.containerElement = HBox(list(param.elements.values()))
-				i = Accordion(children=[param.containerElement])
+				i = Accordion(children=[param.containerElement], selected_index=0)
 				i.set_title(0, title)
 				i.add_class('helipad_checkgrid')
 
 			if i is not None and param.type!='checkgrid':
-				circle='<span class="helipad_circle" style="background:'+circle.hex+'"></span>' if circle is not None else ''
-				i.children[0].description = circle+title
+				if param.per is not None:
+					n = (f'{param.prim}_' if param.per=='breed' else '')+title.lower()
+					i.children[0].add_class(f'helipad_{param.per}_{n}')
+					i.children[0].add_class(f'helipad_per_item')
+				i.children[0].description = title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
 				i.children[0].description_tooltip = param.desc if param.desc is not None else ''
 				if param.type=='slider' and isinstance(param.opts, list):
+					i.children[0].add_class('widget-logslider')
 					i.children[1].value = str(val)
 					if val in param.opts: val=param.opts.index(val)
 				if param.type!='checkentry': i.children[0].value = val
@@ -118,7 +131,7 @@ class Cpanel(VBox):
 			for item, good in itemList.items():
 				param.elements[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
 
-			accordion = Accordion(children=[HBox(list(param.elements.values()))])
+			accordion = Accordion(children=[HBox(list(param.elements.values()))], selected_index=0)
 			accordion.set_title(0, param.title)
 			accordion.add_class('helipad_param_peritem helipad_paramgroup')
 			return accordion
@@ -198,7 +211,7 @@ class Cpanel(VBox):
 				shock.element.description_tooltip = shock.desc if shock.desc is not None else ''
 				buttons.append(shock.element)
 			children.append(HBox(buttons))
-			model.params['shocks'].element = Accordion(children=[VBox(children)])
+			model.params['shocks'].element = Accordion(children=[VBox(children)], selected_index=0)
 			model.shocks.element = model.params['shocks'].element
 			model.params['shocks'].element.set_title(0, model.params['shocks'].title)
 			self.children += model.params['shocks'].element,
@@ -280,7 +293,7 @@ class Cpanel(VBox):
 		warning = Label(value=message)
 		warning.add_class('helipad_modal')
 		self.children += warning,
-		for p in self.model.params: del p.element
+		for p in self.model.params.values(): del p.element
 		return warning
 
 #https://stackoverflow.com/questions/24005221/ipython-notebook-early-exit-from-cell

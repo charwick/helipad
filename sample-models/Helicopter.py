@@ -4,7 +4,6 @@
 from itertools import combinations
 from math import sqrt
 from helipad import *
-# import pandas
 from numpy import random, isnan
 
 M0 = 120000

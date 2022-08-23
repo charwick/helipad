@@ -300,7 +300,9 @@ class CheckgridParam(Param):
 			if hasattr(self, 'element') and not isNotebook(): self.element.checks[item].set(val)
 			self.vars[item] = val
 
-			if updateGUI and isNotebook() and hasattr(self, 'elements'): self.elements[item].children[0].value = val
+			if updateGUI and isNotebook() and hasattr(self, 'elements'):
+				try: self.elements[item].children[0].value = val
+				except KeyError: return #Ipywidgets ≥8.0 runs the callback on instantiation before the element property is set
 
 	@property
 	def range(self):

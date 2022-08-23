@@ -1,12 +1,17 @@
 /* The color indicator on per-item parameters */
 
-.helipad_circle {
+.helipad_per_item .widget-label::before {
+	content: '';
 	height: 10px; width: 10px;
 	border-radius: 10px;
 	border: 1px solid rgba(0,0,0,0.2);
 	display: inline-block;
 	margin-right:5px;
 }
+.helipad_cpanel .widget-inline-hbox { max-width: calc(100% - 4px); }
+.helipad_cpanel .widget-inline-hbox .widget-label { width: auto !important;} /* Not sure why the previous rule screws this up */
+
+.helipad_cpanel div.widget-logslider { max-width: calc(100% - 50px); }
 
 /* Turn an HBox of checkboxes into a wrapping Checkgrid */
 
@@ -110,7 +115,7 @@
 	text-align: center;
 	top: 50px; left: 50%;
 	margin: 0 0 0 -40%;
-	padding: 20px 0;
+	padding: 20px;
 	background: rgba(255,210,200,0.75);
 	border: 1px solid rgba(100,0,0,0.5);
 	border-radius: 4px;

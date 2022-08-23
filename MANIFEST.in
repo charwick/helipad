@@ -3,6 +3,7 @@ global-include *.css
 global-include *.po
 global-include *.mo
 global-include *.pot
+global-include *.png
 recursive-include sample-models *
 recursive-include sample-notebooks *
 
