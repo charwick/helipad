@@ -867,15 +867,6 @@ class Hooks(funcStore):
 	multi = True
 
 	def add(self, name, function, prioritize=False):
-		deprec = {
-			'networkNodeClick': 'agentClick',	#1.3; can be removed in 1.5
-			'spatialAgentClick': 'agentClick',	#1.3; can be removed in 1.5
-			'spatialPatchClick': 'patchClick'	#1.3; can be removed in 1.5
-		}
-		if name in deprec:
-			warnings.warn(_('The {0} hook is deprecated and has been replaced with {1}.').format(name, deprec[name]), FutureWarning, 2)
-			name = deprec[name]
-
 		if not name in self: self[name] = []
 		if prioritize: self[name].insert(0, function)
 		else: self[name].append(function)

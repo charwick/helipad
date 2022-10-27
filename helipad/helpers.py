@@ -13,7 +13,7 @@ def isIpy():
 	except NameError: return False
 
 #Check whether Helipad is running in an interactive notebook. However, get_ipython() comes
-# back undefined inside callbacks. So cache the value once, the first time it runs.
+#back undefined inside callbacks. So cache the value once, the first time it runs.
 def isNotebook():
 	if not '__helipad_ipy' in globals():
 		try:
@@ -53,19 +53,6 @@ class funcStore(dict):
 		else:
 			del self[name]
 			return True
-
-#To handle deprecated parameter names
-class dictLike(dict):
-	def __getitem__(self, index): return super().__getitem__(self.normalize(index))
-	def __setitem__(self, index, value): super().__setitem__(self.normalize(index), value)
-	def normalize(self, index):
-		deprecated = {
-			# 'updateEvery': 'refresh'
-		}
-		if index in deprecated:
-			warnings.warn(_('The {0} parameter is deprecated and has been renamed to {1}.').format(index, deprecated[index]), FutureWarning, 3)
-			index = deprecated[index]
-		return index
 
 import colorsys, matplotlib.colors as mplcolor
 class Color:

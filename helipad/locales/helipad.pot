@@ -122,10 +122,6 @@ msgstr ""
 msgid "First argument of Data.getLast() must be either a key name or an int."
 msgstr ""
 
-#: helpers.py:66
-msgid "The {0} parameter is deprecated and has been renamed to {1}."
-msgstr ""
-
 #: model.py:66
 msgid "Stop on period"
 msgstr ""
@@ -253,10 +249,6 @@ msgstr ""
 
 #: model.py:801
 msgid "{} is a reserved name. Please choose another."
-msgstr ""
-
-#: model.py:873
-msgid "The {0} hook is deprecated and has been replaced with {1}."
 msgstr ""
 
 #: param.py:33 param.py:100 param.py:118 param.py:166
