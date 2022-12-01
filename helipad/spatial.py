@@ -58,10 +58,9 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 			else: raise RuntimeError(_('Patches cannot move.'))
 		return np2
 
-	def setx(self, val): self.position[0] = val
-	def sety(self, val): self.position[1] = val
-
-	#Both agents and patches to have x and y properties
+	#Both agents and patches have x and y properties
+	def setx(self, val): self.moveTo(val, self.position[1])
+	def sety(self, val): self.moveTo(self.position[0], val)
 	baseAgent.x = property(lambda self: self.position[0], setx)
 	baseAgent.y = property(lambda self: self.position[1], sety)
 
@@ -70,13 +69,13 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 	baseAgent.distanceFrom = distanceFrom
 
 	baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
-	def moveUp(self): self.position = list(self.patch.up.position)
+	def moveUp(self): self.move(0, -1)
 	baseAgent.moveUp = NotPatches(moveUp)
-	def moveRight(self): self.position = list(self.patch.right.position)
+	def moveRight(self): self.move(1, 0)
 	baseAgent.moveRight = NotPatches(moveRight)
-	def moveDown(self): self.position = list(self.patch.down.position)
+	def moveDown(self): self.move(0, 1)
 	baseAgent.moveDown = NotPatches(moveDown)
-	def moveLeft(self): self.position = list(self.patch.left.position)
+	def moveLeft(self): self.move(-1, 0)
 	baseAgent.moveLeft = NotPatches(moveLeft)
 	def move(self, x, y):
 		mapx, mapy, wrap = self.model.param('x'), self.model.param('y'), self.model.param('wrap')
