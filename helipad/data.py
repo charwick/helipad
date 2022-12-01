@@ -81,14 +81,11 @@ class Data:
 		else: subplots = None
 
 		def reporter(model):
-			u = []
-			array = model.allagents.values() if prim=='all' else model.agents[prim]
+			#Construct list of values
+			array = [getattr(a, key) for a in (model.allagents.values() if prim=='all' else model.agents[prim]) if breed is None or breed==a.breed]
+			if good is not None: array = [v[good] for v in array]
+			u = [v for v in array if v is not None]
 
-			for agent in array:
-				if breed is not None and agent.breed != breed: continue
-				v = getattr(agent, key)
-				if good is not None: v = v[good] #Narrow to goods. Hackish…
-				if v is not None: u.append(v)
 			if not u: return 0
 			elif stat=='sum':	return sum(u)
 			elif stat=='mean':	return np.mean(u)

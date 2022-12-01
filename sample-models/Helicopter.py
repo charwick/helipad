@@ -1,6 +1,8 @@
 # A model of the relative price effects of monetary shocks via helicopter drop
 # Download the paper at https://ssrn.com/abstract=2545488
 
+#To generate IRFs, turn off the visualization, turn on stopafter, and one shock.
+
 from itertools import combinations
 from math import sqrt
 from helipad import *

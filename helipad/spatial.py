@@ -1,7 +1,6 @@
 #===============
-# Unlike other ABM frameworks like Mesa or Netlogo, Helipad is not specifically designed for spatial models.
-# However, it can be extended easily enough to do so using networks to create a grid.
-# The functions in this module are in pre-beta and not API stable.
+# Functions to initialize a grid network of Patch agents
+# and add orientation and motion functions to other agents.
 #===============
 
 import warnings

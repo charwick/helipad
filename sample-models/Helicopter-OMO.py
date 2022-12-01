@@ -17,7 +17,6 @@ class Bank(baseAgent):
 
 		self.i = .1				#Per-period interest rate
 		self.targetRR = 0.25
-		# self.lastWithdrawal = 0
 		self.inflation = 0
 		self.accounts = {}		#Liabilities
 		self.credit = {}		#Assets
@@ -61,7 +60,6 @@ class Bank(baseAgent):
 	def deposit(self, customer, amt):
 		amt = customer.pay(self, amt)
 		self.accounts[customer.id] += amt	#Credit account
-		# if amt<0: self.lastWithdrawal -= amt
 		return amt
 
 	def transfer(self, customer, recipient, amt):
@@ -109,7 +107,6 @@ class Bank(baseAgent):
 		return amt - leftover							#How much you amortized
 
 	def step(self, stage):
-		# self.lastWithdrawal = 0
 		for l in self.credit.values(): l.step()
 
 		#Pay interest on deposits
@@ -119,14 +116,6 @@ class Bank(baseAgent):
 			print('Disbursing profit of $',profit)
 			for id, a in self.accounts.items():
 				self.accounts[id] += profit/lia * a
-
-		# # Set target reserve ratio
-		# if self.model.t > 2:
-		# 	wd = self.model.data.getLast('withdrawals', 50)
-		# 	mn, st = mean(wd), std(wd)
-		# 	if isnan(mn) or isnan(st): mn, st = .1, .1
-		# 	ttargetRR = (mn + 2 * st) / lia
-		# 	self.targetRR = (49*self.targetRR + ttargetRR)/50
 
 		#Calculate inflation as the unweighted average price change over all goods
 		if self.model.t >= 2:
@@ -218,8 +207,7 @@ heli.hooks.add('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set t
 def lpUpdater(model, var, breed, val):
 	if model.hasModel:
 		for a in model.agents['agent']:
-			if a.breed == breed:
-				a.liqPref = val
+			if a.breed == breed: a.liqPref = val
 
 heli.params['dist'].opts = {
 	'prop': 'Helicopter/Proportional',
@@ -246,6 +234,10 @@ heli.visual.addPlot('i', 'Interest Rate', selected=False)
 
 #Don't bother keeping track of the bank-specific variables unless the banking system is there
 #Do this here rather than at the beginning so we can decide at runtime
+
+def cashdemand(model):
+	return model.data.agentReporter('stocks', good=model.goods.money, stat='sum', prim='agent')(model)/model.data.agentReporter('balance', stat='sum', prim='agent')(model)
+
 @heli.hook
 def modelPreSetup(model):
 	if model.param('num_bank') > 0:
@@ -255,8 +247,8 @@ def modelPreSetup(model):
 		model.data.addReporter('targetRR', model.data.agentReporter('targetRR', 'bank'))
 		model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
 		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
+		model.data.addReporter('cashdemand', cashdemand)
 		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
-		# model.data.addReporter('withdrawals', model.data.agentReporter('lastWithdrawal', 'bank'))
 		model.data.addReporter('M2', lambda model: model.cb.M2)
 
 		model.visual.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
@@ -267,6 +259,7 @@ def modelPreSetup(model):
 		model.visual.plots['i'].addSeries('i', 'Nominal interest', '#000000')
 		model.visual.plots['i'].addSeries('r', 'Real interest', '#0000CC')
 		model.visual.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
+		model.visual.plots['i'].addSeries('cashdemand', '% cash held', '#00CC00')
 
 @heli.hook
 def modelPostSetup(model):
@@ -280,8 +273,8 @@ def storeStep(agent, model, stage):
 	#Intertemporal transactions
 	if hasattr(agent, 'bank') and model.t > 0:
 		#Stipulate some demand for credit, we can worry about microfoundations later
-		agent.bank.amortize(agent, agent.bank.credit[agent.id].owe/1.5)
-		agent.bank.borrow(agent, model.cb.ngdp * (1-agent.bank.i))
+		agent.bank.amortize(agent, agent.bank.credit[agent.id].owe/1.5) #Pay back 2/3 of the outstanding balance each period
+		agent.bank.borrow(agent, model.cb.ngdp * (1-agent.bank.i)) #Borrow some amount rising in sales volume and declining in the interest rate
 
 #
 # Agents
@@ -303,7 +296,7 @@ def agentInit(agent, model):
 def agentStep(agent, model, stage):
 	#Deposit cash in the bank at the end of each period
 	if hasattr(agent, 'bank'):
-		tCash = agent.liqPref*agent.balance
+		tCash = agent.liqPref * (1/(1+agent.bank.i)) * agent.balance #Slightly interest-elastic
 		agent.bank.deposit(agent, agent.stocks[agent.model.goods.money]-tCash)
 
 #Use the bank if the bank exists

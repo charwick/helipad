@@ -1,6 +1,6 @@
 # Helipad
 
-Helipad is an agent-based modeling framework for Python with powerful visualization capabilities and a shallow learning curve. Documentation and API reference can be found at https://helipad.dev
+Helipad is an agent-based modeling framework for Python with powerful visualization capabilities and a shallow learning curve. Documentation and API reference can be found at [helipad.dev](https://helipad.dev).
 
 ## Features
 
@@ -11,7 +11,7 @@ Helipad is an agent-based modeling framework for Python with powerful visualizat
 * 🤹🏻‍♂️ Agents can barter, buy and sell with money, reproduce both haploid and polyploid, and more
 * 🕺🏻 A variety of model types: sequential or random-activation models, matching models, multi-level models, network models, spatial models, and more
 
-## How to use
+## How to Use
 
 You can install Helipad using either Pip or Conda, depending on your preferred package manager.
 
@@ -43,6 +43,12 @@ The following libraries are optional but recommended:
 * [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) to run Helipad in Jupyter notebooks
 * [Readline](https://pypi.org/project/readline/) and Code for the debug console
 * [Nest-asyncio](https://pypi.org/project/nest-asyncio/) to run Helipad from Spyder
+
+## How to Cite
+
+If you use Helipad in your own research, please cite as follows:
+
+> Harwick, Cameron (2021). “Helipad: A Framework for Agent-Based Modeling in Python.” Working paper available at [ssrn.com/abstract=3870501](https://ssrn.com/abstract=3870501). 
 
 ## Version History
 
