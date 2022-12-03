@@ -2,6 +2,7 @@
 # https://en.wikipedia.org/wiki/Conway%27s_Game_of_Life
 
 from helipad import Helipad
+from random import getrandbits
 
 heli = Helipad()
 heli.name = 'Game of Life'
@@ -34,5 +35,14 @@ def patchClick(patch, plot, t):
 	patch.active = not patch.active
 	plot.update(None, t)
 	plot.draw(t, forceUpdate=True)
+
+@heli.button
+def Randomize(model):
+	if not model.hasModel: return
+	for p in model.agents['patch']:
+		p.active = bool(getrandbits(1))
+	if model.visual:
+		model.visual.plots['map'].update(None, model.t)
+		model.visual.plots['map'].draw(model.t, forceUpdate=True)
 
 heli.launchCpanel()
