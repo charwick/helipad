@@ -7,7 +7,7 @@ import tkinter as tk
 import os, sys
 from math import ceil
 from tkinter.ttk import Progressbar
-from helipad.helpers import Color
+from helipad.helpers import Color, ï
 from helipad.param import Param
 
 class Cpanel(tk.Tk):
@@ -17,7 +17,7 @@ class Cpanel(tk.Tk):
 
 		#Set application name
 		self.setAppIcon()
-		self.title(_('{}Control Panel').format(self.model.name+(' ' if self.model.name!='' else '')))
+		self.title(ï('{}Control Panel').format(self.model.name+(' ' if self.model.name!='' else '')))
 		self.resizable(0,0)
 
 		bgcolors = ('#FFFFFF','#EEEEEE')
@@ -81,15 +81,15 @@ class Cpanel(tk.Tk):
 				super().__init__(root, text='Run', command=self.model.launchVisual, padx=10, pady=10, highlightbackground=bg)
 
 			def run(self2):
-				self2['text'] = _('Pause')
+				self2['text'] = ï('Pause')
 				self2['command'] = self.model.stop
 
 			def pause(self2):
-				self2['text'] = _('Run')
+				self2['text'] = ï('Run')
 				self2['command'] = self.model.start
 
 			def terminate(self2):
-				self2['text'] = _('New Model')
+				self2['text'] = ï('New Model')
 				self2['command'] = self.model.launchVisual
 
 		#
@@ -196,7 +196,7 @@ class Cpanel(tk.Tk):
 		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3, sticky='w')
 		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3, sticky='w')
 		if not self.model.params['stopafter'].event and not self.model.param('stopafter'): self.model.params['stopafter'].element.entryValue.set(10000)
-		self.model.params['csv'].set(_('filename'))
+		self.model.params['csv'].set(ï('filename'))
 		self.model.params['csv'].set(False)
 
 		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
@@ -514,7 +514,7 @@ class checkEntry(tk.Frame):
 			self.textbox = tk.Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
 		elif type=='int':
 			self.textbox = tk.Spinbox(self, from_=limits[0], to=limits[1], textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
-		else: raise ValueError(_('Invalid Checkentry type. Must be either "string" or "int"'))
+		else: raise ValueError(ï('Invalid Checkentry type. Must be either "string" or "int"'))
 		self.textbox.grid(row=0, column=1)
 
 		self.checkVar = tk.BooleanVar()

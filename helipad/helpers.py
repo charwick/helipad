@@ -5,6 +5,11 @@
 
 import warnings
 
+#Internationalization since using _ is a disaster
+#Can't install to global scope because it conflicts with readline;
+#Can't name it _ here because `import *` skips it (???)
+def ï(text): return helipad_gettext(text)
+
 #Checks for any Ipython environment, including Spyder, for event loop purposes.
 def isIpy():
 	try:

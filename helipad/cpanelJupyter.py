@@ -3,6 +3,7 @@ from collections import ChainMap
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
 from IPython.display import display
 from helipad.param import Param
+from helipad.helpers import ï
 
 class Cpanel(VBox):
 	def __init__(self, model, redraw=False):
@@ -144,7 +145,7 @@ class Cpanel(VBox):
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
 			param.element = renderParam(param, param.setVar(), param.title, param.get())
 			if param.element is not None: self.children += (param.element,)
-			if param.name=='csv': param.set(_('filename'))
+			if param.name=='csv': param.set(ï('filename'))
 			if n=='stopafter' and not param.event and not param.get(): param.element.children[1].value = '10000'
 			if param.type=='checkentry' and getattr(param, 'config', False) and not (n=='stopafter' and param.event): param.set(False)
 
@@ -219,7 +220,7 @@ class Cpanel(VBox):
 		cbot = self.model.doHooks('CpanelBottom', [self, None])
 		if cbot: self.children += cbot,
 
-		self.postinstruct = self.displayAlert(_('After setting parameter values, run <code>launchVisual()</code> or <code>start()</code> to start the model.'))
+		self.postinstruct = self.displayAlert(ï('After setting parameter values, run <code>launchVisual()</code> or <code>start()</code> to start the model.'))
 		if not redraw:
 			display(self)
 
@@ -246,12 +247,12 @@ class Cpanel(VBox):
 
 				def run(self2):
 					self2.click = self.model.stop
-					self2.description = _('Pause')
+					self2.description = ï('Pause')
 					self2.icon = 'pause'
 
 				def pause(self2):
 					self2.click = self.model.start
-					self2.description = _('Run')
+					self2.description = ï('Run')
 					self2.icon = 'play'
 
 				def terminate(self):
@@ -264,11 +265,11 @@ class Cpanel(VBox):
 			#Model flow control: pause/run button and progress bar
 			@model.hook('modelPreSetup', prioritize=True)
 			def cpanel_visualPreLaunch(model):
-				self.runButton = runButton(description=_('Pause'), icon='pause')
+				self.runButton = runButton(description=ï('Pause'), icon='pause')
 				self.progress = progressBar()
 				self.postinstruct.layout = Layout(display='none')
 
-				self.stopbutton = Button(description=_('Stop'), icon='stop')
+				self.stopbutton = Button(description=ï('Stop'), icon='stop')
 				self.stopbutton.click = self.model.terminate
 
 				pbararea = HBox([self.runButton, self.stopbutton, self.progress])
@@ -287,7 +288,7 @@ class Cpanel(VBox):
 		else: display(element)
 		return element
 
-	def invalidate(self, message=_('Model parameters changed, please re-launch the control panel with launchCpanel().')):
+	def invalidate(self, message=ï('Model parameters changed, please re-launch the control panel with launchCpanel().')):
 		self.valid = False
 		self.add_class('invalid')
 		warning = Label(value=message)

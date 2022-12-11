@@ -4,6 +4,7 @@
 # ==========
 
 from abc import ABC, abstractmethod
+from helipad.helpers import ï
 
 #Basic utility functions
 class Utility(ABC):
@@ -23,7 +24,7 @@ class Utility(ABC):
 	#Returns a scalar utility
 	@abstractmethod
 	def calculate(self, quantities):
-		if len(quantities) != len(self.goods): raise KeyError(_('Quantities argument doesn\'t match initialized list of goods.'))
+		if len(quantities) != len(self.goods): raise KeyError(ï('Quantities argument doesn\'t match initialized list of goods.'))
 
 	#Receives a budget and an array of prices
 	#Returns an array of utility-maximizing quantities
@@ -35,7 +36,7 @@ class Utility(ABC):
 	#Returns a dictionary of marginal utilities
 	@abstractmethod
 	def mu(self, quantities):
-		if len(quantities) != len(self.goods): raise KeyError(_('Quantities argument doesn\'t match initialized list of goods.'))
+		if len(quantities) != len(self.goods): raise KeyError(ï('Quantities argument doesn\'t match initialized list of goods.'))
 
 	#Receives two quantities, returns a marginal rate of substitution
 	@abstractmethod

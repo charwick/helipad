@@ -19,9 +19,11 @@ class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
 
 	def __init__(self, locale='en'):
-		#Have to do this first so that _() is available early
+		#Have to do this first so that i18n() is available early.
+		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console.
 		if not hasattr(self, 'breed'):
-			gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).install()
+			import builtins
+			builtins.__dict__['helipad_gettext'] = gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).gettext
 
 		self.data = Data(self)
 		self.params = Params(self)
@@ -67,9 +69,9 @@ class Helipad:
 				else:
 					model.cpanel.progress.determinate(True)
 					model.cpanel.progress.update(model.t/val)
-			self.params.add('stopafter', _('Stop on period'), 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
-			self.params.add('csv', _('CSV?'), 'checkentry', False, runtime=True, config=True)
-			self.params.add('refresh', _('Refresh Every __ Periods'), 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
+			self.params.add('stopafter', ï('Stop on period'), 'checkentry', False, runtime=True, config=True, entryType='int', callback=switchPbar)
+			self.params.add('csv', ï('CSV?'), 'checkentry', False, runtime=True, config=True)
+			self.params.add('refresh', ï('Refresh Every __ Periods'), 'slider', 20, opts=[1, 2, 5, 10, 20, 50, 100, 200, 500, 1000], runtime=True, config=True)
 			self.params['shocks'] = self.shocks
 
 			#Check for updates
@@ -95,7 +97,7 @@ class Helipad:
 				pypi = xmlrpc.client.ServerProxy('https://pypi.org/pypi', context=ssl._create_unverified_context())
 				available = pypi.package_releases('helipad')
 				if vcompare(available[0], __version__):
-					print(_('A Helipad update is available! Use `pip install -U helipad` to upgrade to version {}.').format(available[0]))
+					print(ï('A Helipad update is available! Use `pip install -U helipad` to upgrade to version {}.').format(available[0]))
 			except: pass #Fail silently if we're not online
 
 	def addButton(self, text, func, desc=None):
@@ -112,7 +114,7 @@ class Helipad:
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-			else: raise KeyError(_('Breed must specify which primitive it belongs to.'))
+			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
 		return self.primitives[prim].breeds.add(name, color)
 
 	#Returns the value of the last function in the list
@@ -130,11 +132,11 @@ class Helipad:
 
 	def useVisual(self, viz):
 		if hasattr(self, 'breed'):
-			warnings.warn(_('Visualizations can only be registered on the top-level model.'), None, 2)
+			warnings.warn(ï('Visualizations can only be registered on the top-level model.'), None, 2)
 			return #Doesn't matter if it's not the top-level model
 
 		if viz is not None and not issubclass(viz, BaseVisualization):
-			raise RuntimeError(_('Visualization class must inherit from BaseVisualization.'))
+			raise RuntimeError(ï('Visualization class must inherit from BaseVisualization.'))
 
 		self.visual = viz(self) if viz is not None else None
 		return self.visual
@@ -174,7 +176,7 @@ class Helipad:
 		if self.goods.money is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
 			if self.visual is not None and isinstance(self.visual, TimeSeries) and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
-				self.visual.plots['money'].addSeries('M0', _('Monetary Base'), self.goods[self.goods.money].color)
+				self.visual.plots['money'].addSeries('M0', ï('Monetary Base'), self.goods[self.goods.money].color)
 
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
@@ -184,13 +186,13 @@ class Helipad:
 		for breed, b in self.primitives[defPrim].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
-				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' '+_('Utility'), b.color)
+				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' '+ï('Utility'), b.color)
 
 		if len(self.goods) >= 2:
 			for good, g in self.goods.nonmonetary.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 				if self.visual is not None and hasattr(self.visual, 'plots'):
-					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' '+_('Demand'), g.color)
+					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
 
 		#Initialize agents
 		self.primitives = dict(sorted(self.primitives.items(), key=lambda d: d[1].priority))				#Sort by priority
@@ -213,7 +215,7 @@ class Helipad:
 				import nest_asyncio
 				nest_asyncio.apply()
 			except:
-				raise ImportError(_('nest_asyncio is required to run Helipad from Spyder.'))
+				raise ImportError(ï('nest_asyncio is required to run Helipad from Spyder.'))
 
 		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
@@ -277,7 +279,7 @@ class Helipad:
 										for other in others: matchpool.remove(other)
 										agents += others
 										break
-									else: raise ValueError(_('matchSelect did not return the correct number of agents.'))
+									else: raise ValueError(ï('matchSelect did not return the correct number of agents.'))
 
 						accept = self.doHooks('matchAccept', agents)
 						if accept is not None and not accept:
@@ -331,7 +333,7 @@ class Helipad:
 				# Performance indicator
 				if self.timer:
 					newtime = time.time()
-					print(_('Period {0}: {1} periods/second ({2}% model, {3}% visuals)').format(t, round(self.param('refresh')/(newtime-begin),2), round((t2-begin)/(newtime-begin)*100,2), round((newtime-t2)/(newtime-begin)*100,2)))
+					print(ï('Period {0}: {1} periods/second ({2}% model, {3}% visuals)').format(t, round(self.param('refresh')/(newtime-begin),2), round((t2-begin)/(newtime-begin)*100,2), round((newtime-t2)/(newtime-begin)*100,2)))
 					begin = newtime
 
 			if st:
@@ -384,7 +386,7 @@ class Helipad:
 
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
 	def paramSweep(self, param, reporters=None):
-		if not self.param('stopafter'): raise RuntimeError(_('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set.'))
+		if not self.param('stopafter'): raise RuntimeError(ï('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set.'))
 
 		#Standardize format and get the Param objects
 		if not isinstance(param, list): param = [param]
@@ -419,7 +421,7 @@ class Helipad:
 
 	#Creates an unweighted and undirected network of a certain density
 	def createNetwork(self, density, kind='edge', prim=None):
-		if density < 0 or density > 1: raise ValueError(_('Network density must take a value between 0 and 1.'))
+		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
 		from itertools import combinations
 		agents = self.allagents.values() if prim is None else self.agents[prim]
 		for c in combinations(agents, 2):
@@ -482,7 +484,7 @@ class Helipad:
 				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.primitives[prim].breeds.keys(), self])
 				if breed is None: breed = list(self.primitives[prim].breeds.keys())[aId%len(self.primitives[prim].breeds)]
 				if not breed in self.primitives[prim].breeds:
-					raise ValueError(_('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
+					raise ValueError(ï('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
 				new = self.primitives[prim].class_(breed, aId, self)
 				array.append(new)
 
@@ -513,9 +515,8 @@ class Helipad:
 				import code, readline
 				env = globals().copy()
 				env['self'] = self
-				shell = code.InteractiveConsole(env)
-				shell.interact()
-			except: print(_('Use pip to install readline and code for a debug console.'))
+				code.interact(local=env)
+			except ModuleNotFoundError: print(ï('Use pip to install readline and code for a debug console.'))
 
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive=None):
@@ -549,7 +550,7 @@ class Helipad:
 			print(k+': ', v)
 
 	def launchCpanel(self):
-		if hasattr(self, 'breed'): warnings.warn(_('Control panel can only be launched on the top-level model.'), None, 2)
+		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
 
 		self.doHooks('CpanelPreLaunch', [self])
 
@@ -573,7 +574,7 @@ class Helipad:
 			self.cpanel.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit
-			if self.cpanel: self.cpanel.invalidate(_('Control panel was redrawn in another cell.'))
+			if self.cpanel: self.cpanel.invalidate(ï('Control panel was redrawn in another cell.'))
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
 			raise SilentExit() #Don't blow past the cpanel if doing "run all"
@@ -583,16 +584,16 @@ class Helipad:
 	def launchVisual(self):
 		if self.visual is None or self.visual.isNull:
 			if not self.cpanel:
-				print(_('No visualizations available. To run the model with no GUI, use model.start() instead.'))
+				print(ï('No visualizations available. To run the model with no GUI, use model.start() instead.'))
 				return
 			if not self.param('stopafter') or not (self.param('csv') or 'terminate' in self.hooks):
-				print(_('Running from the control panel with no visualization requires a stop condition, and either CSV export or a terminate hook.'))
+				print(ï('Running from the control panel with no visualization requires a stop condition, and either CSV export or a terminate hook.'))
 				return
 
 		self.setup()
 
 		if self.visual is not None and not self.visual.isNull:
-			self.visual.launch(_('{}Data Plots').format(self.name+(' ' if self.name!='' else '')))
+			self.visual.launch(ï('{}Data Plots').format(self.name+(' ' if self.name!='' else '')))
 		else: #Headless
 			self.params['stopafter'].disable()
 			self.params['csv'].disable()
@@ -632,25 +633,25 @@ class Helipad:
 	# DEPRECATED IN HELIPAD 1.4; REMOVE IN HELIPAD 1.6
 
 	def addEvent(self, name, fn, **kwargs):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.addEvent()', 'model.events.add()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addEvent()', 'model.events.add()'), FutureWarning, 2)
 		return self.events.add(name, fn, **kwargs)
 
 	def removeEvent(self, name):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.removeEvent()', 'model.events.remove()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removeEvent()', 'model.events.remove()'), FutureWarning, 2)
 		return self.events.remove(name)
 
 	def clearEvents(self):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.clearEvents()', 'model.events.clear()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.clearEvents()', 'model.events.clear()'), FutureWarning, 2)
 		self.events.clear()
 
 	def addParameter(self, *args, **kwargs):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.addParameter()', 'model.params.add()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addParameter()', 'model.params.add()'), FutureWarning, 2)
 		return self.params.add(*args, **kwargs)
 
 	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
 		if prim is None:
 			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-			else: raise KeyError(_('Breed parameter must specify which primitive it belongs to.'))
+			else: raise KeyError(ï('Breed parameter must specify which primitive it belongs to.'))
 		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
 
 	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
@@ -658,46 +659,46 @@ class Helipad:
 
 	@property
 	def goodParams(self):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.goodParams', 'model.params.perGood'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.goodParams', 'model.params.perGood'), FutureWarning, 2)
 		return self.params.perGood
 
 	@property
 	def allParams(self):
-		warnings.warn(_('Model.allParams is deprecated. All parameters can be accessed using model.params.'), FutureWarning, 2)
+		warnings.warn(ï('Model.allParams is deprecated. All parameters can be accessed using model.params.'), FutureWarning, 2)
 		return self.params.values()
 
 	def addHook(self, place, func, prioritize=False):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.addHook()', 'model.hooks.add()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addHook()', 'model.hooks.add()'), FutureWarning, 2)
 		return self.hooks.add(place, func, prioritize)
 
 	def removeHook(self, place, fname, removeall=False):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.removeHook()', 'model.hooks.remove()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removeHook()', 'model.hooks.remove()'), FutureWarning, 2)
 		return self.hooks.remove(place, fname, removeall=False)
 
 	def clearHooks(self, place):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.clearHooks()', 'model.hooks.clear()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.clearHooks()', 'model.hooks.clear()'), FutureWarning, 2)
 		return self.hooks.remove(place)
 
 	def addPrimitive(self, *args, **kwargs):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.addPrimitive()', 'model.primitives.add()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addPrimitive()', 'model.primitives.add()'), FutureWarning, 2)
 		return self.primitives.add(*args, **kwargs)
 
 	def removePrimitive(self, name):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.removePrimitive()', 'model.primitives.remove()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removePrimitive()', 'model.primitives.remove()'), FutureWarning, 2)
 		return self.primitives.remove(name)
 
 	def addGood(self, *args, **kwargs):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.addGood()', 'model.goods.add()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addGood()', 'model.goods.add()'), FutureWarning, 2)
 		return self.goods.add(*args, **kwargs)
 
 	@property
 	def moneyGood(self):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.moneyGood', 'model.goods.money'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.moneyGood', 'model.goods.money'), FutureWarning, 2)
 		return self.goods.money
 
 	@property
 	def nonMoneyGoods(self):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('Model.nonMoneyGoods()', 'model.goods.nonmonetary'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.nonMoneyGoods()', 'model.goods.nonmonetary'), FutureWarning, 2)
 		return self.goods.nonmonetary
 
 class MultiLevel(baseAgent, Helipad):
@@ -708,12 +709,12 @@ class MultiLevel(baseAgent, Helipad):
 	#Deprecated in Helipad 1.4; remove in Helipad 1.6
 	@property
 	def dontStepAgents(self):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
 		return self._cut
 
 	@dontStepAgents.setter
 	def dontStepAgents(self, val):
-		warnings.warn(_('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
 		self._cut = val
 
 #==================
@@ -727,7 +728,7 @@ class gandb(funcStore):
 
 	def add(self, obj, name, color, prim=None, **kwargs):
 		if name in self:
-			warnings.warn(_('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
+			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
 
 		cobj = color if isinstance(color, Color) else Color(color)
 		cobj2 = cobj.lighten()
@@ -758,13 +759,13 @@ class Goods(gandb):
 	def add(self, name, color, endowment=None, money=False, props={}):
 		if money:
 			if self.money is not None:
-				print(_('Money good already specified as {}. Overriding…').format(self.money))
+				print(ï('Money good already specified as {}. Overriding…').format(self.money))
 				self[self.money].money = False
 
 			#Add the M0 plot once we have a money good, only if we haven't done it before
 			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 				try:
-					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', _('Money'), selected=False)
+					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', ï('Money'), selected=False)
 				except: pass #Can't add plot if re-drawing the cpanel
 
 		props['quantity'] = endowment
@@ -773,7 +774,7 @@ class Goods(gandb):
 		#Add demand plot once we have at least 2 goods
 		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 			try:
-				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', _('Demand'), selected=False)
+				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
 			except: pass
 
 		return item
@@ -801,7 +802,7 @@ class Primitives(funcStore):
 		super().__init__()
 
 	def add(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
-		if name=='all': raise ValueError(_('{} is a reserved name. Please choose another.').format(name))
+		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
 		if not plural: plural = name+'s'
 		class_.primitive = name
 		self[name] = Item(
