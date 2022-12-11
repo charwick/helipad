@@ -114,10 +114,10 @@ mapPlot.config({
 	'lockLayout': True
 })
 
-pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True)
-sexratio = heli.visual.addPlot('sexratio', 'Sex Ratio', 'timeseries', logscale=True)
-age = heli.visual.addPlot('age', 'Age', 'timeseries')
-energy = heli.visual.addPlot('energy', 'Energy', 'timeseries')
+pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True, selected=False)
+sexratio = heli.visual.addPlot('sexratio', 'Sex Ratio', 'timeseries', logscale=True, selected=False)
+age = heli.visual.addPlot('age', 'Age', 'timeseries', selected=False)
+energy = heli.visual.addPlot('energy', 'Energy', 'timeseries', selected=False)
 
 pop.addSeries('num_agent', 'Population', 'black')
 pop.addSeries('grass', 'Grass', 'green')

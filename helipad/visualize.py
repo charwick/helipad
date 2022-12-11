@@ -298,11 +298,13 @@ class Charts(MPLVisualization):
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 
-	def addPlot(self, name, label, type=None, selected=True, **kwargs):
-		self.selector.addItem(name, label, selected)
+	def addPlot(self, name, label, type=None, position=None, selected=True, **kwargs):
+		self.selector.addItem(name, label, position, selected)
 		self.type = type if type is not None else 'bar'
 		if self.type not in self.plotTypes: raise KeyError(_('\'{}\' is not a registered plot visualizer.').format(self.type))
 		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
+		
+		self.plots[name].selected = selected #Do this after CheckgridParam.addItem
 		return self.plots[name]
 
 	def addPlotType(self, clss):
