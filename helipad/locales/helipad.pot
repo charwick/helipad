@@ -287,10 +287,15 @@ msgstr ""
 msgid "randn() argument must be between 0 and 100."
 msgstr ""
 
-#: spatial.py:22
+#: spatial.py:21
 msgid ""
 "Using x and y to set dimensions is deprecated. Use the dim argument "
 "instead."
+msgstr ""
+
+#: spatial.py:25
+msgid ""
+"The `diag` argument is deprecated. Use the `corners` argument instead."
 msgstr ""
 
 #: spatial.py:27

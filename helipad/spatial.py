@@ -14,11 +14,14 @@ from helipad.visualize import Charts
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
-	# Backward compatibility. Remove in Helipad 1.6
-	if 'x' in kwargs:
+def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
+	# Backward compatibility
+	if 'x' in kwargs:		#Remove in Helipad 1.6
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
 		warnings.warn(_('Using x and y to set dimensions is deprecated. Use the dim argument instead.'), FutureWarning, 3)
+	if 'diag' in kwargs:	#Remove in Helipad 1.7
+		corners = kwargs['diag']
+		warnings.warn(_('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)
 
 	#Dimension parameters
 	#If square, have the x and y parameters alias dimension
@@ -163,10 +166,10 @@ def spatialSetup(model, dim=10, wrap=True, diag=False, **kwargs):
 				if n and not n in connections:
 					patch.newEdge(n, 'space')
 
-			if diag:
+			if corners:
 				for d in [patch.up.left, patch.right.up, patch.down.right, patch.left.down]:
 					if d and not d in connections:
-						patch.newEdge(d, 'space', weight=float(diag))
+						patch.newEdge(d, 'space', weight=float(corners))
 
 	#Don't reset the visualizer if charts is already registered
 	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
