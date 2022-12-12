@@ -15,7 +15,7 @@ from helipad.helpers import ï
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
+def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs):
 	# Backward compatibility
 	if 'x' in kwargs:		#Remove in Helipad 1.6
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
@@ -25,7 +25,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 		warnings.warn(ï('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)
 
 	#Dimension parameters
-	#If square, have the x and y parameters alias dimension
+	#If equidimensional, have the x and y parameters alias dimension
 	if isinstance(dim, int):
 		model.params.add('dimension', ï('Map Size'), 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
 		def dimget(name, model): return model.param('dimension')
@@ -43,7 +43,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 	
 	pClasses = {'rect': PatchesRect}
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
-	model.params['num_patch'].getter = lambda item: model.patches.count if model.hasModel else 0
+	model.params['num_patch'].getter = lambda item: model.patches.count if getattr(model, 'patches', False) else 0
 	model.params['num_patch'].setter = npsetter
 
 	#Hook a positioning function or randomly position our agents
@@ -56,13 +56,6 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 
 	#MOVEMENT AND POSITION
 
-	#Functions for all primitives except patches, which are spatially fixed
-	def NotPatches(function):
-		def np2(self, *args, **kwargs):
-			if self.primitive != 'patch': return function(self, *args, **kwargs)
-			else: raise RuntimeError(ï('Patches cannot move.'))
-		return np2
-
 	#Both agents and patches have x and y properties
 	def setx(self, val): self.moveTo(val, self.position[1])
 	def sety(self, val): self.moveTo(self.position[0], val)
@@ -74,14 +67,6 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 	baseAgent.distanceFrom = distanceFrom
 
 	baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
-	def moveUp(self): self.move(0, -1)
-	baseAgent.moveUp = NotPatches(moveUp)
-	def moveRight(self): self.move(1, 0)
-	baseAgent.moveRight = NotPatches(moveRight)
-	def moveDown(self): self.move(0, 1)
-	baseAgent.moveDown = NotPatches(moveDown)
-	def moveLeft(self): self.move(-1, 0)
-	baseAgent.moveLeft = NotPatches(moveLeft)
 	def move(self, x, y):
 		mapx, mapy, wrap = self.model.param('x'), self.model.param('y'), self.model.param('wrap')
 		self.position[0] += x
@@ -135,43 +120,26 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 		self.move(steps * cos(radians(self.orientation-90)), steps * sin(radians(self.orientation-90)))
 	baseAgent.forward = NotPatches(forward)
 
-	#A 2D list that lets us use [x,y] indices
-	class Patches(list):
-		def __getitem__(self, key):
-			if isinstance(key, int): return super().__getitem__(key)
-			else: return super().__getitem__(key[0])[key[1]]
-
-		def __setitem__(self, key, val):
-			if isinstance(key, int): return super().__setitem__(key, val)
-			else: super().__getitem__(key[0])[key[1]] = val
-
-	#Position our patches in a 2D array
-	@model.hook(prioritize=True)
-	def patchInit(agent, model):
-		x=0
-		while len(model.patches[x]) >= model.param('y'): x+=1	#Find a column that's not full yet
-		agent.position = (x, len(model.patches[x]))				#Note the position
-		model.patches[x].append(agent)							#Append the agent
-		agent.colorData = {}
-
+	#Initialize the patch container at the beginning of the model
 	@model.hook(prioritize=True)
 	def modelPreSetup(model):
-		model.patches = Patches([[] for i in range(model.param('x'))])
+		model.patches = pClasses[shape](model.param('x'), model.param('y'))
+
+	#Position our patches in the coordinate system
+	@model.hook(prioritize=True)
+	def patchInit(agent, model):
+		model.patches.place(agent)
+		agent.colorData = {}
 
 	#Establish grid links
 	@model.hook(prioritize=True)
 	def modelPostSetup(model):
 		for patch in model.agents['patch']:
-			neighbors = [ patch.up, patch.right, patch.down, patch.left ]
+			neighbors = model.patches.neighbors(patch, corners)
 			connections = patch.neighbors #Neighbors that already have a connection
-			for n in neighbors:
-				if n and not n in connections:
-					patch.newEdge(n, 'space')
-
-			if corners:
-				for d in [patch.up.left, patch.right.up, patch.down.right, patch.left.down]:
-					if d and not d in connections:
-						patch.newEdge(d, 'space', weight=float(corners))
+			for n, weight in neighbors:
+				if not n in connections:
+					patch.newEdge(n, 'space', weight=weight)
 
 	#Don't reset the visualizer if charts is already registered
 	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
@@ -179,3 +147,80 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, **kwargs):
 
 	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid')
 	return mapPlot
+
+#Functions for all primitives except patches, which are spatially fixed
+def NotPatches(function):
+	def np2(self, *args, **kwargs):
+		if self.primitive != 'patch': return function(self, *args, **kwargs)
+		else: raise RuntimeError(ï('Patches cannot move.'))
+	return np2
+
+#===============
+# COORDINATE SYSTEMS
+#===============
+
+#A 2D list of lists that lets us use [x,y] indices
+class Patches2D(list):
+	def __init__(self, x, y):
+		self.x, self.y = x, y
+		super().__init__([[] for i in range(x)])
+	
+	def __getitem__(self, key):
+		if isinstance(key, int): return super().__getitem__(key)
+		else: return super().__getitem__(key[0])[key[1]]
+
+	def __setitem__(self, key, val):
+		if isinstance(key, int): return super().__setitem__(key, val)
+		else: super().__getitem__(key[0])[key[1]] = val
+
+#Each row and column of equal length
+class PatchesRect(Patches2D):
+	shape = 'rect'
+
+	#Give patches and agents methods for their neighbors in the four cardinal directions
+	def __init__(self, x, y):
+		super().__init__(x, y)
+
+		def up(patch):
+			if patch.y==0 and not patch.model.param('wrap'): return None
+			return self[patch.x, patch.y-1 if patch.y > 0 else patch.model.param('y')-1]
+		Patch.up = property(up)
+
+		def right(patch):
+			if patch.x>=patch.model.param('x')-1 and not patch.model.param('wrap'): return None
+			return self[self.x+1 if self.x < patch.model.param('x')-1 else 0, patch.y]
+		Patch.right = property(right)
+
+		def down(patch):
+			if patch.y>=patch.model.param('y')-1 and not patch.model.param('wrap'): return None
+			return self[patch.x, patch.y+1 if patch.y < patch.model.param('y')-1 else 0]
+		Patch.down = property(down)
+
+		def left(patch):
+			if patch.x==0 and not patch.model.param('wrap'): return None
+			return self[patch.x-1 if patch.x > 0 else patch.model.param('x')-1, patch.y]
+		Patch.left = property(left)
+		
+		def moveUp(agent): agent.move(0, -1)
+		baseAgent.moveUp = NotPatches(moveUp)
+		def moveRight(agent): agent.move(1, 0)
+		baseAgent.moveRight = NotPatches(moveRight)
+		def moveDown(agent): agent.move(0, 1)
+		baseAgent.moveDown = NotPatches(moveDown)
+		def moveLeft(agent): agent.move(-1, 0)
+		baseAgent.moveLeft = NotPatches(moveLeft)
+
+	def neighbors(self, patch, corners):
+		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
+		if corners: neighbors += [(patch.up.left, corners), (patch.right.up, corners), (patch.down.right, corners), (patch.left.down, corners)]
+		return [p for p in neighbors if p[0] is not None]
+
+	#Take a sequential list of self.count patches and position them appropriately in the internal list
+	def place(self, agent):
+		x=0
+		while len(self[x]) >= self.y: x+=1		#Find a column that's not full yet
+		agent.position = (x, len(self[x]))		#Note the position
+		self[x].append(agent)					#Append the agent
+
+	@property
+	def count(self): return self.x * self.y

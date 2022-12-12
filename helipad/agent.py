@@ -307,26 +307,6 @@ class Patch(baseAgent):
 		return self.outbound('space', True, obj='agent')
 
 	@property
-	def up(self):
-		if self.y==0 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x, self.y-1 if self.y > 0 else self.model.param('y')-1]
-
-	@property
-	def right(self):
-		if self.x>=self.model.param('x')-1 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x+1 if self.x < self.model.param('x')-1 else 0, self.y]
-
-	@property
-	def down(self):
-		if self.y>=self.model.param('y')-1 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x, self.y+1 if self.y < self.model.param('y')-1 else 0]
-
-	@property
-	def left(self):
-		if self.x==0 and not self.model.param('wrap'): return None
-		return self.model.patches[self.x-1 if self.x > 0 else self.model.param('x')-1, self.y]
-
-	@property
 	def agentsOn(self):
 		for prim, lst in self.model.agents.items():
 			if prim=='patch': continue
