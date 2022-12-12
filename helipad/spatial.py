@@ -52,7 +52,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 		if agent.primitive == 'patch': return #Patch position is fixed
 		p = model.doHooks(['baseAgentPosition', agent.primitive+'Position'], [agent, agent.model])
 		agent.position = list(p) if p and len(p) >= 2 else [randint(0, model.param('x')-1), randint(0, model.param('y')-1)]
-		agent.angle = 0
+		agent.rads = 0
 
 	#MOVEMENT AND POSITION
 
@@ -92,11 +92,14 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 
 	#ANGLE FUNCTIONS
 
-	def orientation(self): return self.angle
+	#Agent.orientation reports and sets degrees or radians, depending on Agent.angle.
+	#Agent.rads always reports radians and is not documented.
+	def orientation(self): return degrees(self.rads) if 'deg' in self.angle else self.rads
 	def setOrientation(self, val):
-		self.angle = val
-		while self.angle >= 360: self.angle -= 360
-		while self.angle < 0: self.angle += 360
+		if 'deg' in self.angle: val = radians(val)
+		while val >= 2*pi: val -= 2*pi
+		while val < 0: val += 2*pi
+		self.rads = val
 	baseAgent.orientation = property(NotPatches(orientation), NotPatches(setOrientation))
 
 	def rotate(self, angle): self.orientation += angle
@@ -112,12 +115,11 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 			if dify>dimy/2: dify -= dimy
 			elif dify<-dimy/2: dify += dimy
 
-		rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
-		self.orientation = degrees(rads)
+		self.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
 	baseAgent.orientTo = NotPatches(orientTo)
 
 	def forward(self, steps=1):
-		self.move(steps * cos(radians(self.orientation-90)), steps * sin(radians(self.orientation-90)))
+		self.move(steps * cos(self.rads-90), steps * sin(self.rads-90))
 	baseAgent.forward = NotPatches(forward)
 
 	#Initialize the patch container at the beginning of the model

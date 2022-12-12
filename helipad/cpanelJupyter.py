@@ -79,7 +79,7 @@ class Cpanel(VBox):
 				if param.per is None:
 					i = HBox(i.children)
 					i.children[0].layout = Layout(width='150px')
-				if val==False: i.children[1].disabled = True
+				if val is False: i.children[1].disabled = True
 				i.children[1].description = ''
 
 				if param.name=='stopafter' and param.event:

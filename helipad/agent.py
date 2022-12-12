@@ -6,11 +6,13 @@
 import warnings
 from random import choice, randint
 import numpy as np
+from helipad.helpers import ï
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
 class baseAgent:
+	angle = 'deg'
 	fixed = False
 	overdraft = 'continue-silent'
 
