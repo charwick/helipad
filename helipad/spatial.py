@@ -169,7 +169,10 @@ class Patches2D(list):
 	
 	def __getitem__(self, key):
 		if isinstance(key, int): return super().__getitem__(key)
-		else: return super().__getitem__(key[0])[key[1]]
+		else:
+			if key[1] is None: return super().__getitem__(key[0])
+			if key[0] is None: return [x[key[1]] for x in self]
+			return super().__getitem__(key[0])[key[1]]
 
 	def __setitem__(self, key, val):
 		if isinstance(key, int): return super().__setitem__(key, val)
