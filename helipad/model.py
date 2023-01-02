@@ -35,7 +35,7 @@ class Helipad:
 
 		self.name = ''
 		self.agents = {}
-		self.patches = None
+		self.patches = []
 		self.stages = 1
 		self.order = 'linear'
 		self.hasModel = False		#Have we initialized?

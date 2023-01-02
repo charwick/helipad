@@ -44,7 +44,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	model.params.add('wrapy', ï('Wrap'), 'hidden', dflt=(wrap is True or wrap=='y'))
 
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
-	model.params['num_patch'].getter = lambda item: model.patches.count if getattr(model, 'patches', False) else 0
+	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
 
 	#Hook a positioning function or randomly position our agents
@@ -239,5 +239,3 @@ class PatchesRect(Patches2D):
 		agent.position = (x, len(self[x]))		#Note the position
 		self[x].append(agent)					#Append the agent
 
-	@property
-	def count(self): return self.x * self.y
