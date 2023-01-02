@@ -5,7 +5,7 @@
 
 import warnings
 from random import randint
-from math import sqrt, degrees, radians, sin, cos, atan2, pi
+from math import sqrt, degrees, radians, sin, cos, atan2, pi, copysign
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
 from helipad.helpers import ï
@@ -39,9 +39,10 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
 	model.params.add('square', ï('Square'), 'hidden', dflt=isinstance(dim, (list, tuple)))
-	model.params.add('wrap', ï('Wrap'), 'hidden', dflt=wrap) #Only checked at the beginning of a model
-	
 	pClasses = {'rect': PatchesRect}
+	model.params.add('wrapx', ï('Wrap'), 'hidden', dflt=(wrap is True or wrap=='x')) #Only checked at the beginning of a model
+	model.params.add('wrapy', ï('Wrap'), 'hidden', dflt=(wrap is True or wrap=='y'))
+
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: model.patches.count if getattr(model, 'patches', False) else 0
 	model.params['num_patch'].setter = npsetter
@@ -62,25 +63,43 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	baseAgent.x = property(lambda self: self.position[0], setx)
 	baseAgent.y = property(lambda self: self.position[1], sety)
 
+	#Internal function  to calculate x,y distances s.t. wrap constraints for distance and orientation purposes
+	def _offset(self, x, y):
+		difx, dify = x - self.x, y - self.y
+		if self.model.param('wrapx'):
+			crossx = difx - copysign(model.param('x'), difx)
+			if abs(crossx) < abs(difx): difx = crossx
+		if self.model.param('wrapy'):
+			crossy = dify - copysign(model.param('y'), dify)
+			if abs(crossy) < abs(dify): dify = crossy
+		return (difx, dify)
+	baseAgent._offset = _offset
+
 	def distanceFrom(self, agent2):
-		return sqrt((self.x-agent2.x)**2 + (self.y-agent2.y)**2)
+		difx, dify = self._offset(agent2.x, agent2.y)
+		return sqrt(difx**2 + dify**2)
 	baseAgent.distanceFrom = distanceFrom
 
 	baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
 	def move(self, x, y):
-		mapx, mapy, wrap = self.model.param('x'), self.model.param('y'), self.model.param('wrap')
+		mapx, mapy = self.model.param('x'), self.model.param('y')
 		self.position[0] += x
 		self.position[1] += y
-		if not wrap:
-			self.position[0] = min(self.position[0], mapx-0.5)
-			self.position[0] = max(self.position[0], -0.5)
-			self.position[1] = min(self.position[1], mapy-0.5)
-			self.position[1] = max(self.position[1], -0.5)
-		else:
+
+		if self.model.param('wrapx'):
 			while self.position[0] >= mapx-0.5: self.position[0] -= mapx
 			while self.position[0] < -0.5: self.position[0] += mapx
+		else:
+			self.position[0] = min(self.position[0], mapx-0.5)
+			self.position[0] = max(self.position[0], -0.5)
+
+		if self.model.param('wrapy'):
 			while self.position[1] >= mapy-0.5: self.position[1] -= mapy
 			while self.position[1] < -0.5: self.position[1] += mapy
+		else:
+			self.position[1] = min(self.position[1], mapy-0.5)
+			self.position[1] = max(self.position[1], -0.5)
+
 	baseAgent.move = NotPatches(move)
 
 	#Can also take an agent or patch as a single argument
@@ -107,14 +126,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 
 	def orientTo(self, x, y=None):
 		if not isinstance(x, int): x,y = x.position
-		difx, dify = x-self.x, y-self.y
-		if self.model.param('wrap'):
-			dimx, dimy = self.model.param('x'), self.model.param('y')
-			if difx>dimx/2: difx -= dimx
-			elif difx<-dimx/2: difx += dimx
-			if dify>dimy/2: dify -= dimy
-			elif dify<-dimy/2: dify += dimy
-
+		difx, dify = self._offset(x, y)
 		self.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
 	baseAgent.orientTo = NotPatches(orientTo)
 
@@ -166,7 +178,7 @@ class Patches2D(list):
 	def __init__(self, x, y):
 		self.x, self.y = x, y
 		super().__init__([[] for i in range(x)])
-	
+
 	def __getitem__(self, key):
 		if isinstance(key, int): return super().__getitem__(key)
 		else:
@@ -187,25 +199,25 @@ class PatchesRect(Patches2D):
 		super().__init__(x, y)
 
 		def up(patch):
-			if patch.y==0 and not patch.model.param('wrap'): return None
+			if patch.y==0 and not patch.model.param('wrapy'): return None
 			return self[patch.x, patch.y-1 if patch.y > 0 else patch.model.param('y')-1]
 		Patch.up = property(up)
 
 		def right(patch):
-			if patch.x>=patch.model.param('x')-1 and not patch.model.param('wrap'): return None
+			if patch.x>=patch.model.param('x')-1 and not patch.model.param('wrapx'): return None
 			return self[self.x+1 if self.x < patch.model.param('x')-1 else 0, patch.y]
 		Patch.right = property(right)
 
 		def down(patch):
-			if patch.y>=patch.model.param('y')-1 and not patch.model.param('wrap'): return None
+			if patch.y>=patch.model.param('y')-1 and not patch.model.param('wrapy'): return None
 			return self[patch.x, patch.y+1 if patch.y < patch.model.param('y')-1 else 0]
 		Patch.down = property(down)
 
 		def left(patch):
-			if patch.x==0 and not patch.model.param('wrap'): return None
+			if patch.x==0 and not patch.model.param('wrapx'): return None
 			return self[patch.x-1 if patch.x > 0 else patch.model.param('x')-1, patch.y]
 		Patch.left = property(left)
-		
+
 		def moveUp(agent): agent.move(0, -1)
 		baseAgent.moveUp = NotPatches(moveUp)
 		def moveRight(agent): agent.move(1, 0)
