@@ -5,9 +5,9 @@
 
 import sys
 from abc import ABC, abstractmethod
-from math import sqrt, ceil
-from numpy import ndarray, asanyarray, log10
-import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
+from math import sqrt, ceil, floor, pi
+from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like
+import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
 from helipad.helpers import *
 mlpstyle.use('fast')
 
@@ -266,6 +266,7 @@ class Charts(MPLVisualization):
 		plots = list(self.activePlots.values())
 		for i in range(n):
 			plots[i].launch(self.fig.add_subplot(y,x,i+1, projection=plots[i].projection))
+			plots[i].subplot_position = (y,x,i+1)
 		super().launch(title)
 
 		#Time slider
@@ -612,16 +613,16 @@ class NetworkPlot(ChartPlot):
 		}
 
 	def launch(self, axes):
-		import networkx as nx, networkx.drawing.layout as lay, pandas
+		import networkx as nx, networkx.drawing.layout as lay
 		def patchgrid_layout(G):
-			if not hasattr(self.viz.model, 'patches'): raise
-			return {i: data['position'] for i,data in G.nodes.items()}
+			if not self.viz.model.patches: raise
+			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
+				return {i: (2*pi-(2*pi/self.viz.model.patches.x * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
+			else: return {i: data['position'] for i,data in G.nodes.items()}
 		lay.patchgrid_layout = patchgrid_layout
 		self.nx = nx
-		self.pandas = pandas
 		self.layClass = getattr(lay, self.layout+'_layout')
 		self.components = {}
-		axes.set_title(self.label, fontdict={'fontsize':10})
 
 		super().launch(axes)
 
@@ -635,13 +636,20 @@ class NetworkPlot(ChartPlot):
 			self.viz.model.doHooks('agentClick', [agents, self, self.viz.scrubval])
 
 		elif event.name=='button_press_event' and self.layout=='patchgrid':
-			self.viz.model.doHooks('patchClick', [self.viz.model.patches[round(event.xdata), round(event.ydata)], self, self.viz.scrubval])
+			if self.projection=='polar':
+				x = 2*pi-event.xdata+1/2*pi
+				if x > 2*pi: x-=2*pi
+				x,y = floor(x/(2*pi/self.viz.model.patches.x)), floor(event.ydata)
+			else:
+				x,y = round(event.xdata), round(event.ydata)
+			if x > self.viz.model.patches.x-1 or y > self.viz.model.patches.y-1: return
+			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
 
 	def update(self, data, t):
 		G = self.viz.model.network(self.kind, self.prim, excludePatches=True)
 
 		#Capture label and size data
-		if self.params['agentLabel'] and self.params['agentLabel'] != True:
+		if self.params['agentLabel'] and self.params['agentLabel'] is not True:
 			agents = self.viz.model.allagents
 			if 'good:' in self.params['agentLabel']:
 				for n in G.nodes: G.nodes[n]['label'] = agents[n].stocks[self.params['agentLabel'].split(':')[1]]
@@ -657,7 +665,7 @@ class NetworkPlot(ChartPlot):
 		self.ndata[t] = G
 
 		#Save spatial data even if we're on a different layout
-		if hasattr(self.viz.model, 'patches'):
+		if self.viz.model.patches:
 			pd = self.patchData(None if t==self.viz.model.t else t)
 			for col in self.viz.model.patches:
 				for p in col:
@@ -671,14 +679,30 @@ class NetworkPlot(ChartPlot):
 	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
-		if self.layout != 'patchgrid': self.axes.axis('off')
+		if self.layout != 'patchgrid' or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
 
 		if self.layout == 'patchgrid':
-			pd = self.patchData(t)
-			self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.params['patchAspect'])
-			# self.patchmap.set_norm(self.normal)
-			# self.components['patches'].set_data(pd)
+			pd = self.patchData(t).T #Transpose because numpy is indexed col, row
+			if self.projection=='polar':
+				self.axes.set_ylim(0, self.viz.model.patches.y)
+				norm = (pd - self.normal.vmin)/(self.normal.vmax-self.normal.vmin)
+				space = linspace(0.0, 1.0, 100)
+				rgb = cm.get_cmap(self.params['patchColormap'])(space)[newaxis, :, :3][0]
+				
+				x = self.viz.model.patches.x
+				for r in range(len(norm)):
+					for ti in range(len(norm[0])):
+						#Define the range going counterclockwise. The 1/4 is to make r=0 point north rather than east.
+						#Last argument is the resolution of the curve
+						theta = arange(2*pi*((1-1/x) * ti - 1/x + 1/4), 2*pi*((1-1/x) * ti + 1/4)+.04, .04)
+						cr1 = full_like(theta, r)
+						cr2 = full_like(theta, r+1)
+						self.axes.fill_between(theta, cr1, cr2, color=rgb[int(norm[r,ti]*(len(space)-1))])
+			else:
+				self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.params['patchAspect'])
+				# self.patchmap.set_norm(self.normal)
+				# self.components['patches'].set_data(pd)
 
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
 		self.pos = self.layClass(self.ndata[t])
@@ -701,14 +725,21 @@ class NetworkPlot(ChartPlot):
 		self.axes.set_yscale('linear') #Override default logscale keypress
 		if self.params['lockLayout']: return
 
+		#Select the next layout in the list
 		import networkx.drawing.layout as lay
 		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral', 'patchgrid']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
 		self.layClass = getattr(lay, self.layout+'_layout')
+		
+		#Replace the axes object if we need to switch projections
+		if self.projection == 'polar' or (self.layout=='patchgrid' and self.viz.model.patches.shape=='polar'):
+			self.projection = None if self.projection=='polar' else 'polar'
+			self.viz.fig.delaxes(self.axes)
+			super().launch(self.viz.fig.add_subplot(*self.subplot_position, projection=self.projection))
 
-		#kamada_kawai requires scipy
+		#kamada_kawai requires scipy; fail silently and continue if we don't have it
 		try: self.draw(self.viz.scrubval)
 		except: self.rotateLayout()
 
@@ -720,9 +751,8 @@ class NetworkPlot(ChartPlot):
 		else: return getattr(patch, self.params['patchProperty'])
 
 	def patchData(self, t=None):
-		if not hasattr(self.viz.model, 'patches'): return
-		#Pandas goes row,col instead of col,row so we have to transpose it
-		return self.pandas.DataFrame([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).transpose()
+		if not self.viz.model.patches: return
+		return array([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches])
 
 	def config(self, param, val=None):
 		if isinstance(param, dict):

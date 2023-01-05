@@ -18,11 +18,11 @@ class Cpanel(VBox):
 		#CSS niceties
 		__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 		with open(os.path.join(__location__,'ipy-styles.css'), encoding='UTF-8') as c: css = c.read()
-		
+
 		#CSS for goods and breeds, since Ipywidgets ≥8.0 oversanitizes HTML in description attributes
 		for n,c in ChainMap(*[{f'breed_{p}_{k}': v.color.hex for k,v in d.breeds.items()} for p,d in model.primitives.items()]+[{'good_'+k: v.color.hex for k,v in model.goods.items()}]).items():
 			css += f'.helipad_{n} .widget-label::before {{ background: {c} }}'
-			
+
 		self.children += HTML(value='<style type="text/css">'+css+'</style>'),
 
 		#Callback function generator for Jupyter elements
@@ -44,7 +44,7 @@ class Cpanel(VBox):
 					#Ipywidgets ≥8.0 runs the callback before the element is assigned
 					try: els = param.element if item is None else param.elements[item]
 					except (AttributeError, KeyError): return
-					
+
 					els.children[1].disabled = not b
 					#Coercing an int can fail, so if there's an exception, reset the textbox content
 					try:
@@ -115,7 +115,7 @@ class Cpanel(VBox):
 				if param.per is not None:
 					n = (f'{param.prim}_' if param.per=='breed' else '')+title.lower()
 					i.children[0].add_class(f'helipad_{param.per}_{n}')
-					i.children[0].add_class(f'helipad_per_item')
+					i.children[0].add_class('helipad_per_item')
 				i.children[0].description = title
 				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
 				i.children[0].description_tooltip = param.desc if param.desc is not None else ''

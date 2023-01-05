@@ -5,8 +5,9 @@
 
 import pandas, os.path
 import numpy as np
-from helipad.model import Item, ï
+from helipad.helpers import Item, ï
 
+#Don't try to subclass Pandas.dataframe; substantially slower and doesn't scale
 class Data:
 	def __init__(self, model):
 		self.reporters = {}

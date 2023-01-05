@@ -191,7 +191,7 @@ msgid "Breed '{0}' is not registered for the '{1}' primitive."
 msgstr ""
 
 #: model.py:515
-msgid "Use pip to install readline and code for a debug console."
+msgid "Error initializing the debug console. Make sure the `readline` and `code` modules are installed."
 msgstr ""
 
 #: model.py:549
@@ -328,6 +328,10 @@ msgstr ""
 
 #: spatial.py:59
 msgid "Patches cannot move."
+msgstr ""
+
+#: spatial.py:92
+msgid "Dimension is out of range."
 msgstr ""
 
 #: utility.py:26 utility.py:38

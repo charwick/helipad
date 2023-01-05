@@ -5,10 +5,10 @@
 
 import warnings
 from random import randint
-from math import sqrt, degrees, radians, sin, cos, atan2, pi, copysign
+from math import sqrt, degrees, radians, sin, cos, atan2, pi, copysign, floor
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
-from helipad.helpers import ï
+from helipad.helpers import ï, Number
 
 #===============
 # SETUP
@@ -39,6 +39,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
 	model.params.add('square', ï('Square'), 'hidden', dflt=isinstance(dim, (list, tuple)))
+	if shape=='polar': wrap='x'
 	model.params.add('wrapx', ï('Wrap')+' X', 'hidden', dflt=(wrap is True or wrap=='x')) #Only checked at the beginning of a model
 	model.params.add('wrapy', ï('Wrap')+' Y', 'hidden', dflt=(wrap is True or wrap=='y'))
 
@@ -63,32 +64,33 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	baseAgent.x = property(lambda self: self.position[0], setx)
 	baseAgent.y = property(lambda self: self.position[1], sety)
 
-	baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
 	def move(self, x, y):
 		mapx, mapy = self.model.param('x'), self.model.param('y')
+		xlim, ylim = self.model.patches.boundaries
 		self.position[0] += x
 		self.position[1] += y
 
 		if self.model.param('wrapx'):
-			while self.position[0] >= mapx-0.5: self.position[0] -= mapx
-			while self.position[0] < -0.5: self.position[0] += mapx
+			while self.position[0] >= xlim[1]: self.position[0] -= mapx
+			while self.position[0] < xlim[0]: self.position[0] += mapx
 		else:
-			self.position[0] = min(self.position[0], mapx-0.5)
-			self.position[0] = max(self.position[0], -0.5)
+			self.position[0] = min(self.position[0], xlim[1])
+			self.position[0] = max(self.position[0], xlim[0])
 
 		if self.model.param('wrapy'):
-			while self.position[1] >= mapy-0.5: self.position[1] -= mapy
-			while self.position[1] < -0.5: self.position[1] += mapy
+			while self.position[1] >= ylim[1]: self.position[1] -= mapy
+			while self.position[1] < ylim[0]: self.position[1] += mapy
 		else:
-			self.position[1] = min(self.position[1], mapy-0.5)
-			self.position[1] = max(self.position[1], -0.5)
+			self.position[1] = min(self.position[1], ylim[1])
+			self.position[1] = max(self.position[1], ylim[0])
 
 	baseAgent.move = NotPatches(move)
 
 	#Can also take an agent or patch as a single argument
 	def moveTo(self, x, y=None):
-		if type(x) not in [int, float]: x,y = x.position
-		if x>self.model.param('x')+0.5 or y>self.model.param('y')+0.5 or x<-0.5 or y<-0.5: raise IndexError('Dimension is out of range.')
+		if not isinstance(x, Number): x,y = x.position
+		if x>self.model.patches.boundaries[0][1] or y>self.model.patches.boundaries[1][1] or x<self.model.patches.boundaries[0][0] or y<self.model.patches.boundaries[1][0]:
+			raise IndexError(ï('Dimension is out of range.'))
 		self.position = [x,y]
 	baseAgent.moveTo = NotPatches(moveTo)
 
@@ -106,10 +108,6 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 
 	def rotate(self, angle): self.orientation += angle
 	baseAgent.rotate = NotPatches(rotate)
-
-	def forward(self, steps=1):
-		self.move(steps * cos(self.rads-90), steps * sin(self.rads-90))
-	baseAgent.forward = NotPatches(forward)
 
 	#Initialize the patch container at the beginning of the model
 	@model.hook(prioritize=True)
@@ -136,7 +134,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 
-	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid')
+	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid', projection=shape if shape=='polar' else None)
 	return mapPlot
 
 #Functions for all primitives except patches, which are spatially fixed
@@ -193,10 +191,19 @@ class PatchesRect(Patches2D):
 			if patch.x==0 and not patch.model.param('wrapx'): return None
 			return self[patch.x-1 if patch.x > 0 else patch.model.param('x')-1, patch.y]
 
+		def agentsOn(self):
+			for prim, lst in self.model.agents.items():
+				if prim=='patch': continue
+				yield from [a for a in lst if self.x-0.5<=a.x<self.x+0.5 and self.y-0.5<=a.y<self.y+0.5]
+
+		baseAgent.patch = property(lambda self: self.model.patches[round(self.x), round(self.y)])
+
 		def moveUp(agent): agent.move(0, -1)
 		def moveRight(agent): agent.move(1, 0)
 		def moveDown(agent): agent.move(0, 1)
 		def moveLeft(agent): agent.move(-1, 0)
+		def forward(self, steps=1):
+			self.move(steps * cos(self.rads-pi/2), steps * sin(self.rads-pi/2))
 
 		#Internal function  to calculate x,y distances s.t. wrap constraints for distance and orientation purposes
 		def _offset(self, x, y):
@@ -216,11 +223,11 @@ class PatchesRect(Patches2D):
 		baseAgent.distanceFrom = distanceFrom
 
 		def orientTo(self, x, y=None):
-			if not isinstance(x, (int, float)): x,y = x.position
+			if not isinstance(x, Number): x,y = x.position
 			difx, dify = self._offset(x, y)
 			self.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
-		
-		super().__init__(x, y, props=[up, right, down, left], funcs=[moveUp, moveRight, moveDown, moveLeft, orientTo])
+
+		super().__init__(x, y, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo])
 
 	def neighbors(self, patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
@@ -233,6 +240,9 @@ class PatchesRect(Patches2D):
 		while len(self[x]) >= self.y: x+=1		#Find a column that's not full yet
 		agent.position = (x, len(self[x]))		#Note the position
 		self[x].append(agent)					#Append the agent
+
+	@property #((xmin, xmax),(ymin, ymax))
+	def boundaries(self): return ((-0.5, self.x-0.5), (-0.5, self.y-0.5))
 
 	def __len__(self): return self.x * self.y
 
@@ -256,10 +266,25 @@ class PatchesPolar(PatchesRect):
 		def counterclockwise(patch):
 			return self[patch.x-1 if patch.x > 0 else patch.model.param('x')-1, patch.y]
 
+		def agentsOn(self):
+			for prim, lst in self.model.agents.items():
+				if prim=='patch': continue
+				yield from [a for a in lst if floor(a.x)==self.x and floor(a.y)==self.y]
+
+		baseAgent.patch = property(lambda self: self.model.patches[floor(self.x), floor(self.y)])
+
 		def moveInward(agent): agent.move(0, -1)
 		def moveOutward(agent): agent.move(0, 1)
 		def moveClockwise(agent): agent.move(1, 0)
 		def moveCounterclockwise(agent): agent.move(-1, 0)
+		def forward(self, steps=1):
+			#2π-self.rads to make it go clockwise
+			th1 = 2*pi-(2*pi/x * self.x)
+			newth = th1 + atan2(steps*sin(2*pi-self.rads-th1), self.y+steps*cos(2*pi-self.rads-th1))
+			newx = (2*pi-newth)/(2*pi/x)
+			if newx > x: newx -= x
+			newr = sqrt(self.y**2 + steps**2 + 2*self.y*steps*cos(2*pi-self.rads-th1))
+			self.move(newx-self.x, newr-self.y)
 
 		def distanceFrom(self, agent2):
 			th1 = self.x * 2*pi / x
@@ -268,13 +293,13 @@ class PatchesPolar(PatchesRect):
 		baseAgent.distanceFrom = distanceFrom
 
 		def orientTo(self, x, y=None):
-			if not isinstance(x, (int, float)): x,y = x.position
-			th1 = self.x * 2*pi / self.model.param('x')
-			th2 = x * 2*pi / self.model.param('x')
-			return atan2(self.y * sin(th1) - y * sin(th2), self.y * cos(th1) - y * cos(th2))
+			if not isinstance(x, Number): x,y = x.position
+			th1 = 2*pi-(2*pi/self.model.param('x') * self.x)
+			th2 = 2*pi-(2*pi/self.model.param('x') * x)
+			self.rads = pi - atan2(self.y * sin(th1) - y * sin(th2), self.y * cos(th1) - y * cos(th2))
 
 		#Skip PatchesRect.__init__
-		Patches2D.__init__(self, x, y, props=[inward, outward, clockwise, counterclockwise], funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, orientTo])
+		Patches2D.__init__(self, x, y, props=[inward, outward, clockwise, counterclockwise, agentsOn], funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, forward, orientTo])
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
 	def neighbors(self, patch, corners):
@@ -288,3 +313,6 @@ class PatchesPolar(PatchesRect):
 						neighbors.append((p, corners))
 
 		return [p for p in neighbors if p[0] is not None and p[0] is not self]
+
+	@property #((xmin, xmax),(ymin, ymax))
+	def boundaries(self): return ((0, self.x), (0, self.y))

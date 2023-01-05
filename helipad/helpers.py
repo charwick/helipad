@@ -4,6 +4,7 @@
 # ==========
 
 import warnings
+from numbers import Number
 
 #Internationalization since using _ is a disaster
 #Can't install to global scope because it conflicts with readline;

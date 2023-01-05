@@ -5,9 +5,10 @@
 
 import os, sys, warnings, asyncio, time
 import gettext
-import pandas
 from random import shuffle, choice
 from numpy import random
+import pandas
+#from memory_profiler import profile
 
 from helipad.visualize import BaseVisualization, Charts, TimeSeries
 from helipad.helpers import *
@@ -342,6 +343,7 @@ class Helipad:
 				if stop: self.terminate()
 
 	#The *args allows it to be used as an Ipywidgets callback
+	#@profile #To test memory usage
 	def start(self, *args):
 
 		#Start the progress bar
@@ -517,7 +519,7 @@ class Helipad:
 				env = globals().copy()
 				env['self'] = self
 				code.interact(local=env)
-			except ModuleNotFoundError: print(ï('Use pip to install readline and code for a debug console.'))
+			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
 
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive=None):
