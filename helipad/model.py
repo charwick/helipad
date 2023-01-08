@@ -15,6 +15,9 @@ from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
 from helipad.agent import Agent, baseAgent
+if isNotebook():
+	import logging
+	logger = logging.getLogger('LOGGER_NAME')
 
 class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
@@ -335,12 +338,17 @@ class Helipad:
 				# Performance indicator
 				if self.timer:
 					newtime = time.time()
-					print(ï('Period {0}: {1} periods/second ({2}% model, {3}% visuals)').format(t, round(self.param('refresh')/(newtime-begin),2), round((t2-begin)/(newtime-begin)*100,2), round((newtime-t2)/(newtime-begin)*100,2)))
+					output = ï('Period {0}: {1} periods/second ({2}% model, {3}% visuals)').format(t, round(self.param('refresh')/(newtime-begin),2), round((t2-begin)/(newtime-begin)*100,2), round((newtime-t2)/(newtime-begin)*100,2))
+					if isBuffered():
+						if isNotebook(): os.write(1, bytes('\r'+output, 'utf-8'))
+						else: sys.stdout.write('\r'+output)
+					else: print(output)
 					begin = newtime
 
 			if st:
 				stop = self.events[st].triggered if isinstance(st, str) else t>=st
 				if stop: self.terminate()
+		if self.timer and isBuffered(): print('\r') #Newline on pause so the output doesn't interfere with the console
 
 	#The *args allows it to be used as an Ipywidgets callback
 	#@profile #To test memory usage

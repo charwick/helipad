@@ -734,7 +734,7 @@ class NetworkPlot(ChartPlot):
 		self.layClass = getattr(lay, self.layout+'_layout')
 		
 		#Replace the axes object if we need to switch projections
-		if self.projection == 'polar' or (self.layout=='patchgrid' and self.viz.model.patches.shape=='polar'):
+		if self.projection == 'polar' or (self.layout=='patchgrid' and self.viz.model.patches and self.viz.model.patches.shape=='polar'):
 			self.projection = None if self.projection=='polar' else 'polar'
 			self.viz.fig.delaxes(self.axes)
 			super().launch(self.viz.fig.add_subplot(*self.subplot_position, projection=self.projection))

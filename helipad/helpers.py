@@ -5,6 +5,8 @@
 
 import warnings
 from numbers import Number
+from sys import __stdout__
+from io import BufferedWriter
 
 #Internationalization since using _ is a disaster
 #Can't install to global scope because it conflicts with readline;
@@ -27,6 +29,9 @@ def isNotebook():
 		except NameError: globals()['__helipad_ipy'] = False
 
 	return __helipad_ipy
+
+def isBuffered():
+	return isinstance(__stdout__.buffer, BufferedWriter)
 
 #Generic extensible item class to store structured data
 class Item:
