@@ -617,7 +617,7 @@ class NetworkPlot(ChartPlot):
 		def patchgrid_layout(G):
 			if not self.viz.model.patches: raise
 			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
-				return {i: (2*pi-(2*pi/self.viz.model.patches.x * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
+				return {i: (2*pi-(2*pi/self.viz.model.patches.dim[0] * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
 			else: return {i: data['position'] for i,data in G.nodes.items()}
 		lay.patchgrid_layout = patchgrid_layout
 		self.nx = nx
@@ -639,10 +639,10 @@ class NetworkPlot(ChartPlot):
 			if self.projection=='polar':
 				x = 2*pi-event.xdata+1/2*pi
 				if x > 2*pi: x-=2*pi
-				x,y = floor(x/(2*pi/self.viz.model.patches.x)), floor(event.ydata)
+				x,y = floor(x/(2*pi/self.viz.model.patches.dim[0])), floor(event.ydata)
 			else:
 				x,y = round(event.xdata), round(event.ydata)
-			if x > self.viz.model.patches.x-1 or y > self.viz.model.patches.y-1: return
+			if x > self.viz.model.patches.dim[0]-1 or y > self.viz.model.patches.dim[1]-1: return
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
 
 	def update(self, data, t):
@@ -685,12 +685,12 @@ class NetworkPlot(ChartPlot):
 		if self.layout == 'patchgrid':
 			pd = self.patchData(t).T #Transpose because numpy is indexed col, row
 			if self.projection=='polar':
-				self.axes.set_ylim(0, self.viz.model.patches.y)
+				self.axes.set_ylim(0, self.viz.model.patches.dim[1])
 				norm = (pd - self.normal.vmin)/(self.normal.vmax-self.normal.vmin)
 				space = linspace(0.0, 1.0, 100)
 				rgb = cm.get_cmap(self.params['patchColormap'])(space)[newaxis, :, :3][0]
 				
-				x = self.viz.model.patches.x
+				x = self.viz.model.patches.dim[0]
 				for r in range(len(norm)):
 					for ti in range(len(norm[0])):
 						#Define the range going counterclockwise. The 1/4 is to make r=0 point north rather than east.
