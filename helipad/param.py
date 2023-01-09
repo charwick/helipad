@@ -15,6 +15,8 @@ class Param(Item):
 		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['pKeys']} if self.per else self.defaultVal
 		self.reset() #Populate with default values
 
+	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
+
 	#Set values from defaults
 	#Global generic:				int → int
 	#Per-breed universal generic:	int → dict{int}
@@ -493,6 +495,8 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 				if callable(model.params['shocks'].callback): model.params['shocks'].callback(model, 'shocks', (self.name, val))
 		self.Shock = Shock
+
+	def __repr__(self): return f'<{self.__class__.__name__}: {len(self)} shocks>'
 
 	#param is the name of the variable to shock.
 	#valFunc is a function that takes the current value and returns the new value.

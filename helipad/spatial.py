@@ -155,6 +155,8 @@ class Patches2D(list):
 		if isinstance(key, int): return super().__setitem__(key, val)
 		else: super().__getitem__(key[0])[key[1]] = val
 
+	def __repr__(self): return f'<{self.__class__.__name__}: {self.dim[0]}×{self.dim[1]}>'
+
 #Each row and column of equal length
 class PatchesRect(Patches2D):
 	shape = 'rect'

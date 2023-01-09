@@ -71,6 +71,8 @@ class Color:
 		#Can take a hex string, color name, or [r,g,b] list/tuple.
 		self.rgb = mplcolor.hex2color(color) if isinstance(color, str) else list(color)
 
+	def __repr__(self): return f'<Color: ({round(self.r*100)},{round(self.g*100)},{round(self.b*100)})>'
+
 	@property
 	def hex(self): return mplcolor.to_hex(self.rgb)
 	@property

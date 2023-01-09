@@ -57,6 +57,8 @@ class MPLVisualization(BaseVisualization):
 			get_ipython().magic('matplotlib widget')
 		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
 
+	def __repr__(self): return f'<{self.__class__.__name__} with {len(self.plots)} plots>'
+
 	#Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
 	def launch(self, title, dim=None, pos=None):
@@ -340,6 +342,8 @@ class ChartPlot(Item):
 	def __init__(self, **kwargs):
 		if 'projection' not in kwargs and not hasattr(self, 'projection'): self.projection = None
 		super().__init__(**kwargs)
+
+	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
 
 	@property
 	def selected(self): return self.viz.model.params['plots'].get(self.name)

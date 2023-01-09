@@ -102,6 +102,10 @@ class Helipad:
 					print(ï('A Helipad update is available! Use `pip install -U helipad` to upgrade to version {}.').format(available[0]))
 			except: pass #Fail silently if we're not online
 
+	def __repr__(self):
+		if self.name: return f'<Helipad: {self.name}>'
+		else: return '<Helipad object>'
+
 	def addButton(self, text, func, desc=None):
 		self.shocks.add(text, None, func, 'button', True, desc)
 

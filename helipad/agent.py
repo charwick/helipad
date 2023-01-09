@@ -40,6 +40,8 @@ class baseAgent:
 
 		self.model.doHooks(['baseAgentInit', self.primitive+'Init'], [self, self.model])
 
+	def __repr__(self): return f'<{self.__class__.__name__} {self.id}>'
+
 	def step(self, stage):
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
@@ -327,6 +329,8 @@ class Patch(baseAgent):
 	def neighbors(self):
 		return self.outbound('space', True, obj='agent')
 
+	def __repr__(self): return f'<Patch at {self.position[0]},{self.position[1]}>'
+
 #Direction can take an Agent object (corresponding to the endpoint),
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
 #or a boolean (False for undirected, True for agent1 to agent2)
@@ -360,6 +364,10 @@ class Edge:
 			if not self in agent.edges[kind]: agent.edges[kind].append(self) #Don't add self-links twice
 
 		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
+
+	def __repr__(self):
+		pair, arrow = (self.vertices, '—') if not self.directed else ((self.startpoint, self.endpoint), '→')
+		return f'<{self.__class__.__name__}: {pair[0].__class__.__name__} {pair[0].id} {arrow} {pair[1].__class__.__name__} {pair[1].id}>'
 
 	def cut(self):
 		for agent in self.vertices:
