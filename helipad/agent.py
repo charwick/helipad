@@ -6,6 +6,7 @@
 import warnings
 from random import choice, randint
 import numpy as np
+from math import degrees, radians, pi
 from helipad.helpers import ï
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
@@ -31,6 +32,7 @@ class baseAgent:
 		self.utils = 0
 		self.position = None #Overridden in spatial init
 		self.currentDemand = {g:0 for g in model.goods.keys()}
+		self.rads = 0
 
 		#For multi-level models
 		#Has to be a static property since we're checking as the object initializes
@@ -287,6 +289,23 @@ class baseAgent:
 	#==================
 	# OTHER METHODS
 	#==================
+
+	#Agent.orientation reports and sets degrees or radians, depending on Agent.angle.
+	#Agent.rads always reports radians and is not documented.
+	@property
+	def orientation(self):
+		if self.primitive == 'patch': return None
+		return degrees(self.rads) if 'deg' in self.angle else self.rads
+
+	@orientation.setter
+	def orientation(self, val):
+		if self.primitive == 'patch': raise RuntimeError(ï('Patches cannot rotate.'))
+		if 'deg' in self.angle: val = radians(val)
+		while val >= 2*pi: val -= 2*pi
+		while val < 0: val += 2*pi
+		self.rads = val
+
+	def rotate(self, angle): self.orientation += angle
 
 	#In a multi-level model, allow the agent to move to a different deme/firm/etc
 	def transfer(self, dest):

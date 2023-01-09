@@ -330,6 +330,10 @@ msgstr ""
 msgid "Patches cannot move."
 msgstr ""
 
+#: agent.py:296
+msgid "Patches cannot rotate."
+msgstr ""
+
 #: spatial.py:92
 msgid "Dimension is out of range."
 msgstr ""

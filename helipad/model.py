@@ -15,9 +15,6 @@ from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
 from helipad.agent import Agent, baseAgent
-if isNotebook():
-	import logging
-	logger = logging.getLogger('LOGGER_NAME')
 
 class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
@@ -521,7 +518,7 @@ class Helipad:
 	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 	# Has to be called *after* Cpanel.__init__() is called, or the cpanel object won't be available.
 	def debugConsole(self):
-		if sys.platform=='darwin':
+		if sys.platform=='darwin' and isBuffered():
 			try:
 				import code, readline
 				env = globals().copy()

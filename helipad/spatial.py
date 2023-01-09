@@ -5,7 +5,7 @@
 
 import warnings
 from random import randint
-from math import sqrt, degrees, radians, sin, cos, atan2, pi, copysign, floor
+from math import sqrt, sin, cos, atan2, pi, copysign, floor
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
 from helipad.helpers import ï, Number
@@ -54,7 +54,6 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 		if agent.primitive == 'patch': return #Patch position is fixed
 		p = model.doHooks(['baseAgentPosition', agent.primitive+'Position'], [agent, agent.model])
 		agent.position = list(p) if p and len(p) >= 2 else [randint(0, model.param('x')-1), randint(0, model.param('y')-1)]
-		agent.rads = 0
 
 	#MOVEMENT AND POSITION
 
@@ -93,21 +92,6 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 			raise IndexError(ï('Dimension is out of range.'))
 		self.position = [x,y]
 	baseAgent.moveTo = NotPatches(moveTo)
-
-	#ANGLE FUNCTIONS
-
-	#Agent.orientation reports and sets degrees or radians, depending on Agent.angle.
-	#Agent.rads always reports radians and is not documented.
-	def orientation(self): return degrees(self.rads) if 'deg' in self.angle else self.rads
-	def setOrientation(self, val):
-		if 'deg' in self.angle: val = radians(val)
-		while val >= 2*pi: val -= 2*pi
-		while val < 0: val += 2*pi
-		self.rads = val
-	baseAgent.orientation = property(NotPatches(orientation), NotPatches(setOrientation))
-
-	def rotate(self, angle): self.orientation += angle
-	baseAgent.rotate = NotPatches(rotate)
 
 	#Initialize the patch container at the beginning of the model
 	@model.hook(prioritize=True)
