@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, wrap=(True, True), corners=False, shape='rect', **kwargs):
+def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
 	# Backward compatibility
 	if 'x' in kwargs:		#Remove in Helipad 1.6
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
@@ -27,7 +27,7 @@ def spatialSetup(model, dim=10, wrap=(True, True), corners=False, shape='rect', 
 	#Initialize patch container and primitive
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
 	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar}
-	model.patches = pClasses[shape](dim, wrap=wrap)
+	model.patches = pClasses[shape](dim, **kwargs)
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
@@ -47,6 +47,7 @@ def spatialSetup(model, dim=10, wrap=(True, True), corners=False, shape='rect', 
 	def wrapset(val, name, model):
 		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'wrap'", "model.patches.wrap"), FutureWarning, 5)
 		model.patches.wrap = val if isinstance(val, (tuple, list)) else (val, val)
+	wrap = kwargs['wrap'] if 'wrap' in kwargs else True
 	model.params.add('x', ï('Map Width'), 'hidden', dflt=model.patches.dim[0], setter=dimgen('x','set'), getter=dimgen('x','get'))
 	model.params.add('y', ï('Map Height'), 'hidden', dflt=model.patches.dim[1], setter=dimgen('y','set'), getter=dimgen('y','get'))
 	model.params.add('wrap', ï('Wrap'), 'hidden', dflt=(wrap is True), setter=wrapset, getter=wrapget) #Only checked at the beginning of a model
@@ -137,13 +138,10 @@ def NotPatches(function):
 
 #A 2D list of lists that lets us use [x,y] indices
 class Patches2D(list):
-	def __init__(self, dim, wrap=(True, True), props=[], funcs=[]):
+	def __init__(self, dim, props=[], funcs=[], **kwargs):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
-		if isinstance(wrap, bool): wrap = (wrap, wrap)
-		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
-		self.wrap = wrap
 		super().__init__([])
 
 		#Attach coordinate-specific functions and properties to agent objects
@@ -168,7 +166,7 @@ class PatchesRect(Patches2D):
 	shape = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
-	def __init__(self, dim, wrap=True):
+	def __init__(self, dim, wrap=True, **kwargs):
 		def up(patch):
 			if patch.y==0 and not self.wrap[1]: return None
 			return self[patch.x, patch.y-1 if patch.y > 0 else self.dim[1]-1]
@@ -221,7 +219,10 @@ class PatchesRect(Patches2D):
 			difx, dify = agent._offset(x, y)
 			agent.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
 
-		super().__init__(dim, wrap=wrap, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo])
+		if isinstance(wrap, bool): wrap = (wrap, wrap)
+		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
+		self.wrap = wrap
+		super().__init__(dim, wrap=wrap, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo], **kwargs)
 
 	def neighbors(self, patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
@@ -247,7 +248,7 @@ class PatchesPolar(PatchesRect):
 	shape = 'polar'
 	wrap = (True, False) #Wrap around, but not in-to-out.
 
-	def __init__(self, dim, wrap=None): #Ignore wrap parameter
+	def __init__(self, dim, **kwargs):
 		def inward(patch):
 			if patch.y==0: return None
 			return self[patch.x, patch.y-1]
@@ -275,23 +276,23 @@ class PatchesPolar(PatchesRect):
 		def moveCounterclockwise(agent): agent.move(-1, 0)
 		def forward(agent, steps=1):
 			#2π-self.rads to make it go clockwise
-			th1 = 2*pi-(2*pi/dim[0] * agent.x)
+			th1 = 2*pi-(2*pi/self.dim[0] * agent.x)
 			newth = th1 + atan2(steps*sin(2*pi-agent.rads-th1), agent.y+steps*cos(2*pi-agent.rads-th1))
-			newx = (2*pi-newth)/(2*pi/dim[0])
-			if newx > dim[0]: newx -= dim[0]
+			newx = (2*pi-newth)/(2*pi/self.dim[0])
+			if newx > self.dim[0]: newx -= self.dim[0]
 			newr = sqrt(agent.y**2 + steps**2 + 2*agent.y*steps*cos(2*pi-agent.rads-th1))
 			agent.move(newx-agent.x, newr-agent.y)
 
 		def distanceFrom(agent, agent2):
-			th1 = agent.x * 2*pi / dim[0]
-			th2 = agent2.x * 2*pi / dim[0]
+			th1 = agent.x * 2*pi /self.dim[0]
+			th2 = agent2.x * 2*pi /self.dim[0]
 			return sqrt(agent.y**2 + agent2.y**2 - 2*agent.y*agent2.y*cos(th1-th2))
 		baseAgent.distanceFrom = distanceFrom
 
 		def orientTo(agent, x, y=None):
 			if not isinstance(x, Number): x,y = x.position
-			th1 = 2*pi-(2*pi/dim[0] * agent.x)
-			th2 = 2*pi-(2*pi/dim[0] * x)
+			th1 = 2*pi-(2*pi/self.dim[0] * agent.x)
+			th2 = 2*pi-(2*pi/self.dim[0] * x)
 			agent.rads = pi - atan2(agent.y * sin(th1) - y * sin(th2), agent.y * cos(th1) - y * cos(th2))
 
 		#Skip PatchesRect.__init__
