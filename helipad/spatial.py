@@ -42,10 +42,10 @@ def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
 			model.patches.dim[0 if dim=='x' else 1] = val
 		return dimget if action=='get' else dimset
 	def wrapget(name, model):
-		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'wrap'", "model.patches.wrap"), FutureWarning, 5)
+		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format("'wrap'", "model.patches.wrap"), FutureWarning, 5)
 		return model.patches.wrap == (True, True)
 	def wrapset(val, name, model):
-		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'wrap'", "model.patches.wrap"), FutureWarning, 5)
+		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format("'wrap'", "model.patches.wrap"), FutureWarning, 5)
 		model.patches.wrap = val if isinstance(val, (tuple, list)) else (val, val)
 	wrap = kwargs['wrap'] if 'wrap' in kwargs else True
 	model.params.add('x', ï('Map Width'), 'hidden', dflt=model.patches.dim[0], setter=dimgen('x','set'), getter=dimgen('x','get'))
@@ -119,7 +119,7 @@ def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
 					patch.newEdge(n, 'space', weight=weight)
 
 	#Don't reset the visualizer if charts is already registered
-	if not hasattr(model, 'visual') or not isinstance(model.visual, Charts):
+	if model.visual is None or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 
 	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid', projection=shape if shape=='polar' else None)

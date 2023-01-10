@@ -145,7 +145,7 @@ class Cpanel(tk.Tk):
 						el.BooleanVar = v
 					elif param.type=='checkentry':
 						dflt = param.get(item)
-						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, type='int' if param.entryType is int else 'string', command=param.setVar(item))
+						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, datatype='int' if param.entryType is int else 'string', command=param.setVar(item))
 						if param.name=='stopafter' and param.event:
 							el.disable()
 							el.entryValue.set('Event: '+param.get())
@@ -490,31 +490,31 @@ class textCheck(tk.Label):
 
 # A checkbox that enables/disables a text box
 class checkEntry(tk.Frame):
-	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', type='string', command=None, limits=(0, 10**100)):
+	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', datatype='string', command=None, limits=(0, 10**100)):
 		tk.Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
 		self.callback = command
 
 		#If we're enforcing int, don't allow nonnumerical input
-		self.type=type
+		self.datatype=datatype
 		def validate(code, insert, oldval, newval):
 			if not self.enabled: return
 			allow = True
-			if self.type=='int' and code == '1':
+			if self.datatype=='int' and code == '1':
 				for c in insert:
 					if c not in '0123456789':
 						allow = False
-			if allow: self.callback(int(newval) if self.type=='int' and newval!='' else newval)
+			if allow: self.callback(int(newval) if self.datatype=='int' and newval!='' else newval)
 			return allow
 		valint = self.register(validate)
 
 		self.enabled = True
 		self.entryValue = tk.StringVar()
 		self.entryValue.set(default)
-		if type=='string':
+		if datatype=='string':
 			self.textbox = tk.Entry(self, textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
-		elif type=='int':
+		elif datatype=='int':
 			self.textbox = tk.Spinbox(self, from_=limits[0], to=limits[1], textvariable=self.entryValue, width=width, state='disabled', validate='key', validatecommand=(valint, '%d', '%S', '%s', '%P'), highlightbackground=bg)
-		else: raise ValueError(ï('Invalid Checkentry type. Must be either "string" or "int"'))
+		else: raise ValueError(ï('Invalid Checkentry datatype. Must be either "string" or "int"'))
 		self.textbox.grid(row=0, column=1)
 
 		self.checkVar = tk.BooleanVar()
@@ -529,17 +529,17 @@ class checkEntry(tk.Frame):
 	def get(self):
 		if not self.checkVar.get(): return False
 		v = self.entryValue.get()
-		if self.type=='int':
+		if self.datatype=='int':
 			return 0 if v=='' else int(v)
 		else: return v
 
-	#Can pass a bool to turn on and off the checkbox, or a string or an int (depending on the type)
+	#Can pass a bool to turn on and off the checkbox, or a string or an int (depending on the datatype)
 	#to change the value of the textbox.
 	def set(self, val):
 		if isinstance(val, bool):
 			self.checkVar.set(val)
 		elif isinstance(val, (str, int)):
-			if self.type=='int' and val!='': val=int(val)
+			if self.datatype=='int' and val!='': val=int(val)
 			self.checkVar.set(True)
 			self.entryValue.set(val)
 		self.disableTextfield()

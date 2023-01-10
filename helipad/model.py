@@ -44,6 +44,7 @@ class Helipad:
 		self.visual = None
 		self.cpanel = None
 
+		self.t = None
 		self.running = False
 		self._cut = False
 
@@ -154,7 +155,7 @@ class Helipad:
 		self.t = 0
 
 		#Blank breeds for any primitives not otherwise specified
-		for k,p in self.primitives.items():
+		for p in self.primitives.values():
 			if not p.breeds: p.breeds.add('', '#000000')
 
 		#SERIES AND REPORTERS
@@ -181,7 +182,7 @@ class Helipad:
 
 		if self.goods.money is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
-			if self.visual is not None and isinstance(self.visual, TimeSeries) and hasattr(self.visual, 'plots') and 'money' in self.visual.plots:
+			if self.visual is not None and isinstance(self.visual, TimeSeries) and 'money' in self.visual.plots:
 				self.visual.plots['money'].addSeries('M0', ï('Monetary Base'), self.goods[self.goods.money].color)
 
 		#Unconditional variables to report
@@ -197,7 +198,7 @@ class Helipad:
 		if len(self.goods) >= 2:
 			for good, g in self.goods.nonmonetary.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-				if self.visual is not None and hasattr(self.visual, 'plots'):
+				if self.visual is not None:
 					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
 
 		#Initialize agents
@@ -873,8 +874,8 @@ class Events(funcStore):
 					self.triggered = False
 		self.Event = Event
 
-	def add(self, name, fn, **kwargs):
-		return super().add(name, self.Event(name, fn, **kwargs))
+	def add(self, name, function, **kwargs):
+		return super().add(name, self.Event(name, function, **kwargs))
 
 class Hooks(funcStore):
 	multi = True

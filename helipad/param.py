@@ -255,7 +255,7 @@ class CheckentryParam(Param):
 
 		if updateGUI and isNotebook() and hasattr(self, 'element'):
 			els = self.element.children if self.per is None else self.elements[item].children
-			els[0].value = val != False
+			els[0].value = val is not False
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 
 	#Only re-enable the textbox if the checkbox is checked

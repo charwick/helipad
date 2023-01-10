@@ -13,10 +13,10 @@ mlpstyle.use('fast')
 
 #======================
 # TOP-LEVEL VISUALIZERS
-# These two use Matplotlib, but subclasses of BaseVisualization don't necessarily have to.
+# These two use Matplotlib, but subclasses of BaseVisualization don't necessarily have to
 #======================
 
-#Used for creating an entirely new visualization window.
+#Used for creating an entirely new visualization window
 class BaseVisualization(ABC):
 	isNull = True
 
@@ -29,7 +29,7 @@ class BaseVisualization(ABC):
 	@abstractmethod
 	def update(self, data): pass
 
-	#Do something when events happen. Mandatory to implement.
+	#Do something when events happen. Mandatory to implement
 	@abstractmethod
 	def event(self, t, color, **kwargs): pass
 
@@ -45,6 +45,8 @@ class MPLVisualization(BaseVisualization):
 		self.selector = model.params.add('plots', ï('Plots'), 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.dim = None
 		self.pos = (400, 0)
+		self.fig = None
+		self.lastUpdate = None
 
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
@@ -235,7 +237,7 @@ class TimeSeries(MPLVisualization):
 		return True
 
 	def event(self, t, color='#CC0000', linestyle='--', linewidth=1, **kwargs):
-		if not hasattr(self, 'fig'): return
+		if self.fig is None: return
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
@@ -306,7 +308,7 @@ class Charts(MPLVisualization):
 		self.type = type if type is not None else 'bar'
 		if self.type not in self.plotTypes: raise KeyError(ï('\'{}\' is not a registered plot visualizer.').format(self.type))
 		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
-		
+
 		self.plots[name].selected = selected #Do this after CheckgridParam.addItem
 		return self.plots[name]
 
@@ -341,6 +343,7 @@ class Charts(MPLVisualization):
 class ChartPlot(Item):
 	def __init__(self, **kwargs):
 		if 'projection' not in kwargs and not hasattr(self, 'projection'): self.projection = None
+		self.axes = None
 		super().__init__(**kwargs)
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
@@ -693,7 +696,7 @@ class NetworkPlot(ChartPlot):
 				norm = (pd - self.normal.vmin)/(self.normal.vmax-self.normal.vmin)
 				space = linspace(0.0, 1.0, 100)
 				rgb = cm.get_cmap(self.params['patchColormap'])(space)[newaxis, :, :3][0]
-				
+
 				x = self.viz.model.patches.dim[0]
 				for r in range(len(norm)):
 					for ti in range(len(norm[0])):
@@ -717,7 +720,7 @@ class NetworkPlot(ChartPlot):
 		self.components['edges_d'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_directed, width=[e[2]['weight'] for e in e_directed])
 		self.components['edges_u'] = self.nx.draw_networkx_edges(self.ndata[t], self.pos, ax=self.axes, edgelist=e_undirected, width=[e[2]['weight'] for e in e_undirected], arrows=False)
 		if self.params['agentLabel']:
-			lab = None if self.params['agentLabel']==True else {n:self.ndata[t].nodes[n]['label'] for n in self.ndata[t].nodes}
+			lab = None if self.params['agentLabel'] is True else {n:self.ndata[t].nodes[n]['label'] for n in self.ndata[t].nodes}
 			self.components['labels'] = self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes, labels=lab, font_size=self.params['labelSize'], font_color=self.params['labelColor'], font_family=self.params['labelFamily'], font_weight=self.params['labelWeight'], alpha=self.params['labelAlpha'], horizontalalignment=self.params['labelAlign'], verticalalignment=self.params['labelVerticalAlign'])
 
 		self.components['nodes'].set_picker(True)	#Listen for mouse events on nodes
@@ -736,7 +739,7 @@ class NetworkPlot(ChartPlot):
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
 		self.layClass = getattr(lay, self.layout+'_layout')
-		
+
 		#Replace the axes object if we need to switch projections
 		if self.projection == 'polar' or (self.layout=='patchgrid' and self.viz.model.patches and self.viz.model.patches.shape=='polar'):
 			self.projection = None if self.projection=='polar' else 'polar'

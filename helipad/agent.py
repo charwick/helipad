@@ -5,8 +5,8 @@
 
 import warnings
 from random import choice, randint
-import numpy as np
 from math import degrees, radians, pi
+import numpy as np
 from helipad.helpers import ï
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
