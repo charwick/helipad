@@ -13,6 +13,9 @@ heli.primitives.remove('agent')
 mapPlot = heli.spatial(dim=30, wrap=True, corners=True)
 mapPlot.config('patchProperty', 'active')
 
+def setdim(model, var, val): model.patches.dim = (int(val), int(val))
+heli.params.add('dim', 'Dimension', 'slider', 30, opts={'low': 4, 'high': 30, 'step': 1}, runtime=False, callback=setdim)
+
 @heli.hook
 def patchInit(patch, model):
 	patch.active = False

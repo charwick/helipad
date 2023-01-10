@@ -4,7 +4,7 @@
 #===============
 
 import warnings
-from random import randint
+from random import uniform
 from math import sqrt, sin, cos, atan2, pi, copysign, floor
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs):
+def spatialSetup(model, dim=10, wrap=(True, True), corners=False, shape='rect', **kwargs):
 	# Backward compatibility
 	if 'x' in kwargs:		#Remove in Helipad 1.6
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
@@ -24,36 +24,39 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 		corners = kwargs['diag']
 		warnings.warn(ï('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)
 
-	#Dimension parameters
-	#If equidimensional, have the x and y parameters alias dimension
-	if isinstance(dim, int):
-		model.params.add('dimension', ï('Map Size'), 'slider', dflt=dim, opts={'low': 1, 'high': dim, 'step': 1}, runtime=False)
-		def dimget(name, model): return model.param('dimension')
-		def dimset(val, name, model): model.param('dimension', val)
-		model.params.add('x', ï('Map Width'), 'hidden', dflt=dim, setter=dimset, getter=dimget)
-		model.params.add('y', ï('Map Height'), 'hidden', dflt=dim, setter=dimset, getter=dimget)
-	elif isinstance(dim, (list, tuple)):
-		model.params.add('x', ï('Map Width'), 'slider', dflt=dim[0], opts={'low': 1, 'high': dim[0], 'step': 1}, runtime=False)
-		model.params.add('y', ï('Map Height'), 'slider', dflt=dim[1], opts={'low': 1, 'high': dim[1], 'step': 1}, runtime=False)
-	else: raise TypeError(ï('Invalid dimension.'))
-
+	#Initialize patch container and primitive
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
-	model.params.add('square', ï('Square'), 'hidden', dflt=isinstance(dim, (list, tuple)))
-	if shape=='polar': wrap='x'
-	model.params.add('wrapx', ï('Wrap')+' X', 'hidden', dflt=(wrap is True or wrap=='x')) #Only checked at the beginning of a model
-	model.params.add('wrapy', ï('Wrap')+' Y', 'hidden', dflt=(wrap is True or wrap=='y'))
-
 	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar}
+	model.patches = pClasses[shape](dim, wrap=wrap)
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
+
+	#Dimension parameters. Deprecated in Helipad 1.5; remove in Helipad 1.7
+	def dimgen(dim, action):
+		def dimget(name, model):
+			warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'{dim}'", "model.patches.dim"), FutureWarning, 5)
+			return model.patches.dim[0 if dim=='x' else 1]
+		def dimset(val, name, model):
+			warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'{dim}'", "model.patches.dim"), FutureWarning, 5)
+			model.patches.dim[0 if dim=='x' else 1] = val
+		return dimget if action=='get' else dimset
+	def wrapget(name, model):
+		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'wrap'", "model.patches.wrap"), FutureWarning, 5)
+		return model.patches.wrap == (True, True)
+	def wrapset(val, name, model):
+		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'wrap'", "model.patches.wrap"), FutureWarning, 5)
+		model.patches.wrap = val if isinstance(val, (tuple, list)) else (val, val)
+	model.params.add('x', ï('Map Width'), 'hidden', dflt=model.patches.dim[0], setter=dimgen('x','set'), getter=dimgen('x','get'))
+	model.params.add('y', ï('Map Height'), 'hidden', dflt=model.patches.dim[1], setter=dimgen('y','set'), getter=dimgen('y','get'))
+	model.params.add('wrap', ï('Wrap'), 'hidden', dflt=(wrap is True), setter=wrapset, getter=wrapget) #Only checked at the beginning of a model
 
 	#Hook a positioning function or randomly position our agents
 	@model.hook(prioritize=True)
 	def baseAgentInit(agent, model):
 		if agent.primitive == 'patch': return #Patch position is fixed
 		p = model.doHooks(['baseAgentPosition', agent.primitive+'Position'], [agent, agent.model])
-		agent.position = list(p) if p and len(p) >= 2 else [randint(0, model.param('x')-1), randint(0, model.param('y')-1)]
+		agent.position = list(p) if p and len(p) >= 2 else [uniform(*model.patches.boundaries[0]), uniform(*model.patches.boundaries[1])]
 
 	#MOVEMENT AND POSITION
 
@@ -64,19 +67,19 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	baseAgent.y = property(lambda self: self.position[1], sety)
 
 	def move(self, x, y):
-		mapx, mapy = self.model.param('x'), self.model.param('y')
+		mapx, mapy = self.model.patches.dim
 		xlim, ylim = self.model.patches.boundaries
 		self.position[0] += x
 		self.position[1] += y
 
-		if self.model.param('wrapx'):
+		if self.model.patches.wrap[0]:
 			while self.position[0] >= xlim[1]: self.position[0] -= mapx
 			while self.position[0] < xlim[0]: self.position[0] += mapx
 		else:
 			self.position[0] = min(self.position[0], xlim[1])
 			self.position[0] = max(self.position[0], xlim[0])
 
-		if self.model.param('wrapy'):
+		if self.model.patches.wrap[1]:
 			while self.position[1] >= ylim[1]: self.position[1] -= mapy
 			while self.position[1] < ylim[0]: self.position[1] += mapy
 		else:
@@ -96,7 +99,7 @@ def spatialSetup(model, dim=10, wrap=True, corners=False, shape='rect', **kwargs
 	#Initialize the patch container at the beginning of the model
 	@model.hook(prioritize=True)
 	def modelPreSetup(model):
-		model.patches = pClasses[shape]((model.param('x'), model.param('y')))
+		model.patches.clear()
 
 	#Position our patches in the coordinate system
 	@model.hook(prioritize=True)
@@ -134,11 +137,14 @@ def NotPatches(function):
 
 #A 2D list of lists that lets us use [x,y] indices
 class Patches2D(list):
-	def __init__(self, dim, props=[], funcs=[]):
+	def __init__(self, dim, wrap=(True, True), props=[], funcs=[]):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
-		super().__init__([[] for i in range(dim[0])])
+		if isinstance(wrap, bool): wrap = (wrap, wrap)
+		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
+		self.wrap = wrap
+		super().__init__([])
 
 		#Attach coordinate-specific functions and properties to agent objects
 		for p in props: setattr(Patch, p.__name__, property(p))
@@ -162,21 +168,21 @@ class PatchesRect(Patches2D):
 	shape = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
-	def __init__(self, dim):
+	def __init__(self, dim, wrap=True):
 		def up(patch):
-			if patch.y==0 and not patch.model.param('wrapy'): return None
+			if patch.y==0 and not self.wrap[1]: return None
 			return self[patch.x, patch.y-1 if patch.y > 0 else self.dim[1]-1]
 
 		def right(patch):
-			if patch.x>=patch.model.param('x')-1 and not patch.model.param('wrapx'): return None
+			if patch.x>=self.dim[0]-1 and not self.wrap[0]: return None
 			return self[patch.x+1 if patch.x < self.dim[0]-1 else 0, patch.y]
 
 		def down(patch):
-			if patch.y>=patch.model.param('y')-1 and not patch.model.param('wrapy'): return None
+			if patch.y>=self.dim[1]-1 and not self.wrap[1]: return None
 			return self[patch.x, patch.y+1 if patch.y < self.dim[1]-1 else 0]
 
 		def left(patch):
-			if patch.x==0 and not patch.model.param('wrapx'): return None
+			if patch.x==0 and not self.wrap[0]: return None
 			return self[patch.x-1 if patch.x > 0 else self.dim[0]-1, patch.y]
 
 		def agentsOn(patch):
@@ -196,10 +202,10 @@ class PatchesRect(Patches2D):
 		#Internal function  to calculate x,y distances s.t. wrap constraints for distance and orientation purposes
 		def _offset(agent, x, y):
 			difx, dify = x - agent.x, y - agent.y
-			if agent.model.param('wrapx'):
+			if self.wrap[0]:
 				crossx = difx - copysign(self.dim[0], difx)
 				if abs(crossx) < abs(difx): difx = crossx
-			if agent.model.param('wrapy'):
+			if self.wrap[1]:
 				crossy = dify - copysign(self.dim[1], dify)
 				if abs(crossy) < abs(dify): dify = crossy
 			return (difx, dify)
@@ -215,7 +221,7 @@ class PatchesRect(Patches2D):
 			difx, dify = agent._offset(x, y)
 			agent.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
 
-		super().__init__(dim, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo])
+		super().__init__(dim, wrap=wrap, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo])
 
 	def neighbors(self, patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
@@ -224,6 +230,7 @@ class PatchesRect(Patches2D):
 
 	#Take a sequential list of self.count patches and position them appropriately in the internal list
 	def place(self, agent):
+		if not super().__len__(): self += [[] for i in range(self.dim[0])]
 		x=0
 		while len(self[x]) >= self.dim[1]: x+=1		#Find a column that's not full yet
 		agent.position = (x, len(self[x]))			#Note the position
@@ -238,8 +245,9 @@ class PatchesRect(Patches2D):
 #x is number around, y is number out
 class PatchesPolar(PatchesRect):
 	shape = 'polar'
+	wrap = (True, False) #Wrap around, but not in-to-out.
 
-	def __init__(self, dim):
+	def __init__(self, dim, wrap=None): #Ignore wrap parameter
 		def inward(patch):
 			if patch.y==0: return None
 			return self[patch.x, patch.y-1]

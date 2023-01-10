@@ -298,6 +298,10 @@ msgid ""
 "The `diag` argument is deprecated. Use the `corners` argument instead."
 msgstr ""
 
+#: spatial.py:40
+msgid "The {0} parameter is deprecated. Use {1} instead."
+msgstr ""
+
 #: spatial.py:27
 msgid "Map Size"
 msgstr ""
@@ -312,6 +316,10 @@ msgstr ""
 
 #: spatial.py:35
 msgid "Invalid dimension."
+msgstr ""
+
+#: spatial.py:142
+msgid "Invalid wrap parameter."
 msgstr ""
 
 #: spatial.py:38
