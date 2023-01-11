@@ -13,7 +13,7 @@ from helipad.helpers import ï
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
 class baseAgent:
-	angle = 'deg'
+	angleUnit = 'deg'
 	fixed = False
 	overdraft = 'continue-silent'
 
@@ -292,17 +292,17 @@ class baseAgent:
 	# OTHER METHODS
 	#==================
 
-	#Agent.orientation reports and sets degrees or radians, depending on Agent.angle.
+	#Agent.orientation reports and sets degrees or radians, depending on Agent.angleUnit.
 	#Agent.rads always reports radians and is not documented.
 	@property
 	def orientation(self):
 		if self.primitive == 'patch': return None
-		return degrees(self.rads) if 'deg' in self.angle else self.rads
+		return degrees(self.rads) if 'deg' in self.angleUnit else self.rads
 
 	@orientation.setter
 	def orientation(self, val):
 		if self.primitive == 'patch': raise RuntimeError(ï('Patches cannot rotate.'))
-		if 'deg' in self.angle: val = radians(val)
+		if 'deg' in self.angleUnit: val = radians(val)
 		while val >= 2*pi: val -= 2*pi
 		while val < 0: val += 2*pi
 		self.rads = val
