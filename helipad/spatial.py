@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
+def spatialSetup(model, dim=10, corners=False, geometry='rect', **kwargs):
 	# Backward compatibility
 	if 'x' in kwargs:		#Remove in Helipad 1.6
 		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
@@ -27,7 +27,10 @@ def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
 	#Initialize patch container and primitive
 	model.primitives.add('patch', Patch, hidden=True, priority=-10)
 	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar}
-	model.patches = pClasses[shape](dim, **kwargs)
+	if not isinstance(geometry, str): #We're gonna throw an error anyway if it's not a class or a string
+		pClasses[geometry.geometry] = geometry
+		geometry = geometry.geometry
+	model.patches = pClasses[geometry](dim, **kwargs)
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
@@ -122,7 +125,7 @@ def spatialSetup(model, dim=10, corners=False, shape='rect', **kwargs):
 	if model.visual is None or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 
-	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid', projection=shape if shape=='polar' else None)
+	mapPlot = model.visual.addPlot('map', 'Map', type='network', layout='patchgrid', projection=geometry if geometry=='polar' else None)
 	return mapPlot
 
 #Functions for all primitives except patches, which are spatially fixed
@@ -163,7 +166,7 @@ class Patches2D(list):
 
 #Each row and column of equal length
 class PatchesRect(Patches2D):
-	shape = 'rect'
+	geometry = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
 	def __init__(self, dim, wrap=True, **kwargs):
@@ -245,7 +248,7 @@ class PatchesRect(Patches2D):
 #x,y placement is the same; just need to redefine patch functions and neighbors
 #x is number around, y is number out
 class PatchesPolar(PatchesRect):
-	shape = 'polar'
+	geometry = 'polar'
 	wrap = (True, False) #Wrap around, but not in-to-out.
 
 	def __init__(self, dim, **kwargs):
