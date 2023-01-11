@@ -91,6 +91,14 @@ class MPLVisualization(BaseVisualization):
 			self.fig.set_size_inches(width/self.fig.dpi, height/self.fig.dpi)
 			fm.window.wm_geometry(f'+{self.pos[0]}+{self.pos[1]}')
 
+	#Save window dimensions and position
+	def terminate(self, model):
+		fm = self.fig.canvas.manager
+		if hasattr(fm, 'window'):
+			self.dim = list(self.fig.get_size_inches()*self.fig.dpi)
+			pos = fm.window.wm_geometry().split('+')
+			self.pos = (pos[1], pos[2])
+
 	def sendEvent(self, event):
 		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
 		if axes is not None:
@@ -179,6 +187,7 @@ class TimeSeries(MPLVisualization):
 		plt.show(block=False)
 
 	def terminate(self, model):
+		super().terminate(model)
 		if self.isNull:
 			model.params['csv'].enable()
 			if not isinstance(model.param('stopafter'), str): model.params['stopafter'].enable()

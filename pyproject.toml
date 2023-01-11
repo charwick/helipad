@@ -23,7 +23,7 @@ classifiers = [
 dependencies = ["matplotlib", "pandas", "networkx"]
 
 [project.optional-dependencies]
-notebook = ["jupyterlab", "ipywidgets", "ipympl"]
+notebook = ["jupyterlab", "ipywidgets>=8.0", "ipympl"]
 
 [project.urls]
 "Homepage" = "https://helipad.dev"
