@@ -388,7 +388,6 @@ class Helipad:
 		if self.cpanel:
 			self.cpanel.progress.done()
 			self.cpanel.runButton.terminate()
-		elif self.visual and getattr(self, 'root', False): self.root.destroy() #Quit if we're in cpanel-less mode
 
 		#Re-enable parameters
 		for param in self.params.values():
@@ -613,12 +612,11 @@ class Helipad:
 
 		self.doHooks('visualLaunch', [self, self.visual])
 
-		#If we're running in cpanel-less mode, hook through a Tkinter loop so it doesn't exit on pause
+		#If we're running in cpanel-less mode, hook through a Tcl loop so it doesn't exit on pause
 		if not self.cpanel and not self.visual.isNull and not isNotebook():
-			from tkinter import Tk
-			self.root = Tk()
+			from tkinter import Tcl
+			self.root = Tcl()
 			self.root.after(1, self.start)
-			self.root.after(1, self.root.withdraw) #Close stray window (don't destroy here)
 			self.debugConsole()
 			self.root.mainloop()
 		else: self.start() #As long as we haven't already started
