@@ -42,10 +42,11 @@ class Cpanel(VBox):
 			if param.type=='checkentry':
 				def sv2(b,s):
 					#Ipywidgets ≥8.0 runs the callback before the element is assigned
-					try: els = param.element if item is None else param.elements[item]
+					try:
+						els = param.element if item is None else param.elements[item]
+						els.children[1].disabled = not b
 					except (AttributeError, KeyError): return
 
-					els.children[1].disabled = not b
 					#Coercing an int can fail, so if there's an exception, reset the textbox content
 					try:
 						val = s if (b and s=='') or 'func〈' in s else (param.entryType(s) if b else False)

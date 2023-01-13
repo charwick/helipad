@@ -13,6 +13,7 @@ class Param(Item):
 		super().__init__(**kwargs)
 		if not hasattr(self, 'per'): self.per=None
 		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['pKeys']} if self.per else self.defaultVal
+		self.element = None
 		self.reset() #Populate with default values
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
@@ -35,7 +36,7 @@ class Param(Item):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 
 		#Jupyter requires an explicit update for all parameter types.
-		if updateGUI and isNotebook() and hasattr(self, 'element'):
+		if updateGUI and isNotebook() and self.element is not None:
 			if self.per is None: self.element.children[0].value = val
 			else: self.elements[item].children[0].value = val
 
@@ -63,7 +64,7 @@ class Param(Item):
 		return self.value if self.per is None or item is None else self.value[item]
 
 	def disabled(self, disable):
-		if not hasattr(self, 'element'): return
+		if self.element is None: return
 		for e in ([self.element] if self.per is None else self.elements.values()):
 			if isNotebook():
 				for i in e.children: i.disabled = disable
@@ -100,7 +101,7 @@ class MenuParam(Param):
 
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
-		if updateGUI and not isNotebook() and hasattr(self, 'element'):
+		if updateGUI and not isNotebook() and self.element is not None:
 			sv = self.element if self.per is None else self.elements[item]
 			sv.StringVar.set(self.opts[val]) #Saved the StringVar here
 		else: super().setParent(val, item, updateGUI)
@@ -118,7 +119,7 @@ class CheckParam(Param):
 
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
-		if updateGUI and not isNotebook() and hasattr(self, 'element'):
+		if updateGUI and not isNotebook() and self.element is not None:
 			sv = self.element if self.per is None else self.elements[item]
 			sv.BooleanVar.set(val) #Saved the BooleanVar here
 		else: super().setParent(val, item, updateGUI)
@@ -138,7 +139,7 @@ class SliderParam(Param):
 
 		#Because the slider tkinter widget doesn't use a Var() object like the others, we have
 		#to explicitly push the value to the slider if necessary
-		if updateGUI and hasattr(self, 'element') and not isNotebook():
+		if updateGUI and self.element is not None and not isNotebook():
 			if self.per is None: self.element.set(val)
 			else: self.elements[item].set(val)
 
@@ -167,7 +168,7 @@ class SliderParam(Param):
 	def setParent(self, val, item=None, updateGUI=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 
-		if isNotebook() and hasattr(self, 'element') and self.element is not None and (self.per is None or item in self.elements):
+		if isNotebook() and self.element is not None and (self.per is None or item in self.elements):
 			el = self.element if self.per is None else self.elements[item]
 
 			#Regular slider update
@@ -195,7 +196,7 @@ class CheckentryParam(Param):
 		#Global parameter
 		if self.per is None:
 			if self.name=='stopafter' and self.event: return self.svar
-			elif hasattr(self, 'element') and not isNotebook(): return self.element.get()
+			elif self.element is not None and not isNotebook(): return self.element.get()
 			else: return self.svar if self.bvar else False
 		#Per-item parameter, get all
 		elif item is None:
@@ -214,7 +215,7 @@ class CheckentryParam(Param):
 			if self.name == 'stopafter':
 				if val and isinstance(val, str):
 					self.event = True
-					if hasattr(self, 'element'):
+					if self.element is not None:
 						self.disable()
 						if isNotebook():
 							self.element.children[1].value = 'Event: '+val
@@ -227,7 +228,7 @@ class CheckentryParam(Param):
 					self.svar = val
 					self.bvar = True
 					return
-				elif self.event and hasattr(self, 'element'):
+				elif self.event and self.element is not None:
 					self.event = False
 					if isNotebook():
 						if isinstance(val, bool): self.element.children[1].value = ''
@@ -238,14 +239,14 @@ class CheckentryParam(Param):
 						self.element.enable()
 						self.element.textbox.config(font=('Lucida Grande', 12))
 
-			if hasattr(self, 'element') and not isNotebook(): self.element.set(val)
+			if self.element is not None and not isNotebook(): self.element.set(val)
 			elif isinstance(val, bool):
 				self.bvar = val
-				if isNotebook() and hasattr(self, 'element'): self.element.children[1].disabled = not val
+				if isNotebook() and self.element is not None: self.element.children[1].disabled = not val
 			elif isinstance(val, self.entryType):
 				self.bvar = True
 				self.svar = val
-				if isNotebook() and hasattr(self, 'element'): self.element.children[1].disabled = False
+				if isNotebook() and self.element is not None: self.element.children[1].disabled = False
 		else:
 			if hasattr(self, 'elements') and not isNotebook(): self.elements[item].set(val)
 			elif isinstance(val, bool): self.bvar[item] = val
@@ -253,14 +254,14 @@ class CheckentryParam(Param):
 				self.bvar[item] = True
 				self.svar[item] = val
 
-		if updateGUI and isNotebook() and hasattr(self, 'element'):
+		if updateGUI and isNotebook() and self.element is not None:
 			els = self.element.children if self.per is None else self.elements[item].children
 			els[0].value = val is not False
 			if not isinstance(val, bool): els[1].value = str(val) #Ipy text widget requires a string
 
 	#Only re-enable the textbox if the checkbox is checked
 	def disabled(self, disable):
-		if hasattr(self, 'element') and isNotebook() and not disable:
+		if self.element is not None and isNotebook() and not disable:
 			for e in ([self.element] if self.per is None else self.elements.values()):
 				e.children[0].disabled = False
 				if e.children[0].value: e.children[1].disabled = False
@@ -283,7 +284,7 @@ class CheckgridParam(Param):
 	def pKeys(self): return list(self.vars.keys())
 
 	def getSpecific(self, item=None):
-		useElement = hasattr(self, 'element') and not isNotebook() and not isinstance(self, Shocks)
+		useElement = self.element is not None and not isNotebook() and not isinstance(self, Shocks)
 		vals = self.element if useElement else self.vars
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
@@ -299,7 +300,7 @@ class CheckgridParam(Param):
 		if isinstance(item, list):
 			for i in self.pKeys: self.set(i, i in item)
 		else:
-			if hasattr(self, 'element') and not isNotebook(): self.element.checks[item].set(val)
+			if self.element is not None and not isNotebook(): self.element.checks[item].set(val)
 			self.vars[item] = val
 
 			if updateGUI and isNotebook() and hasattr(self, 'elements'):
@@ -319,7 +320,7 @@ class CheckgridParam(Param):
 		else: super().disabled(disable)
 
 	def addItem(self, name, label, position=None, selected=False):
-		if getattr(self, 'element', False) and not isNotebook(): raise RuntimeError(ï('Cannot add checkgrid items after control panel is drawn.'))
+		if self.element is not None and not isNotebook(): raise RuntimeError(ï('Cannot add checkgrid items after control panel is drawn.'))
 
 		if position is None or position > len(self.vars): self.opts[name] = label
 		else:		#Reconstruct opts because there's no insert method
@@ -345,6 +346,7 @@ class ParamGroup:
 	def __init__(self, name, members, opened):
 		self.title = name
 		self.members = members
+		self.element = None
 		self.open = opened
 
 		for p in members.values():
@@ -362,7 +364,7 @@ class ParamGroup:
 	@open.setter
 	def open(self, val):
 		self._open = val
-		if hasattr(self, 'element'):
+		if self.element is not None:
 			if isNotebook(): self.element.selected_index = 0 if val else None
 			else: self.element.open = val
 
@@ -383,10 +385,9 @@ class fStoreWithInterface(funcStore):
 		return True
 
 	def _destroy(self, item):
-		element = item.element if getattr(item, 'element', False) else None
-		if element:
-			if not isNotebook(): element.forget()
-			else: element.close()
+		if item.element:
+			if not isNotebook(): item.element.forget()
+			else: item.element.close()
 
 class Params(fStoreWithInterface):
 	multi = False
@@ -472,7 +473,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 			def active(self2, val, updateGUI=True):
 				self.set(self2.name, bool(val))
-				if updateGUI and not isNotebook() and hasattr(self2, 'element'):
+				if updateGUI and not isNotebook() and self2.element is not None:
 					self2.element.BooleanVar.set(val)
 
 			def do(self, model):
@@ -517,13 +518,14 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 			item=item,
 			valFunc=valFunc,
 			timerFunc=timerFunc,
+			element=None,
 			selected=active
 		))
 
 		if timerFunc != 'button': self.addItem(name, name, selected=active)
 
 	def clear(self):
-		if getattr(self, 'element'): self._destroy(self)
+		if self.element is not None: self._destroy(self)
 		super().clear()
 
 	#Deprecated. Remove in Helipad 1.6

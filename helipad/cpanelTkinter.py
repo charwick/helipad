@@ -14,6 +14,7 @@ class Cpanel(tk.Tk):
 	def __init__(self, model):
 		self.model = model
 		super().__init__()
+		self.protocol("WM_DELETE_WINDOW", self.cpanelClose)
 
 		#Set application name
 		self.setAppIcon()
@@ -312,6 +313,12 @@ class Cpanel(tk.Tk):
 			pi = tk.PhotoImage(file=icon, master=self)
 			self.tk.call('wm','iconphoto', self._w, pi)
 		except: pass
+
+	#Cleanup on cpanel close so a running model will keep running
+	def cpanelClose(self):
+		for p in self.model.params.values(): p.element = None
+		self.model.cpanel = None
+		self.destroy()
 
 	#Step one period at a time and update the graph
 	#For use in debugging
