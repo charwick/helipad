@@ -1,42 +1,42 @@
 {% set name = "helipad" %}
-{% set version = "1.5" %}
+{% set version = "1.5.1" %}
 
 package:
-  name: "{{ name|lower }}"
-  version: "{{ version }}"
+  name: {{ name|lower }}
+  version: {{ version }}
 
 source:
-  url: "https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/{{ name }}-{{ version }}.tar.gz"
-  sha256: 449801c3c6ddd84f58a0ae653a9489e62e984384f1b4ec454bf5bef4452f26fb
+  url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/helipad-{{ version }}.tar.gz
+  sha256: 8ca9db33f7227e5e27d479cdca789825e0710ca15c2460e4662a9f11d44103ee
 
 build:
   noarch: python
+  script: {{ PYTHON }} -m pip install . -vv
   number: 0
-  script: "{{ PYTHON }} -m pip install . -vv"
 
 requirements:
   host:
-    - matplotlib
-    - pandas
-    - networkx
+    - python >=3.7
     - pip
-    - python >=3.7
   run:
-    - matplotlib
+    - python >=3.7
+    - matplotlib-base
     - pandas
     - networkx
-    - python >=3.7
 
 test:
   imports:
     - helipad
+  commands:
+    - pip check
+  requires:
+    - pip
 
 about:
-  home: "https://helipad.dev"
+  home: https://helipad.dev
+  summary: An agent-based modeling framework for Python with a shallow learning curve and powerful visualization capabilities.
   license: MIT
-  license_family: MIT
-  license_file: 
-  summary: "An agent-based modeling framework for Python with a shallow learning curve and powerful visualization capabilities."
+  license_file: LICENSE
   dev_url: https://github.com/charwick/helipad/
   doc_url: https://helipad.dev/functions/
 

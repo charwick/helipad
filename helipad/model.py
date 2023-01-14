@@ -20,7 +20,7 @@ class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
 
 	def __init__(self, locale='en'):
-		#Have to do this first so that i18n() is available early.
+		#Have to do this first so that i18n is available early.
 		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console.
 		if not hasattr(self, 'breed'):
 			import builtins
@@ -615,10 +615,10 @@ class Helipad:
 		#If we're running in cpanel-less mode, hook through a Tcl loop so it doesn't exit on pause
 		if not self.cpanel and not self.visual.isNull and not isNotebook():
 			from tkinter import Tcl
-			self.root = Tcl()
-			self.root.after(1, self.start)
+			root = Tcl()
+			root.after(1, self.start)
 			self.debugConsole()
-			self.root.mainloop()
+			root.mainloop()
 		else: self.start() #As long as we haven't already started
 
 	# Generates function decorators for hooks, reporters, etc.

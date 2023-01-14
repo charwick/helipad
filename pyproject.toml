@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "helipad"
-version = "1.5"
+version = "1.5.1"
 authors = [
 	{ name="C Harwick", email="cameron@cameronharwick.com" },
 ]
