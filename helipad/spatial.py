@@ -191,6 +191,12 @@ class PatchesRect(Patches2D):
 				if prim=='patch': continue
 				yield from [a for a in lst if patch.x-0.5<=a.x<patch.x+0.5 and patch.y-0.5<=a.y<patch.y+0.5]
 
+		def center(patch): return patch.position
+		def area(patch): return 1
+		def vertices(patch):
+			pp = patch.position
+			return ((pp[0]-0.5, pp[1]-0.5), (pp[0]-0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]-0.5))
+
 		baseAgent.patch = property(lambda agent: self[round(agent.x), round(agent.y)])
 
 		def moveUp(agent): agent.move(0, -1)
@@ -225,7 +231,10 @@ class PatchesRect(Patches2D):
 		if isinstance(wrap, bool): wrap = (wrap, wrap)
 		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
 		self.wrap = wrap
-		super().__init__(dim, wrap=wrap, props=[up, right, down, left, agentsOn], funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo], **kwargs)
+		super().__init__(dim, wrap=wrap,
+			props=[up, right, down, left, agentsOn, center, area, vertices],
+			funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo],
+			**kwargs)
 
 	def neighbors(self, patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
@@ -271,6 +280,12 @@ class PatchesPolar(PatchesRect):
 				if prim=='patch': continue
 				yield from [a for a in lst if floor(a.x)==patch.x and floor(a.y)==patch.y]
 
+		def center(patch): return (patch.position[0]+0.5, patch.position[1]+0.5)
+		def area(patch): return (1/self.dim[0])*pi*((patch.position[1]+1)**2-patch.position[1]**2)
+		def vertices(patch):
+			pp = patch.position
+			return (pp, (pp[0], pp[1]+1), (pp[0]+1, pp[1]+1), (pp[0]+1, pp[1]))
+
 		baseAgent.patch = property(lambda agent: self[floor(agent.x), floor(agent.y)])
 
 		def moveInward(agent): agent.move(0, -1)
@@ -299,7 +314,10 @@ class PatchesPolar(PatchesRect):
 			agent.rads = pi - atan2(agent.y * sin(th1) - y * sin(th2), agent.y * cos(th1) - y * cos(th2))
 
 		#Skip PatchesRect.__init__
-		Patches2D.__init__(self, dim, props=[inward, outward, clockwise, counterclockwise, agentsOn], funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, forward, orientTo])
+		Patches2D.__init__(self, dim,
+			props=[inward, outward, clockwise, counterclockwise, agentsOn, center, area, vertices],
+			funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, forward, orientTo],
+			**kwargs)
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
 	def neighbors(self, patch, corners):
