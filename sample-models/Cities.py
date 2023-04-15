@@ -101,7 +101,7 @@ def modelPreSetup(model):
 		def end3(model): return model.events['stab2'].triggered and model.t >= model.events['stab2'].triggered + burnout
 	
 	#Start with the equilibrium population
-	else: model.param('num_agent', math.floor(2.55-1.69*model.param('fixed'))*popfactor)
+	else: model.param('num_agent', floor(2.55-1.69*model.param('fixed'))*popfactor)
 
 @heli.hook
 def agentInit(agent, model):

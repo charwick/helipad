@@ -96,9 +96,6 @@ heli.param('refresh', 1)
 # DATA AND VISUALIZATION
 #===============
 
-# from helipad.visualize import TimeSeries
-# viz = heli.useVisual(TimeSeries)
-
 heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
 heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
 heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))

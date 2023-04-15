@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use Helipad in your research, please cite it as below."
+authors:
+- family-names: "Harwick"
+  given-names: "Cameron"
+  orcid: "https://orcid.org/0000-0003-2703-1627"
+title: "Helipad: A Framework for Agent-Based Modeling in Python"
+version: 1.5.1
+identifiers:
+  - type: doi
+    value: 10.2139/ssrn.3870501
+repository-code: 'https://github.com/charwick/helipad'
+date-released: 2023-01-14
+url: "https://helipad.dev"
+abstract: >-
+  Helipad is an agent-based modeling framework for Python with a
+  shallow learning curve and powerful visualization capabilities.
+keywords:
+  - Agent based modeling
+  - Python
+  - White paper
+  - Complex systems
+license: MIT
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Harwick"
+    given-names: "Cameron"
+    orcid: "https://orcid.org/0000-0003-2703-1627"
+  identifiers:
+  - type: doi
+    value: 10.2139/ssrn.3870501
+  journal: "Working paper"
+  title: "Helipad: A Framework for Agent-Based Modeling in Python"
+  year: 2023
