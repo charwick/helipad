@@ -90,12 +90,6 @@ class Param(Item):
 	@property
 	def defaultVal(self): return None
 
-	#Deprecated in Helipad 1.4, remove in Helipad 1.6
-	@property
-	def obj(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Param.obj', 'Param.per'), FutureWarning, 2)
-		return self.per
-
 class MenuParam(Param):
 	type = 'menu'
 
@@ -527,11 +521,6 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 	def clear(self):
 		if self.element is not None: self._destroy(self)
 		super().clear()
-
-	#Deprecated. Remove in Helipad 1.6
-	def register(self, *args, **kwargs):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Shocks.register()', 'Shocks.add()'), FutureWarning, 2)
-		self.add(*args, **kwargs)
 
 	def step(self):
 		for shock in self.values():

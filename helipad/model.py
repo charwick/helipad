@@ -21,7 +21,7 @@ class Helipad:
 
 	def __init__(self, locale='en'):
 		#Have to do this first so that i18n is available early.
-		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console.
+		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console, which overwrites _.
 		if not hasattr(self, 'breed'):
 			import builtins
 			builtins.__dict__['helipad_gettext'] = gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).gettext
@@ -637,96 +637,10 @@ class Helipad:
 			return rep1(func) if isDec else rep1
 		return dec
 
-	#===================
-	# DEPRECATED METHODS
-	#===================
-
-	# DEPRECATED IN HELIPAD 1.4; REMOVE IN HELIPAD 1.6
-
-	def addEvent(self, name, fn, **kwargs):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addEvent()', 'model.events.add()'), FutureWarning, 2)
-		return self.events.add(name, fn, **kwargs)
-
-	def removeEvent(self, name):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removeEvent()', 'model.events.remove()'), FutureWarning, 2)
-		return self.events.remove(name)
-
-	def clearEvents(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.clearEvents()', 'model.events.clear()'), FutureWarning, 2)
-		self.events.clear()
-
-	def addParameter(self, *args, **kwargs):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addParameter()', 'model.params.add()'), FutureWarning, 2)
-		return self.params.add(*args, **kwargs)
-
-	def addBreedParam(self, name, title, type, dflt, opts={}, prim=None, runtime=True, callback=None, desc=None, getter=None, setter=None):
-		if prim is None:
-			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-			else: raise KeyError(ï('Breed parameter must specify which primitive it belongs to.'))
-		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'breed', desc, prim=prim, getter=getter, setter=setter)
-
-	def addGoodParam(self, name, title, type, dflt, opts={}, runtime=True, callback=None, desc=None, getter=None, setter=None):
-		return self.addParameter(name, title, type, dflt, opts, runtime, callback, 'good', desc, getter=getter, setter=setter)
-
-	@property
-	def goodParams(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.goodParams', 'model.params.perGood'), FutureWarning, 2)
-		return self.params.perGood
-
-	@property
-	def allParams(self):
-		warnings.warn(ï('Model.allParams is deprecated. All parameters can be accessed using model.params.'), FutureWarning, 2)
-		return self.params.values()
-
-	def addHook(self, place, func, prioritize=False):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addHook()', 'model.hooks.add()'), FutureWarning, 2)
-		return self.hooks.add(place, func, prioritize)
-
-	def removeHook(self, place, fname, removeall=False):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removeHook()', 'model.hooks.remove()'), FutureWarning, 2)
-		return self.hooks.remove(place, fname, removeall=False)
-
-	def clearHooks(self, place):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.clearHooks()', 'model.hooks.clear()'), FutureWarning, 2)
-		return self.hooks.remove(place)
-
-	def addPrimitive(self, *args, **kwargs):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addPrimitive()', 'model.primitives.add()'), FutureWarning, 2)
-		return self.primitives.add(*args, **kwargs)
-
-	def removePrimitive(self, name):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.removePrimitive()', 'model.primitives.remove()'), FutureWarning, 2)
-		return self.primitives.remove(name)
-
-	def addGood(self, *args, **kwargs):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.addGood()', 'model.goods.add()'), FutureWarning, 2)
-		return self.goods.add(*args, **kwargs)
-
-	@property
-	def moneyGood(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.moneyGood', 'model.goods.money'), FutureWarning, 2)
-		return self.goods.money
-
-	@property
-	def nonMoneyGoods(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Model.nonMoneyGoods()', 'model.goods.nonmonetary'), FutureWarning, 2)
-		return self.goods.nonmonetary
-
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
 		self.setup()
-
-	#Deprecated in Helipad 1.4; remove in Helipad 1.6
-	@property
-	def dontStepAgents(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
-		return self._cut
-
-	@dontStepAgents.setter
-	def dontStepAgents(self, val):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('MultiLevel.dontStepAgents', 'MultiLevel.cutStep()'), FutureWarning, 2)
-		self._cut = val
 
 #==================
 # CONTAINER CLASSES

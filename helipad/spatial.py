@@ -17,9 +17,6 @@ from helipad.helpers import ï, Number
 
 def spatialSetup(model, dim=10, corners=False, geometry='rect', **kwargs):
 	# Backward compatibility
-	if 'x' in kwargs:		#Remove in Helipad 1.6
-		dim = kwargs['x'] if 'y' not in kwargs else (kwargs['x'], kwargs['y'])
-		warnings.warn(ï('Using x and y to set dimensions is deprecated. Use the dim argument instead.'), FutureWarning, 3)
 	if 'diag' in kwargs:	#Remove in Helipad 1.7
 		corners = kwargs['diag']
 		warnings.warn(ï('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)

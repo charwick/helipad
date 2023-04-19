@@ -218,21 +218,8 @@ msgstr ""
 msgid "{}Data Plots"
 msgstr ""
 
-#: model.py:632 model.py:636 model.py:640 model.py:644 model.py:658
-#: model.py:667 model.py:671 model.py:675 model.py:679 model.py:683
-#: model.py:687 model.py:692 model.py:697 model.py:708 model.py:713 param.py:93
 #: param.py:525
 msgid "{0} is deprecated and has been replaced with {1}."
-msgstr ""
-
-#: model.py:650
-msgid "Breed parameter must specify which primitive it belongs to."
-msgstr ""
-
-#: model.py:663
-msgid ""
-"Model.allParams is deprecated. All parameters can be accessed using "
-"model.params."
 msgstr ""
 
 #: model.py:727
@@ -285,12 +272,6 @@ msgstr ""
 
 #: param.py:546
 msgid "randn() argument must be between 0 and 100."
-msgstr ""
-
-#: spatial.py:21
-msgid ""
-"Using x and y to set dimensions is deprecated. Use the dim argument "
-"instead."
 msgstr ""
 
 #: spatial.py:25
@@ -375,8 +356,7 @@ msgid "Cannot remove plots after control panel is drawn."
 msgstr ""
 
 #: visualize.py:391
-msgid ""
-"Reporter '{}' does not exist. Be sure to register reporters before adding"
+msgid "Reporter '{}' does not exist. Be sure to register reporters before adding"
 " series."
 msgstr ""
 
