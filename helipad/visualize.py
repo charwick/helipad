@@ -626,7 +626,7 @@ class NetworkPlot(ChartPlot):
 			'labelVerticalAlign': 'center',
 			'lockLayout': False,
 			'patchAspect': 1,
-			'deadColor': 'black'
+			'mapBg': 'black'
 		}
 
 	def launch(self, axes):
@@ -714,10 +714,10 @@ class NetworkPlot(ChartPlot):
 						#Define the range going counterclockwise. The 1/4 is to make r=0 point north rather than east.
 						#Last argument is the resolution of the curve
 						theta = arange(2*pi*((1-1/x) * ti - 1/x + 1/4), 2*pi*((1-1/x) * ti + 1/4)+.04, .04)
-						color = self.params['deadColor'] if isnan(norm[r, ti]) else rgb[int(norm[r,ti]*(len(space)-1))]
+						color = self.params['mapBg'] if isnan(norm[r, ti]) else rgb[int(norm[r,ti]*(len(space)-1))]
 						self.axes.fill_between(theta, full_like(theta, r), full_like(theta, r+1), color=color)
 			else:
-				cmap.set_bad(self.params['deadColor'])
+				cmap.set_bad(self.params['mapBg'])
 				self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=cmap, aspect=self.params['patchAspect'])
 				# self.patchmap.set_norm(self.normal)
 				# self.components['patches'].set_data(pd)

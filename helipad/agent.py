@@ -332,6 +332,8 @@ class Patch(baseAgent):
 	#Don't remove from the list; just mark as dead
 	def die(self):
 		self.dead = True
+		if not self.model.patches.offmap:
+			for a in self.agentsOn: a.die()
 		self.model.doHooks(['baseAgentDie', 'PatchDie'], [self])
 
 	@property

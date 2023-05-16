@@ -319,6 +319,10 @@ msgstr ""
 msgid "Patches cannot move."
 msgstr ""
 
+#: spatial.py:90
+msgid "There is no patch at ({0}, {1})."
+msgstr ""
+
 #: agent.py:296
 msgid "Patches cannot rotate."
 msgstr ""

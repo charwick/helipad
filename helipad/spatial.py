@@ -27,7 +27,7 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **
 	if not isinstance(geometry, str): #We're gonna throw an error anyway if it's not a class or a string
 		pClasses[geometry.geometry] = geometry
 		geometry = geometry.geometry
-	model.patches = pClasses[geometry](dim, **kwargs)
+	model.patches = pClasses[geometry](dim, offmap=offmap, **kwargs)
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
@@ -87,7 +87,7 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **
 			y1 = min(y1, ylim[1])
 			y1 = max(y1, ylim[0])
 		
-		if (not offmap and not self.model.patches.at(x1,y1)): warnings.warn(ï('There is no patch at ({0}, {1}).').format(x1, y1), RuntimeWarning, 3)
+		if (not self.model.patches.offmap and not self.model.patches.at(x1,y1)): warnings.warn(ï('There is no patch at ({0}, {1}).').format(x1, y1), RuntimeWarning, 3)
 		else: self.position = [x1, y1]
 
 	baseAgent.move = NotPatches(move)
@@ -145,6 +145,7 @@ class Patches2D(list):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
+		self.offmap = kwargs['offmap']
 		super().__init__([])
 
 		#Attach coordinate-specific functions and properties to agent objects
