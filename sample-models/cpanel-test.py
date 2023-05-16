@@ -89,7 +89,7 @@ def modelPostStep(model):
 	random.choice(model.allEdges['edge']).cut()
 	newedge(model)
 
-net = viz.addPlot('net', 'Network Structure', type='network', layout='spring')
+net = viz.addPlot('net', 'Network Structure', type='agents', layout='spring')
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
 net.config({

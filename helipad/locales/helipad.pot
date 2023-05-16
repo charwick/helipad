@@ -359,6 +359,10 @@ msgstr ""
 msgid "Cannot remove plots after control panel is drawn."
 msgstr ""
 
+#: visualize.py:318
+msgid "The `network` plot type is deprecated. Use `agents` instead."
+msgstr ""
+
 #: visualize.py:391
 msgid "Reporter '{}' does not exist. Be sure to register reporters before adding"
 " series."

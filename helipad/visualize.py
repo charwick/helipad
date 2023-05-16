@@ -258,7 +258,7 @@ class Charts(MPLVisualization):
 		self.events = {}
 		self.plotTypes = {}
 
-		for p in [BarChart, NetworkPlot, TimeSeriesPlot]: self.addPlotType(p)
+		for p in [BarChart, AgentsPlot, TimeSeriesPlot]: self.addPlotType(p)
 		model.params['refresh'].runtime=False
 		self.refresh = model.params['refresh']
 		self.model = model # :(
@@ -314,6 +314,9 @@ class Charts(MPLVisualization):
 
 	def addPlot(self, name, label, type=None, position=None, selected=True, **kwargs):
 		self.selector.addItem(name, label, position, selected)
+		if type == 'network': #Deprecated in Helipad 1.6; remove in 1.8
+			warnings.warn(ï('The `network` plot type is deprecated. Use `agents` instead.'), FutureWarning, 2)
+			type = 'agents'
 		self.type = type if type is not None else 'bar'
 		if self.type not in self.plotTypes: raise KeyError(ï('\'{}\' is not a registered plot visualizer.').format(self.type))
 		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
@@ -602,8 +605,8 @@ class BarChart(ChartPlot):
 					if len(b.errHist[i]) >= j+1: cap[0 if self.horizontal else 1] = b.errHist[i][j]
 		super().draw(t, forceUpdate)
 
-class NetworkPlot(ChartPlot):
-	type = 'network'
+class AgentsPlot(ChartPlot):
+	type = 'agents'
 	def __init__(self, **kwargs):
 		if 'prim' not in kwargs: kwargs['prim'] = None
 		if 'kind' not in kwargs: kwargs['kind'] = 'edge'
@@ -746,7 +749,7 @@ class NetworkPlot(ChartPlot):
 		#Select the next layout in the list
 		import networkx.drawing.layout as lay
 		layouts = ['patchgrid'] if self.viz.model.patches else []
-		if self.kind in self.viz.model.allEdges: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
+		if self.kind in self.viz.model.allEdges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
