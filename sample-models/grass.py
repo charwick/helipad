@@ -107,8 +107,7 @@ mapPlot = heli.spatial(dim=16, corners=True)
 mapPlot.config({
 	'patchProperty': 'good:energy',
 	'patchColormap': 'Greens',
-	'agentSize': 'good:energy',
-	'lockLayout': True
+	'agentSize': 'good:energy'
 })
 
 pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True, selected=False)

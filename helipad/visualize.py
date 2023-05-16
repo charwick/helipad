@@ -745,7 +745,8 @@ class NetworkPlot(ChartPlot):
 
 		#Select the next layout in the list
 		import networkx.drawing.layout as lay
-		layouts = ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral', 'patchgrid']
+		layouts = ['patchgrid'] if self.viz.model.patches else []
+		if self.kind in self.viz.model.allEdges: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
