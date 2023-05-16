@@ -309,6 +309,10 @@ class baseAgent:
 
 	def rotate(self, angle): self.orientation += angle
 
+	@property
+	def patch(self):
+		if self.position is not None: return self.model.patches.at(*self.position)
+
 	#In a multi-level model, allow the agent to move to a different deme/firm/etc
 	def transfer(self, dest):
 		origin = self.model
@@ -325,9 +329,14 @@ class Agent(baseAgent):
 class Patch(baseAgent):
 	fixed = True
 
+	#Don't remove from the list; just mark as dead
+	def die(self):
+		self.dead = True
+		self.model.doHooks(['baseAgentDie', 'PatchDie'], [self])
+
 	@property
 	def neighbors(self):
-		return self.outbound('space', True, obj='agent')
+		return [p for p in self.outbound('space', True, obj='agent') if not p.dead]
 
 	def __repr__(self): return f'<Patch at {self.position[0]},{self.position[1]}>'
 

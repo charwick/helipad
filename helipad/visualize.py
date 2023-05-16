@@ -5,7 +5,7 @@
 
 import sys
 from abc import ABC, abstractmethod
-from math import sqrt, ceil, floor, pi
+from math import sqrt, ceil, floor, pi, isnan
 from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like
 import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
 from helipad.helpers import *
@@ -625,7 +625,8 @@ class NetworkPlot(ChartPlot):
 			'labelAlign': 'center',
 			'labelVerticalAlign': 'center',
 			'lockLayout': False,
-			'patchAspect': 1
+			'patchAspect': 1,
+			'deadColor': 'black'
 		}
 
 	def launch(self, axes):
@@ -697,6 +698,7 @@ class NetworkPlot(ChartPlot):
 		self.axes.clear()
 		if self.layout != 'patchgrid' or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
+		cmap = cm.get_cmap(self.params['patchColormap'])
 
 		if self.layout == 'patchgrid':
 			pd = self.patchData(t).T #Transpose because numpy is indexed col, row
@@ -704,7 +706,7 @@ class NetworkPlot(ChartPlot):
 				self.axes.set_ylim(0, self.viz.model.patches.dim[1])
 				norm = (pd - self.normal.vmin)/(self.normal.vmax-self.normal.vmin)
 				space = linspace(0.0, 1.0, 100)
-				rgb = cm.get_cmap(self.params['patchColormap'])(space)[newaxis, :, :3][0]
+				rgb = cmap(space)[newaxis, :, :3][0]
 
 				x = self.viz.model.patches.dim[0]
 				for r in range(len(norm)):
@@ -712,11 +714,11 @@ class NetworkPlot(ChartPlot):
 						#Define the range going counterclockwise. The 1/4 is to make r=0 point north rather than east.
 						#Last argument is the resolution of the curve
 						theta = arange(2*pi*((1-1/x) * ti - 1/x + 1/4), 2*pi*((1-1/x) * ti + 1/4)+.04, .04)
-						cr1 = full_like(theta, r)
-						cr2 = full_like(theta, r+1)
-						self.axes.fill_between(theta, cr1, cr2, color=rgb[int(norm[r,ti]*(len(space)-1))])
+						color = self.params['deadColor'] if isnan(norm[r, ti]) else rgb[int(norm[r,ti]*(len(space)-1))]
+						self.axes.fill_between(theta, full_like(theta, r), full_like(theta, r+1), color=color)
 			else:
-				self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=self.params['patchColormap'], aspect=self.params['patchAspect'])
+				cmap.set_bad(self.params['deadColor'])
+				self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=cmap, aspect=self.params['patchAspect'])
 				# self.patchmap.set_norm(self.normal)
 				# self.components['patches'].set_data(pd)
 
@@ -762,7 +764,8 @@ class NetworkPlot(ChartPlot):
 	#Helper function
 	def getPatchParamValue(self, patch, t=None):
 		if t is not None: return patch.colorData[t]
-		if 'patchProperty' not in self.params: return 0
+		if patch.dead: return float('nan')
+		elif 'patchProperty' not in self.params: return 0
 		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
 		else: return getattr(patch, self.params['patchProperty'])
 

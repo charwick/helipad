@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, corners=False, geometry='rect', **kwargs):
+def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **kwargs):
 	# Backward compatibility
 	if 'diag' in kwargs:	#Remove in Helipad 1.7
 		corners = kwargs['diag']
@@ -70,22 +70,25 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', **kwargs):
 	def move(self, x, y):
 		mapx, mapy = self.model.patches.dim
 		xlim, ylim = self.model.patches.boundaries
-		self.position[0] += x
-		self.position[1] += y
+		x1 = self.position[0] + x
+		y1 = self.position[1] + y
 
 		if self.model.patches.wrap[0]:
-			while self.position[0] >= xlim[1]: self.position[0] -= mapx
-			while self.position[0] < xlim[0]: self.position[0] += mapx
+			while x1 >= xlim[1]: x1 -= mapx
+			while x1 < xlim[0]: x1 += mapx
 		else:
-			self.position[0] = min(self.position[0], xlim[1])
-			self.position[0] = max(self.position[0], xlim[0])
+			x1 = min(x1, xlim[1])
+			x1 = max(x1, xlim[0])
 
 		if self.model.patches.wrap[1]:
-			while self.position[1] >= ylim[1]: self.position[1] -= mapy
-			while self.position[1] < ylim[0]: self.position[1] += mapy
+			while y1 >= ylim[1]: y1 -= mapy
+			while y1 < ylim[0]: y1 += mapy
 		else:
-			self.position[1] = min(self.position[1], ylim[1])
-			self.position[1] = max(self.position[1], ylim[0])
+			y1 = min(y1, ylim[1])
+			y1 = max(y1, ylim[0])
+		
+		if (not offmap and not self.model.patches.at(x1,y1)): warnings.warn(ï('There is no patch at ({0}, {1}).').format(x1, y1), RuntimeWarning, 3)
+		else: self.position = [x1, y1]
 
 	baseAgent.move = NotPatches(move)
 
@@ -153,13 +156,17 @@ class Patches2D(list):
 		else:
 			if key[1] is None: return super().__getitem__(key[0])
 			if key[0] is None: return [x[key[1]] for x in self]
-			return super().__getitem__(key[0])[key[1]]
+			patch = super().__getitem__(key[0])[key[1]]
+			return patch if not patch.dead else None
 
 	def __setitem__(self, key, val):
 		if isinstance(key, int): return super().__setitem__(key, val)
 		else: super().__getitem__(key[0])[key[1]] = val
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.dim[0]}×{self.dim[1]}>'
+
+	def revive(self, coords):
+		super().__getitem__(coords[0])[coords[1]].dead = False
 
 #Each row and column of equal length
 class PatchesRect(Patches2D):
@@ -193,8 +200,6 @@ class PatchesRect(Patches2D):
 		def vertices(patch):
 			pp = patch.position
 			return ((pp[0]-0.5, pp[1]-0.5), (pp[0]-0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]-0.5))
-
-		baseAgent.patch = property(lambda agent: self[round(agent.x), round(agent.y)])
 
 		def moveUp(agent): agent.move(0, -1)
 		def moveRight(agent): agent.move(1, 0)
@@ -232,6 +237,8 @@ class PatchesRect(Patches2D):
 			props=[up, right, down, left, agentsOn, center, area, vertices],
 			funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo],
 			**kwargs)
+
+	def at(self, x, y): return self[round(x), round(y)]
 
 	def neighbors(self, patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
@@ -283,8 +290,6 @@ class PatchesPolar(PatchesRect):
 			pp = patch.position
 			return (pp, (pp[0], pp[1]+1), (pp[0]+1, pp[1]+1), (pp[0]+1, pp[1]))
 
-		baseAgent.patch = property(lambda agent: self[floor(agent.x), floor(agent.y)])
-
 		def moveInward(agent): agent.move(0, -1)
 		def moveOutward(agent): agent.move(0, 1)
 		def moveClockwise(agent): agent.move(1, 0)
@@ -315,6 +320,8 @@ class PatchesPolar(PatchesRect):
 			props=[inward, outward, clockwise, counterclockwise, agentsOn, center, area, vertices],
 			funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, forward, orientTo],
 			**kwargs)
+
+	def at(self, x, y): return self[floor(x), floor(y)]
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
 	def neighbors(self, patch, corners):
