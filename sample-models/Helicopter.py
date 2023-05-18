@@ -95,7 +95,7 @@ def setup():
 	heli.goods.add('cash', '#009900', money=True)
 
 	heli.name = 'Helicopter'
-	heli.order = 'random'
+	heli.agents.order = 'random'
 
 	# UPDATE CALLBACKS
 

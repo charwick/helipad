@@ -35,7 +35,7 @@ heli.params.add('fixed', 'Fixed cost (χ)', 'slider', dflt=.4, opts={'low':0, 'h
 
 heli.name = 'Cities'
 heli.stages = 2
-heli.order = 'linear'
+heli.agents.order = 'linear'
 
 popfactor = 10 #Multiplies the productivity and therefore the equilibrium population, without changing anything else
 burnout = 2000 #The end period, once it's equilibrated, over which to average the values

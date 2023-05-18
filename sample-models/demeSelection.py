@@ -12,7 +12,7 @@ import numpy.random as nprand
 
 heli = Helipad()
 heli.name = 'Deme Selection'
-heli.order = ['linear', 'linear', 'match']
+heli.agents.order = ['linear', 'linear', 'match']
 heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, stage 3 for war
 
 heli.agents.addPrimitive('deme', MultiLevel, dflt=20, priority=1)

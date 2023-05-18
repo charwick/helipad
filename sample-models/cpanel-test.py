@@ -76,17 +76,17 @@ def agentStep(agent, model, stage):
 
 @heli.hook
 def modelPostSetup(model):
-	model.createNetwork(0.2)
+	model.agents.createNetwork(0.2)
 
 def newedge(model):
-	a1, a2 = random.choice(list(model.agents['agent'])), random.choice(list(model.agents['agent']))
-	while a1.edgesWith(a2): a1, a2 = random.choice(list(model.agents['agent'])), random.choice(list(model.agents['agent']))
+	a1, a2 = random.choice(model.agents['agent']), random.choice(model.agents['agent'])
+	while a1.edgesWith(a2): a1, a2 = random.choice(model.agents['agent']), random.choice(model.agents['agent'])
 	a1.newEdge(a2, direction=random.choice([True, False]), weight=random.choice([0.5,1,2,3]))
 
 #Cut one edge and create one edge
 @heli.hook
 def modelPostStep(model):
-	random.choice(model.allEdges['edge']).cut()
+	random.choice(model.agents.allEdges['edge']).cut()
 	newedge(model)
 
 net = viz.addPlot('net', 'Network Structure', type='agents', layout='spring')

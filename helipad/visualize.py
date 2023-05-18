@@ -666,7 +666,7 @@ class AgentsPlot(ChartPlot):
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
 
 	def update(self, data, t):
-		G = self.viz.model.network(self.kind, self.prim, excludePatches=True)
+		G = self.viz.model.agents.network(self.kind, self.prim, excludePatches=True)
 
 		#Capture label and size data
 		if self.params['agentLabel'] and self.params['agentLabel'] is not True:

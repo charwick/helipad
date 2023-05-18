@@ -11,7 +11,7 @@ from helipad import Helipad
 
 heli = Helipad()
 heli.name = 'Model Name'
-heli.order = 'random' #Can be changed to 'linear' or 'match'
+heli.agents.order = 'random' #Can be changed to 'linear' or 'match'
 heli.stages = 1 #Change to create a multi-stage model
 
 # heli.params.add('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})

@@ -6,7 +6,6 @@
 import os, sys, warnings, asyncio, time
 import gettext
 from random import shuffle, choice
-from numpy import random
 import pandas
 #from memory_profiler import profile
 
@@ -37,7 +36,6 @@ class Helipad:
 		self.agents = Agents(self)
 		self.patches = []
 		self.stages = 1
-		self.order = 'linear'
 		self.hasModel = False		#Have we initialized?
 		self.timer = False
 		self.visual = None
@@ -242,7 +240,7 @@ class Helipad:
 
 			#Sort agents and step them
 			for prim, lst in self.agents.items():
-				order = self.agents[prim].order or self.order
+				order = self.agents[prim].order or self.agents.order
 				if isinstance(order, list): order = order[self.stage-1]
 				if order == 'random': shuffle(lst)
 
@@ -421,43 +419,6 @@ class Helipad:
 			alldata.append(Item(vars=run, data=data, events=events))
 		return alldata
 
-	#Creates an unweighted and undirected network of a certain density
-	def createNetwork(self, density, kind='edge', prim=None):
-		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
-		from itertools import combinations
-		agents = self.agents.all.values() if prim is None else self.agents[prim]
-		for c in combinations(agents, 2):
-			if random.randint(0,100) < density*100:
-				c[0].newEdge(c[1], kind)
-		return self.network(kind, prim)
-
-	def network(self, kind='edge', prim=None, excludePatches=False):
-		import networkx as nx
-
-		#Have to use DiGraph in order to draw any arrows
-		G = nx.DiGraph(name=kind)
-		agents = list(self.agents.all.values()) if prim is None else self.agents[prim]
-		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
-		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
-		ae = self.allEdges
-		if kind in ae:
-			for e in ae[kind]:
-				if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
-					e.startpoint.id if e.directed else e.vertices[0].id,
-					e.endpoint.id if e.directed else e.vertices[1].id,
-					weight=e.weight, directed=e.directed
-				)
-		return G
-
-	@property
-	def allEdges(self):
-		es = {}
-		for a in self.agents.all.values():
-			for e in a.alledges:
-				if not e.kind in es: es[e.kind] = []
-				if not e in es[e.kind]: es[e.kind].append(e)
-		return es
-
 	def spatial(self, *args, **kwargs):
 		from helipad.spatial import spatialSetup
 		return spatialSetup(self, *args, **kwargs)
@@ -620,22 +581,45 @@ class Helipad:
 			return rep1(func) if isDec else rep1
 		return dec
 
+	#
 	#Deprecated in 1.6, remove in 1.8
+	#
+
 	@property
 	def allagents(self):
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allagents', 'model.agents.all'), FutureWarning, 2)
 		return self.agents.all
 
-	#Deprecated in 1.6, remove in 1.8
 	@property
 	def primitives(self):
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives', 'model.agents'), FutureWarning, 2)
 		return self.agents
 
-	#Deprecated in 1.6, remove in 1.8
+	@property
+	def order(self):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.order', 'model.agents.order'), FutureWarning, 2)
+		return self.agents.order
+	@order.setter
+	def order(self, val):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.order', 'model.agents.order'), FutureWarning, 2)
+		self.agents.order = val
+
 	def addBreed(self, name, color, prim=None):
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.addBreed', 'model.agents.addBreed'), FutureWarning, 2)
-		self.agents.addBreed(name, color, prim)
+		return self.agents.addBreed(name, color, prim)
+
+	def createNetwork(self, density, kind='edge', prim=None):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.createNetwork', 'model.agents.createNetwork'), FutureWarning, 2)
+		return self.agents.createNetwork(density, kind, prim)
+
+	def network(self, kind='edge', prim=None, excludePatches=False):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.network', 'model.agents.network'), FutureWarning, 2)
+		return self.agents.network(kind, prim, excludePatches)
+
+	@property
+	def allEdges(self):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allEdges', 'model.agents.allEdges'), FutureWarning, 2)
+		return self.agents.allEdges
 
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):

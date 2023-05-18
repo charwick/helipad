@@ -8,7 +8,7 @@ from numpy import mean
 
 heli = Helipad()
 heli.name = 'Critical Period'
-heli.order = 'random'
+heli.agents.order = 'random'
 
 heli.params.add('pleio', 'Pleiotropy', 'slider', dflt=7, opts={'low': 0, 'high': 10, 'step': 1}, runtime=False)
 heli.params.add('acq', 'Acquisition from', 'menu', dflt='mother', opts={'mother': 'Mother', 'wholepop': 'Whole Population'})

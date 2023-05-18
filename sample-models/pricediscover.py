@@ -11,7 +11,7 @@ import random
 
 heli = Helipad()
 heli.name = 'Price Discover'
-heli.order = 'match'
+heli.agents.order = 'match'
 
 heli.params.add('ratio', 'Log Endowment Ratio', 'slider', dflt=0, opts={'low': -3, 'high': 3, 'step': 0.5}, runtime=False)
 heli.params['num_agent'].opts['step'] = 2 #Make sure we don't get stray agents

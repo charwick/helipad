@@ -15,7 +15,7 @@ from numpy import mean
 
 heli = Helipad()
 heli.name = 'Prison Escape'
-heli.order = 'random'
+heli.agents.order = 'random'
 
 heli.params.add('strategy', 'Optimal Strategy', 'check', dflt=True)
 heli.param('num_agent', 100)

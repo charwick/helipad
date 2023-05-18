@@ -13,7 +13,7 @@ from numpy import mean, random
 
 heli = Helipad()
 heli.name = 'Axelrod Tournament'
-heli.order = 'match'
+heli.agents.order = 'match'
 
 heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 

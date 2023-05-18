@@ -10,7 +10,7 @@ from helipad import Helipad
 
 heli = Helipad()
 heli.name = 'Grass Eating'
-heli.order = 'random'
+heli.agents.order = 'random'
 heli.stages = 5
 
 heli.params.add('energy', 'Energy from grass', 'slider', dflt=2, opts={'low': 2, 'high': 10, 'step': 1})

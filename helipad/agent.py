@@ -434,6 +434,7 @@ class Stocks:
 class Agents(dict):
 	def __init__(self, model):
 		self.model = model
+		self.order = 'linear'
 		super().__init__()
 
 	#Act as if we've sorted by priority when looping
@@ -476,6 +477,43 @@ class Agents(dict):
 			if len(self) == 1: prim = next(iter(self.keys()))
 			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
 		return self[prim].breeds.add(name, color)
+
+	#Creates an unweighted and undirected network of a certain density
+	def createNetwork(self, density, kind='edge', prim=None):
+		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
+		from itertools import combinations
+		agents = self.all.values() if prim is None else self[prim]
+		for c in combinations(agents, 2):
+			if np.random.randint(0,100) < density*100:
+				c[0].newEdge(c[1], kind)
+		return self.network(kind, prim)
+
+	def network(self, kind='edge', prim=None, excludePatches=False):
+		import networkx as nx
+
+		#Have to use DiGraph in order to draw any arrows
+		G = nx.DiGraph(name=kind)
+		agents = list(self.all.values()) if prim is None else self[prim]
+		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
+		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
+		ae = self.allEdges
+		if kind in ae:
+			for e in ae[kind]:
+				if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
+					e.startpoint.id if e.directed else e.vertices[0].id,
+					e.endpoint.id if e.directed else e.vertices[1].id,
+					weight=e.weight, directed=e.directed
+				)
+		return G
+
+	@property
+	def allEdges(self):
+		es = {}
+		for a in self.all.values():
+			for e in a.alledges:
+				if not e.kind in es: es[e.kind] = []
+				if not e in es[e.kind]: es[e.kind].append(e)
+		return es
 
 	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	def add(self, *args, **kwargs):
