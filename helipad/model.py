@@ -244,7 +244,6 @@ class Helipad:
 			for prim, lst in self.agents.items():
 				order = self.agents[prim].order or self.order
 				if isinstance(order, list): order = order[self.stage-1]
-
 				if order == 'random': shuffle(lst)
 
 				#Can't do our regular doHooks() here since we want to pass the function to .sort()
@@ -253,15 +252,14 @@ class Helipad:
 				ordhooks = (self.hooks['order'] if 'order' in self.hooks else []) + (self.hooks[prim+'Order'] if prim+'Order' in self.hooks else [])
 				for o in ordhooks: lst.sort(key=sortFunc(self, self.stage, o))
 
-				#Keep the agent list constant for a given loop because modifying it while looping
-				#(e.g. if an agent dies or reproduces) will screw up the looping
-				agentpool = self.agents[prim].copy()
+				#Copy the agent list to keep it constant for a given loop because modifying it
+				#while looping (e.g. if an agent dies or reproduces) will screw up the looping
+				agentpool = list(self.agents[prim])
 
 				#Matching model
 				if 'match' in order:
-					matchN = order.split('-')
-					matchN = int(matchN[1]) if len(matchN) > 1 else 2
-					matchpool = self.agents[prim].copy()
+					matchN = int(mn[1]) if len(mn := order.split('-')) > 1 else 2
+					matchpool = list(self.agents[prim])
 					while len(matchpool) > len(agentpool) % matchN and not self._cut:
 						agents = []
 						for a in range(matchN):
