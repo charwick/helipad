@@ -85,7 +85,7 @@ class Data:
 
 		def reporter(model):
 			#Construct list of values
-			array = [getattr(a, key) for a in (model.allagents.values() if prim=='all' else model.agents[prim]) if breed is None or breed==a.breed]
+			array = [getattr(a, key) for a in (model.agents.all.values() if prim=='all' else model.agents[prim]) if breed is None or breed==a.breed]
 			if good is not None: array = [v[good] for v in array]
 			u = [v for v in array if v is not None]
 

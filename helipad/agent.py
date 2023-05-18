@@ -175,7 +175,7 @@ class baseAgent:
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot reproduce.'))
 
 		maxid = 0
-		for a in self.model.allagents.values():
+		for a in self.model.agents.all.values():
 			if a.id > maxid:
 				maxid = a.id
 		newagent = type(self)(self.breed, maxid+1, self.model)
@@ -426,3 +426,11 @@ class Stocks:
 	def keys(self): return self.goods.keys()
 	def values(self): return [g['quantity'] for g in self.goods.values()]
 	def items(self): return [(k, g['quantity']) for k,g in self.goods.items()]
+
+class Agents(dict):
+	@property
+	def all(self):
+		agents = {}
+		for l in self.values():
+			agents.update({a.id:a for a in l})
+		return agents

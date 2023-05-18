@@ -14,7 +14,7 @@ from helipad.visualize import BaseVisualization, Charts, TimeSeries
 from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
-from helipad.agent import Agent, baseAgent
+from helipad.agent import Agent, baseAgent, Agents
 
 class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
@@ -35,7 +35,7 @@ class Helipad:
 		self.goods = Goods(self)				#List of goods
 
 		self.name = ''
-		self.agents = {}
+		self.agents = Agents()
 		self.patches = []
 		self.stages = 1
 		self.order = 'linear'
@@ -435,7 +435,7 @@ class Helipad:
 	def createNetwork(self, density, kind='edge', prim=None):
 		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
 		from itertools import combinations
-		agents = self.allagents.values() if prim is None else self.agents[prim]
+		agents = self.agents.all.values() if prim is None else self.agents[prim]
 		for c in combinations(agents, 2):
 			if random.randint(0,100) < density*100:
 				c[0].newEdge(c[1], kind)
@@ -446,7 +446,7 @@ class Helipad:
 
 		#Have to use DiGraph in order to draw any arrows
 		G = nx.DiGraph(name=kind)
-		agents = list(self.allagents.values()) if prim is None else self.agents[prim]
+		agents = list(self.agents.all.values()) if prim is None else self.agents[prim]
 		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
 		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
 		ae = self.allEdges
@@ -462,7 +462,7 @@ class Helipad:
 	@property
 	def allEdges(self):
 		es = {}
-		for a in self.allagents.values():
+		for a in self.agents.all.values():
 			for e in a.alledges:
 				if not e.kind in es: es[e.kind] = []
 				if not e in es[e.kind]: es[e.kind].append(e)
@@ -472,12 +472,11 @@ class Helipad:
 		from helipad.spatial import spatialSetup
 		return spatialSetup(self, *args, **kwargs)
 
+	#Deprecated in 1.6, remove in 1.8
 	@property
 	def allagents(self):
-		agents = {}
-		for l in self.agents.values():
-			agents.update({a.id:a for a in l})
-		return agents
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allagents', 'model.agents.all'), FutureWarning, 2)
+		return self.agents.all
 
 	#CALLBACK FOR DEFAULT PARAMETERS
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
@@ -490,7 +489,7 @@ class Helipad:
 
 		#Add agents
 		if diff > 0:
-			ids = [a.id for a in self.allagents.values()]
+			ids = [a.id for a in self.agents.all.values()]
 			maxid = max(ids) if ids else 0 #Figure out maximum existing ID
 			for aId in range(maxid+1, maxid+int(diff)+1):
 				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.primitives[prim].breeds.keys(), self])
@@ -537,7 +536,7 @@ class Helipad:
 		if isinstance(var, str):
 			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
-			aa = self.allagents
+			aa = self.agents.all
 			return aa[var] if var in aa else None
 
 		return None #If nobody matched

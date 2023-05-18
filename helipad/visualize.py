@@ -670,13 +670,13 @@ class AgentsPlot(ChartPlot):
 
 		#Capture label and size data
 		if self.params['agentLabel'] and self.params['agentLabel'] is not True:
-			agents = self.viz.model.allagents
+			agents = self.viz.model.agents.all
 			if 'good:' in self.params['agentLabel']:
 				for n in G.nodes: G.nodes[n]['label'] = agents[n].stocks[self.params['agentLabel'].split(':')[1]]
 			else:
 				for n in G.nodes: G.nodes[n]['label'] = getattr(agents[n],self.params['agentLabel'])
 		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]:
-			agents = self.viz.model.allagents
+			agents = self.viz.model.agents.all
 			if 'good:' in self.params['agentSize']:
 				for n in G.nodes: G.nodes[n]['size'] = agents[n].stocks[self.params['agentSize'].split(':')[1]]
 			else:
