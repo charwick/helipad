@@ -15,8 +15,8 @@ heli.name = 'Deme Selection'
 heli.order = ['linear', 'linear', 'match']
 heli.stages = 3 #Stage 1 for intra-demic competition, stage 2 for reproduction, stage 3 for war
 
-heli.primitives.add('deme', MultiLevel, dflt=20, priority=1)
-heli.primitives.remove('agent')
+heli.agents.addPrimitive('deme', MultiLevel, dflt=20, priority=1)
+heli.agents.removePrimitive('agent')
 heli.params.add('b', 'Benefit conferred', 'slider', dflt=6, opts={'low': 0, 'high': 10, 'step': 1})
 heli.params.add('c', 'Cost incurred', 'slider', dflt=2, opts={'low': 0, 'high': 10, 'step': 1})
 heli.params.add('k', 'Likelihood of war', 'slider', dflt=0.25, opts={'low': 0, 'high': 1, 'step': 0.01})
@@ -39,8 +39,8 @@ def agentStep(agent, deme, stage):
 @heli.hook
 def demeInit(deme, model):
 	deme.param('num_agent', 20)
-	deme.addBreed('altruist', '#009900')
-	deme.addBreed('selfish', '#990000')
+	deme.agents.addBreed('altruist', '#009900')
+	deme.agents.addBreed('selfish', '#990000')
 	deme.goods.add('payoff', '#000099', 1)
 	deme.hooks.add('agentStep', agentStep)
 

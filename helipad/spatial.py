@@ -22,7 +22,7 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **
 		warnings.warn(ï('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)
 
 	#Initialize patch container and primitive
-	model.primitives.add('patch', Patch, hidden=True, priority=-10)
+	model.agents.addPrimitive('patch', Patch, hidden=True, priority=-10)
 	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar}
 	if not isinstance(geometry, str): #We're gonna throw an error anyway if it's not a class or a string
 		pClasses[geometry.geometry] = geometry

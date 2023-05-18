@@ -20,7 +20,7 @@ class Cpanel(VBox):
 		with open(os.path.join(__location__,'ipy-styles.css'), encoding='UTF-8') as c: css = c.read()
 
 		#CSS for goods and breeds, since Ipywidgets ≥8.0 oversanitizes HTML in description attributes
-		for n,c in ChainMap(*[{f'breed_{p}_{k}': v.color.hex for k,v in d.breeds.items()} for p,d in model.primitives.items()]+[{'good_'+k: v.color.hex for k,v in model.goods.items()}]).items():
+		for n,c in ChainMap(*[{f'breed_{p}_{k}': v.color.hex for k,v in d.breeds.items()} for p,d in model.agents.items()]+[{'good_'+k: v.color.hex for k,v in model.goods.items()}]).items():
 			css += f'.helipad_{n} .widget-label::before {{ background: {c} }}'
 
 		self.children += HTML(value='<style type="text/css">'+css+'</style>'),

@@ -16,7 +16,7 @@ breeds = [
 ]
 AgentGoods = {}
 for b in breeds:
-	heli.addBreed(b[0], b[2], prim='agent')
+	heli.agents.addBreed(b[0], b[2], prim='agent')
 	heli.goods.add(b[1], b[2])
 
 def gcallback(model, name, val):

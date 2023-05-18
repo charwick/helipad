@@ -9,8 +9,8 @@ heli = Helipad()
 # CONFIGURATION
 #================
 
-heli.addBreed('urban', '#CC0000')
-heli.addBreed('rural', '#00CC00')
+heli.agents.addBreed('urban', '#CC0000')
+heli.agents.addBreed('rural', '#00CC00')
 
 #Constrain the parameter space to values resulting in H* = 100
 def constrain(model, var, val):
@@ -81,10 +81,10 @@ heli.params['num_agent'].type = 'hidden'
 #Otherwise the parameter persists between runs
 @heli.hook
 def modelPreSetup(model):
-	model.movers = {b:0 for b in heli.primitives['agent'].breeds}
-	model.births = {b:0 for b in heli.primitives['agent'].breeds}
+	model.movers = {b:0 for b in heli.agents['agent'].breeds}
+	model.births = {b:0 for b in heli.agents['agent'].breeds}
 	model.deaths = 0
-	for b in heli.primitives['agent'].breeds:
+	for b in heli.agents['agent'].breeds:
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
 	model.deathrate = 0
@@ -165,7 +165,7 @@ def agentStep(agent, model, stage):
 def modelPostStep(model):
 	if len(model.agents['agent']) == 0: model.stop()
 	else:
-		for b in model.primitives['agent'].breeds:
+		for b in model.agents['agent'].breeds:
 			pop = len(model.agent(b))
 			if pop > 0:
 				setattr(model,'moverate'+b, model.movers[b]/pop)
@@ -210,7 +210,7 @@ viz.addPlot('rates', 'Rates', 5, logscale=True)
 heli.data.addReporter('theta', heli.data.modelReporter('deathrate'), smooth=0.99)
 viz.plots['rates'].addSeries('theta', 'Death Rate', '#CCCCCC')
 
-for breed, d in heli.primitives['agent'].breeds.items():
+for breed, d in heli.agents['agent'].breeds.items():
 	heli.data.addReporter(breed+'Pop', heli.land[breed].pop)
 	heli.data.addReporter(breed+'H', heli.data.agentReporter('H', 'agent', breed=breed, percentiles=[25,75]))
 	heli.data.addReporter(breed+'Wage', heli.data.agentReporter('lastWage', 'agent', breed=breed, percentiles=[25,75]))

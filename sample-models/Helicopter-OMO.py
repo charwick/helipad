@@ -186,7 +186,7 @@ class Loan():
 # CONFIGURATION
 #===============
 
-heli.primitives.add('bank', Bank, dflt=1, priority=1, hidden=True)
+heli.agents.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
 heli.name = 'Helicopter/OMO'
 
 #Disable the irrelevant checkboxes if the banking model isn't selected
@@ -354,7 +354,7 @@ CentralBank.step = cbstep
 def expand(self, amount):
 
 	#Deposit with each bank in proportion to their liabilities
-	if 'bank' in self.model.primitives and self.model.param('num_bank') > 0:
+	if 'bank' in self.model.agents and self.model.param('num_bank') > 0:
 		self.stocks[self.model.goods.money] += amount
 		self.model.agents['bank'][0].deposit(self, amount) #Budget constraint taken care of in .pay()
 
@@ -369,7 +369,7 @@ def expand(self, amount):
 CentralBank.expand = expand
 
 def M2(self):
-	if 'bank' not in self.model.primitives or self.model.param('num_bank') == 0: return self.M0
+	if 'bank' not in self.model.agents or self.model.param('num_bank') == 0: return self.M0
 	return sum(a.balance for a in self.model.agents.all.values())
 CentralBank.M2 = property(M2)
 

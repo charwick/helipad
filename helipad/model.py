@@ -14,7 +14,7 @@ from helipad.visualize import BaseVisualization, Charts, TimeSeries
 from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
-from helipad.agent import Agent, baseAgent, Agents
+from helipad.agent import *
 
 class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
@@ -31,11 +31,10 @@ class Helipad:
 		self.shocks = Shocks(self)
 		self.events = Events()
 		self.hooks = Hooks()
-		self.primitives = Primitives(self)
 		self.goods = Goods(self)				#List of goods
 
 		self.name = ''
-		self.agents = Agents()
+		self.agents = Agents(self)
 		self.patches = []
 		self.stages = 1
 		self.order = 'linear'
@@ -49,7 +48,7 @@ class Helipad:
 		self._cut = False
 
 		#Default parameters
-		self.primitives.add('agent', Agent, dflt=50, low=1, high=100)
+		self.agents.addPrimitive('agent', Agent, dflt=50, low=1, high=100)
 
 		#Decorators
 		def repdec(name, fn, kwargs): self.data.addReporter(name, fn, **kwargs)
@@ -118,12 +117,6 @@ class Helipad:
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
 
-	def addBreed(self, name, color, prim=None):
-		if prim is None:
-			if len(self.primitives) == 1: prim = next(iter(self.primitives.keys()))
-			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
-		return self.primitives[prim].breeds.add(name, color)
-
 	#Returns the value of the last function in the list
 	def doHooks(self, place, args):
 		#Take a list of hooks; go until we get a response
@@ -155,7 +148,7 @@ class Helipad:
 		self.t = 0
 
 		#Blank breeds for any primitives not otherwise specified
-		for p in self.primitives.values():
+		for p in self.agents.values():
 			if not p.breeds: p.breeds.add('', '#000000')
 
 		#SERIES AND REPORTERS
@@ -163,7 +156,7 @@ class Helipad:
 
 		self.data.reset()
 		for e in self.events.values(): e.reset()
-		defPrim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
+		defPrim = 'agent' if 'agent' in self.agents else next(iter(self.agents))
 
 		def pReporter(param, item=None):
 			def reporter(model): return param.get(item)
@@ -190,7 +183,7 @@ class Helipad:
 
 		#Per-breed and per-good series and reporters
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
-		for breed, b in self.primitives[defPrim].breeds.items():
+		for breed, b in self.agents[defPrim].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
 				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' '+ï('Utility'), b.color)
@@ -202,10 +195,9 @@ class Helipad:
 					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
 
 		#Initialize agents
-		self.primitives = dict(sorted(self.primitives.items(), key=lambda d: d[1].priority))				#Sort by priority
-		pops = {prim: self.param('num_'+prim) for prim in self.primitives}
-		for ags in self.agents.values(): ags.clear()														#Clear any surviving agents from last run
-		for prim in self.primitives: self.nUpdater(pops[prim], prim, self, force=True)						#Force is so we can call nupdater before instantiating hasModel
+		for prim, ags in self.agents.items():
+			ags.clear()															#Clear any surviving agents from last run
+			self.nUpdater(self.param('num_'+prim), prim, self, force=True)		#Force is so we can call nupdater before instantiating hasModel
 
 		#Start progress bar
 		#Put this here and not in .start() because it'll flash on unpause otherwise
@@ -250,7 +242,7 @@ class Helipad:
 
 			#Sort agents and step them
 			for prim, lst in self.agents.items():
-				order = self.primitives[prim].order or self.order
+				order = self.agents[prim].order or self.order
 				if isinstance(order, list): order = order[self.stage-1]
 
 				if order == 'random': shuffle(lst)
@@ -472,12 +464,6 @@ class Helipad:
 		from helipad.spatial import spatialSetup
 		return spatialSetup(self, *args, **kwargs)
 
-	#Deprecated in 1.6, remove in 1.8
-	@property
-	def allagents(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allagents', 'model.agents.all'), FutureWarning, 2)
-		return self.agents.all
-
 	#CALLBACK FOR DEFAULT PARAMETERS
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
 	def nUpdater(self, val, prim, model, force=False):
@@ -492,11 +478,11 @@ class Helipad:
 			ids = [a.id for a in self.agents.all.values()]
 			maxid = max(ids) if ids else 0 #Figure out maximum existing ID
 			for aId in range(maxid+1, maxid+int(diff)+1):
-				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.primitives[prim].breeds.keys(), self])
-				if breed is None: breed = list(self.primitives[prim].breeds.keys())[aId%len(self.primitives[prim].breeds)]
-				if not breed in self.primitives[prim].breeds:
+				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.agents[prim].breeds.keys(), self])
+				if breed is None: breed = list(self.agents[prim].breeds.keys())[aId%len(self.agents[prim].breeds)]
+				if not breed in self.agents[prim].breeds:
 					raise ValueError(ï('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
-				new = self.primitives[prim].class_(breed, aId, self)
+				new = self.agents[prim].class_(breed, aId, self)
 				array.append(new)
 
 		#Remove agents
@@ -504,7 +490,7 @@ class Helipad:
 			shuffle(array) #Delete agents at random
 
 			#Remove agents, maintaining the proportion between breeds
-			n = {x: 0 for x in self.primitives[prim].breeds.keys()}
+			n = {x: 0 for x in self.agents[prim].breeds.keys()}
 			for a in self.agents[prim]:
 				if n[a.breed] < -diff:
 					n[a.breed] += 1
@@ -532,7 +518,7 @@ class Helipad:
 	#Return agents of a breed if string; return specific agent with ID otherwise
 	def agent(self, var, primitive=None):
 		if primitive is None:
-			primitive = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
+			primitive = 'agent' if 'agent' in self.agents else next(iter(self.agents))
 		if isinstance(var, str):
 			return [a for a in self.agents[primitive] if a.breed==var]
 		else:
@@ -544,7 +530,7 @@ class Helipad:
 	#Returns summary statistics on an agent variable at a single point in time
 	def summary(self, var, prim=None, breed=None, good=False):
 		if prim is None:
-			prim = 'agent' if 'agent' in self.primitives else next(iter(self.primitives))
+			prim = 'agent' if 'agent' in self.agents else next(iter(self.agents))
 		agents = self.agents[prim] if breed is None else self.agent(breed, prim)
 		if not good: data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
 		else: data = pandas.Series([a.stocks[var] for a in agents])
@@ -567,7 +553,7 @@ class Helipad:
 
 		#Set our agents slider to be a multiple of how many agent types there are
 		#Do this down here so we can have breeds registered before determining options
-		for k,p in self.primitives.items():
+		for k,p in self.agents.items():
 			if self.params['num_'+k].type != 'hidden':
 				l = len(p.breeds)
 				if not l: continue
@@ -636,6 +622,23 @@ class Helipad:
 			return rep1(func) if isDec else rep1
 		return dec
 
+	#Deprecated in 1.6, remove in 1.8
+	@property
+	def allagents(self):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allagents', 'model.agents.all'), FutureWarning, 2)
+		return self.agents.all
+
+	#Deprecated in 1.6, remove in 1.8
+	@property
+	def primitives(self):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives', 'model.agents'), FutureWarning, 2)
+		return self.agents
+
+	#Deprecated in 1.6, remove in 1.8
+	def addBreed(self, name, color, prim=None):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.addBreed', 'model.agents.addBreed'), FutureWarning, 2)
+		self.agents.addBreed(name, color, prim)
+
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
@@ -644,112 +647,6 @@ class MultiLevel(baseAgent, Helipad):
 #==================
 # CONTAINER CLASSES
 #==================
-
-#For adding breeds and goods. Should not be called directly
-class gandb(funcStore):
-	def __init__(self, model):
-		self.model = model
-
-	def add(self, obj, name, color, prim=None, **kwargs):
-		if name in self:
-			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
-
-		cobj = color if isinstance(color, Color) else Color(color)
-		cobj2 = cobj.lighten()
-		self[name] = Item(color=cobj, color2=cobj2, **kwargs)
-
-		#Make sure the parameter lists keep up with our items
-		if obj=='good': paramDict = self.model.params.perGood
-		elif obj=='breed': paramDict = {k:v for k,v in self.model.params.perBreed.items() if v.prim==self.primitive}
-		for p in paramDict.values(): p.addKey(name)
-
-		return self[name]
-
-	def remove(self, name):
-		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
-		if not name in self: return False
-
-		#Also delete per-item parameters
-		pdict = self.model.params.perBreed if isinstance(self, Breeds) else self.model.params.perGood
-		for param in pdict.values():
-			del param.value[name]
-			if getattr(param, 'elements', False):
-				if not isNotebook(): param.elements[name].destroy()
-				else: param.elements[name].close()
-				del param.elements[name]
-		return super().remove(name)
-
-class Goods(gandb):
-	def add(self, name, color, endowment=None, money=False, props={}):
-		if money:
-			if self.money is not None:
-				print(ï('Money good already specified as {}. Overriding…').format(self.money))
-				self[self.money].money = False
-
-			#Add the M0 plot once we have a money good, only if we haven't done it before
-			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
-				try:
-					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', ï('Money'), selected=False)
-				except: pass #Can't add plot if re-drawing the cpanel
-
-		props['quantity'] = endowment
-		item = super().add('good', name, color, money=money, props=props)
-
-		#Add demand plot once we have at least 2 goods
-		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
-			try:
-				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
-			except: pass
-
-		return item
-
-	@property
-	def money(self):
-		for name,good in self.items():
-			if good.money: return name
-		return None
-
-	@property
-	def nonmonetary(self):
-		return {k:v for k,v in self.items() if not v.money}
-
-class Breeds(gandb):
-	def __init__(self, model, primitive):
-		self.primitive = primitive
-		super().__init__(model)
-
-	def add(self, name, color): return super().add('breed', name, color)
-
-class Primitives(funcStore):
-	def __init__(self, model):
-		self.model = model
-		super().__init__()
-
-	def add(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
-		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
-		if not plural: plural = name+'s'
-		class_.primitive = name
-		self[name] = Item(
-			class_=class_,
-			plural=plural,
-			priority=priority,
-			order=order,
-			breeds=Breeds(self.model, name)
-		)
-		def popget(name, model):
-			prim = name.split('_')[1]
-			if not model.hasModel: return None
-			else: return len(model.agents[prim])
-
-		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.model.nUpdater, getter=popget)
-		self.model.agents[name] = []
-
-	def remove(self, name):
-		val = super().remove(name)
-		if val:
-			del self.model.agents[name]
-			del self.model.params['num_'+name]
-		return val
 
 class Events(funcStore):
 	def __init__(self):
@@ -787,6 +684,40 @@ class Events(funcStore):
 
 	def add(self, name, function, **kwargs):
 		return super().add(name, self.Event(name, function, **kwargs))
+
+class Goods(gandb):
+	def add(self, name, color, endowment=None, money=False, props={}):
+		if money:
+			if self.money is not None:
+				print(ï('Money good already specified as {}. Overriding…').format(self.money))
+				self[self.money].money = False
+
+			#Add the M0 plot once we have a money good, only if we haven't done it before
+			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
+				try:
+					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', ï('Money'), selected=False)
+				except: pass #Can't add plot if re-drawing the cpanel
+
+		props['quantity'] = endowment
+		item = super().add('good', name, color, money=money, props=props)
+
+		#Add demand plot once we have at least 2 goods
+		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
+			try:
+				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
+			except: pass
+
+		return item
+
+	@property
+	def money(self):
+		for name,good in self.items():
+			if good.money: return name
+		return None
+
+	@property
+	def nonmonetary(self):
+		return {k:v for k,v in self.items() if not v.money}
 
 class Hooks(funcStore):
 	multi = True

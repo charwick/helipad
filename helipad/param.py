@@ -413,10 +413,10 @@ class Params(fStoreWithInterface):
 		if per is not None:
 			if per=='breed':
 				if prim is None:
-					if len(self.model.primitives)==1: prim = next(iter(self.model.primitives.keys()))
+					if len(self.model.agents)==1: prim = next(iter(self.model.agents.keys()))
 					else: raise KeyError(ï('Per-breed parameter must specify which primitive it belongs to.'))
 				args['prim'] = prim
-			args['pKeys'] = self.model.primitives[prim].breeds if per=='breed' else self.model.goods
+			args['pKeys'] = self.model.agents[prim].breeds if per=='breed' else self.model.goods
 
 		if type.title()+'Param' in globals(): pclass = globals()[type.title()+'Param']
 		else:

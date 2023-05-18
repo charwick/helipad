@@ -20,7 +20,7 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.primitives['agent'].breeds)))
+		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.agents['agent'].breeds)))
 		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.goods.nonmonetary}
 
 		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent')*2 for g in model.goods.nonmonetary}
@@ -78,7 +78,7 @@ class Store(baseAgent):
 #Stick this here so we can build on it with the OMO model
 def setup():
 	heli = Helipad()
-	heli.primitives.add('store', Store, dflt=1, priority=2, hidden=True)
+	heli.agents.addPrimitive('store', Store, dflt=1, priority=2, hidden=True)
 
 	# Configure how many breeds there are and what good each consumes
 	# In this model, goods and breeds correspond, but they don't necessarily have to
@@ -89,7 +89,7 @@ def setup():
 	]
 	AgentGoods = {}
 	for b in breeds:
-		heli.addBreed(b[0], b[2], prim='agent')
+		heli.agents.addBreed(b[0], b[2], prim='agent')
 		heli.goods.add(b[1], b[2])
 		AgentGoods[b[0]] = b[1] #Hang on to this list for future looping
 	heli.goods.add('cash', '#009900', money=True)
@@ -157,14 +157,14 @@ def setup():
 	viz.addPlot('wage', 'Wage', 11, selected=False)
 	viz.addPlot('shortage', 'Shortages', 6, selected=False)
 
-	viz.plots['capital'].addSeries(lambda t: 1/len(heli.primitives['agent'].breeds), '', '#CCCCCC')
+	viz.plots['capital'].addSeries(lambda t: 1/len(heli.agents['agent'].breeds), '', '#CCCCCC')
 
 	# heli.data.addReporter('rBal', heli.data.agentReporter('realBalances', 'agent', breed=True))
 	def shortageReporter(good):
 		def reporter(model): return model.shortages[good]
 		return reporter
 
-	for breed, d in heli.primitives['agent'].breeds.items():
+	for breed, d in heli.agents['agent'].breeds.items():
 		heli.data.addReporter('rbalDemand-'+breed, rbaltodemand(breed))
 		heli.data.addReporter('shortage-'+AgentGoods[breed], shortageReporter(AgentGoods[breed]))
 		heli.data.addReporter('eCons-'+breed, heli.data.agentReporter('expCons', 'agent', breed=breed, stat='sum'))

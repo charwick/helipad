@@ -9,7 +9,7 @@ heli.name = 'Game of Life'
 heli.stages = 2
 heli.param('refresh', 1)
 
-heli.primitives.remove('agent')
+heli.agents.removePrimitive('agent')
 mapPlot = heli.spatial(dim=30, wrap=True, corners=True)
 mapPlot.config('patchProperty', 'active')
 

@@ -153,16 +153,16 @@ plot = viz.addPlot('payoffs', 'Payoffs')
 def modelPreSetup(model):
 
 	#Clear breeds from the previous run
-	for b in model.primitives['agent'].breeds:
+	for b in model.agents['agent'].breeds:
 		model.data.removeReporter(b+'-proportion')
-	model.primitives['agent'].breeds.clear()
+	model.agents['agent'].breeds.clear()
 
 	for k in model.param('strategies'):
-		model.addBreed(k, strategies[k][1])
+		model.agents.addBreed(k, strategies[k][1])
 
-	model.param('num_agent', len(model.primitives['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
+	model.param('num_agent', len(model.agents['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
 
-	for b, d in model.primitives['agent'].breeds.items():
+	for b, d in model.agents['agent'].breeds.items():
 		model.data.addReporter(b+'-proportion', proportionReporter(b))
 		plot.addSeries(b+'-proportion', b, d.color)
 

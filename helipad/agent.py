@@ -7,7 +7,7 @@ import warnings
 from random import choice, randint
 from math import degrees, radians, pi
 import numpy as np
-from helipad.helpers import ï
+from helipad.helpers import ï, funcStore, Color, Item
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
@@ -427,10 +427,108 @@ class Stocks:
 	def values(self): return [g['quantity'] for g in self.goods.values()]
 	def items(self): return [(k, g['quantity']) for k,g in self.goods.items()]
 
+#==================
+# CONTAINER CLASSES
+#==================
+
 class Agents(dict):
+	def __init__(self, model):
+		self.model = model
+		super().__init__()
+
+	#Act as if we've sorted by priority when looping
+	def items(self): yield from sorted(super().items(), key=lambda d: d[1].priority)
+	def values(self): yield from sorted(super().values(), key=lambda d: d.priority)
+	def keys(self): yield from [k[0] for k in sorted(super().items(), key=lambda d: d[1].priority)]
+	__iter__ = keys
+
+	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
+		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
+		if not plural: plural = name+'s'
+		class_.primitive = name
+		self[name] = Primitive(
+			class_=class_,
+			plural=plural,
+			priority=priority,
+			order=order,
+			breeds=Breeds(self.model, name)
+		)
+		def popget(name, model):
+			prim = name.split('_')[1]
+			if not model.hasModel: return None
+			else: return len(model.agents[prim])
+
+		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.model.nUpdater, getter=popget)
+
+	def removePrimitive(self, name):
+		del self[name]
+		del self.model.params['num_'+name]
+
 	@property
 	def all(self):
 		agents = {}
 		for l in self.values():
 			agents.update({a.id:a for a in l})
 		return agents
+
+	def addBreed(self, name, color, prim=None):
+		if prim is None:
+			if len(self) == 1: prim = next(iter(self.keys()))
+			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
+		return self[prim].breeds.add(name, color)
+
+	#Deprecated in Helipad 1.6, remove in Helipad 1.8
+	def add(self, *args, **kwargs):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives.add', 'model.agents.addPrimitive'), FutureWarning, 2)
+		self.addPrimitive(*args, **kwargs)
+
+	#Deprecated in Helipad 1.6, remove in Helipad 1.8
+	def remove(self, name):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives.remove', 'model.agents.removePrimitive'), FutureWarning, 2)
+		self.removePrimitive(name)
+
+class Primitive(list):
+	def __init__(self, **kwargs):
+		for k,v in kwargs.items(): setattr(self, k, v)
+		super().__init__()
+
+#For adding breeds and goods. Should not be called directly
+class gandb(funcStore):
+	def __init__(self, model):
+		self.model = model
+
+	def add(self, obj, name, color, prim=None, **kwargs):
+		if name in self:
+			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
+
+		cobj = color if isinstance(color, Color) else Color(color)
+		cobj2 = cobj.lighten()
+		self[name] = Item(color=cobj, color2=cobj2, **kwargs)
+
+		#Make sure the parameter lists keep up with our items
+		if obj=='good': paramDict = self.model.params.perGood
+		elif obj=='breed': paramDict = {k:v for k,v in self.model.params.perBreed.items() if v.prim==self.primitive}
+		for p in paramDict.values(): p.addKey(name)
+
+		return self[name]
+
+	def remove(self, name):
+		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
+		if not name in self: return False
+
+		#Also delete per-item parameters
+		pdict = self.model.params.perBreed if isinstance(self, Breeds) else self.model.params.perGood
+		for param in pdict.values():
+			del param.value[name]
+			if getattr(param, 'elements', False):
+				if not isNotebook(): param.elements[name].destroy()
+				else: param.elements[name].close()
+				del param.elements[name]
+		return super().remove(name)
+
+class Breeds(gandb):
+	def __init__(self, model, primitive):
+		self.primitive = primitive
+		super().__init__(model)
+
+	def add(self, name, color): return super().add('breed', name, color)

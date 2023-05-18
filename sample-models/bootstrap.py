@@ -16,8 +16,8 @@ heli.stages = 1 #Change to create a multi-stage model
 
 # heli.params.add('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
 # heli.goods.add('good1','hex color', lambda breed: endowment)
-# heli.addBreed('name1', 'hex color')
-# heli.addBreed('name2', 'hex color')
+# heli.agents.addBreed('name1', 'hex color')
+# heli.agents.addBreed('name2', 'hex color')
 
 #===============
 # BEHAVIOR

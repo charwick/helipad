@@ -23,8 +23,8 @@ heli.params.add('grassrate', 'Grass Rate', 'slider', dflt=10, opts={'low': 1, 'h
 heli.params['num_agent'].opts = {'low': 1, 'high': 200, 'step': 1}
 heli.param('num_agent', 200)
 
-heli.addBreed('male', 'blue')
-heli.addBreed('female', 'pink')
+heli.agents.addBreed('male', 'blue')
+heli.agents.addBreed('female', 'pink')
 heli.goods.add('energy', 'red', 5)
 
 #===============
