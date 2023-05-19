@@ -4,9 +4,10 @@
 # ==========
 
 import warnings
-from random import choice, randint
+from random import choice, randint, shuffle
 from math import degrees, radians, pi
 import numpy as np
+import pandas
 from helipad.helpers import ï, funcStore, Color, Item
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
@@ -443,6 +444,13 @@ class Agents(dict):
 	def keys(self): yield from [k[0] for k in sorted(super().items(), key=lambda d: d[1].priority)]
 	__iter__ = keys
 
+	def __getitem__(self, val):
+		if isinstance(val, int):
+			for p in super().values():
+				for a in p:
+					if a.id==val: return a
+		else: return super().__getitem__(val)
+
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
 		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
 		if not plural: plural = name+'s'
@@ -459,18 +467,11 @@ class Agents(dict):
 			if not model.hasModel: return None
 			else: return len(model.agents[prim])
 
-		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.model.nUpdater, getter=popget)
+		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.initialize, getter=popget)
 
 	def removePrimitive(self, name):
 		del self[name]
 		del self.model.params['num_'+name]
-
-	@property
-	def all(self):
-		agents = {}
-		for l in self.values():
-			agents.update({a.id:a for a in l})
-		return agents
 
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
@@ -506,6 +507,64 @@ class Agents(dict):
 				)
 		return G
 
+	#CALLBACK FOR DEFAULT PARAMETERS
+	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
+	def initialize(self, val, prim, model=None, force=False):
+		if not self.model.hasModel and not force: return val
+
+		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
+		array = self[prim]
+		diff = val - len(array)
+
+		#Add agents
+		if diff > 0:
+			maxid = max(ids) if (ids := [a.id for a in self.all.values()]) else 0 #Figure out maximum existing ID
+			for aId in range(maxid+1, maxid+int(diff)+1):
+				breed = self.model.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self[prim].breeds.keys(), self.model])
+				if breed is None: breed = list(self[prim].breeds.keys())[aId%len(self[prim].breeds)]
+				if not breed in self[prim].breeds:
+					raise ValueError(ï('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
+				new = self[prim].class_(breed, aId, self.model)
+				array.append(new)
+
+		#Remove agents
+		elif diff < 0:
+			shuffle(array) #Delete agents at random
+
+			#Remove agents, maintaining the proportion between breeds
+			n = {x: 0 for x in self[prim].breeds.keys()}
+			for a in self[prim]:
+				if n[a.breed] < -diff:
+					n[a.breed] += 1
+					a.die(updateGUI=False)
+				else: continue
+
+	#Returns summary statistics on an agent variable at a single point in time
+	def summary(self, var, prim=None, breed=None, good=False):
+		if prim is None:
+			prim = 'agent' if 'agent' in self else next(iter(self))
+		agents = self[prim] if breed is None else self[prim][breed]
+		if not good: data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
+		else: data = pandas.Series([a.stocks[var] for a in agents])
+		stats = {
+			'n': data.size,
+			'Mean': data.mean(),
+			'StDev': data.std(),
+			'Variance': data.var(),
+			'Maximum': data.max(),
+			'Minimum': data.min(),
+			'Sum': data.sum()
+		}
+		for k, v in stats.items():
+			print(k+': ', v)
+
+	@property
+	def all(self):
+		agents = {}
+		for l in self.values():
+			agents.update({a.id:a for a in l})
+		return agents
+
 	@property
 	def allEdges(self):
 		es = {}
@@ -529,6 +588,10 @@ class Primitive(list):
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items(): setattr(self, k, v)
 		super().__init__()
+
+	def __getitem__(self, val):
+		if isinstance(val, str): return [a for a in self if a.breed==val]
+		else: return super().__getitem__(val)
 
 #For adding breeds and goods. Should not be called directly
 class gandb(funcStore):

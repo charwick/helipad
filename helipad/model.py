@@ -6,7 +6,6 @@
 import os, sys, warnings, asyncio, time
 import gettext
 from random import shuffle, choice
-import pandas
 #from memory_profiler import profile
 
 from helipad.visualize import BaseVisualization, Charts, TimeSeries
@@ -194,8 +193,8 @@ class Helipad:
 
 		#Initialize agents
 		for prim, ags in self.agents.items():
-			ags.clear()															#Clear any surviving agents from last run
-			self.nUpdater(self.param('num_'+prim), prim, self, force=True)		#Force is so we can call nupdater before instantiating hasModel
+			ags.clear()																	#Clear any surviving agents from last run
+			self.agents.initialize(self.param('num_'+prim), prim, self, force=True)		#Force is so we can call initialize() before instantiating hasModel
 
 		#Start progress bar
 		#Put this here and not in .start() because it'll flash on unpause otherwise
@@ -423,45 +422,7 @@ class Helipad:
 		from helipad.spatial import spatialSetup
 		return spatialSetup(self, *args, **kwargs)
 
-	#CALLBACK FOR DEFAULT PARAMETERS
-	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
-	def nUpdater(self, val, prim, model, force=False):
-		if not self.hasModel and not force: return val
-
-		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
-		array = self.agents[prim]
-		diff = val - len(array)
-
-		#Add agents
-		if diff > 0:
-			ids = [a.id for a in self.agents.all.values()]
-			maxid = max(ids) if ids else 0 #Figure out maximum existing ID
-			for aId in range(maxid+1, maxid+int(diff)+1):
-				breed = self.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self.agents[prim].breeds.keys(), self])
-				if breed is None: breed = list(self.agents[prim].breeds.keys())[aId%len(self.agents[prim].breeds)]
-				if not breed in self.agents[prim].breeds:
-					raise ValueError(ï('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
-				new = self.agents[prim].class_(breed, aId, self)
-				array.append(new)
-
-		#Remove agents
-		elif diff < 0:
-			shuffle(array) #Delete agents at random
-
-			#Remove agents, maintaining the proportion between breeds
-			n = {x: 0 for x in self.agents[prim].breeds.keys()}
-			for a in self.agents[prim]:
-				if n[a.breed] < -diff:
-					n[a.breed] += 1
-					a.die(updateGUI=False)
-				else: continue
-
-	#
-	# DEBUG FUNCTIONS
-	# Only call from the console, not in user code
-	#
-
-	# Requires to be run from Terminal (⌘-⇧-R in TextMate). `self` will refer to the model object
+	# Requires to be run in a buffered console. `self` will refer to the model object
 	# Readline doesn't look like it's doing anything here, but it enables certain console features
 	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 	# Has to be called *after* Cpanel.__init__() is called, or the cpanel object won't be available.
@@ -473,37 +434,6 @@ class Helipad:
 				env['self'] = self
 				code.interact(local=env)
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
-
-	#Return agents of a breed if string; return specific agent with ID otherwise
-	def agent(self, var, primitive=None):
-		if primitive is None:
-			primitive = 'agent' if 'agent' in self.agents else next(iter(self.agents))
-		if isinstance(var, str):
-			return [a for a in self.agents[primitive] if a.breed==var]
-		else:
-			aa = self.agents.all
-			return aa[var] if var in aa else None
-
-		return None #If nobody matched
-
-	#Returns summary statistics on an agent variable at a single point in time
-	def summary(self, var, prim=None, breed=None, good=False):
-		if prim is None:
-			prim = 'agent' if 'agent' in self.agents else next(iter(self.agents))
-		agents = self.agents[prim] if breed is None else self.agent(breed, prim)
-		if not good: data = pandas.Series([getattr(a, var) for a in agents]) #Pandas gives us nice statistical functions
-		else: data = pandas.Series([a.stocks[var] for a in agents])
-		stats = {
-			'n': data.size,
-			'Mean': data.mean(),
-			'StDev': data.std(),
-			'Variance': data.var(),
-			'Maximum': data.max(),
-			'Minimum': data.min(),
-			'Sum': data.sum()
-		}
-		for k, v in stats.items():
-			print(k+': ', v)
 
 	def launchCpanel(self):
 		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
@@ -620,6 +550,18 @@ class Helipad:
 	def allEdges(self):
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allEdges', 'model.agents.allEdges'), FutureWarning, 2)
 		return self.agents.allEdges
+
+	def agent(self, var, primitive=None):
+		if isinstance(var, str):
+			warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.agent(breed)', 'model.agents[primitive][breed]'), FutureWarning, 2)
+			return self.agents[primitive][var]
+		else:
+			warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.agent(id)', 'model.agents[id]'), FutureWarning, 2)
+			return self.agents[var]
+
+	def summary(self, var, prim=None, breed=None, good=False):
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.summary()', 'model.agents.summary()'), FutureWarning, 2)
+		return self.agents.summary(var, prim, breed, good)
 
 class MultiLevel(baseAgent, Helipad):
 	def __init__(self, breed, id, parentModel):
