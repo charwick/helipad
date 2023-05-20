@@ -670,13 +670,13 @@ class AgentsPlot(ChartPlot):
 
 		#Capture label and size data
 		if self.params['agentLabel'] and self.params['agentLabel'] is not True:
-			agents = self.viz.model.agents.all
+			agents = {a.id:a for a in self.viz.model.agents.all}
 			if 'good:' in self.params['agentLabel']:
 				for n in G.nodes: G.nodes[n]['label'] = agents[n].stocks[self.params['agentLabel'].split(':')[1]]
 			else:
 				for n in G.nodes: G.nodes[n]['label'] = getattr(agents[n],self.params['agentLabel'])
 		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]:
-			agents = self.viz.model.agents.all
+			agents = {a.id:a for a in self.viz.model.agents.all}
 			if 'good:' in self.params['agentSize']:
 				for n in G.nodes: G.nodes[n]['size'] = agents[n].stocks[self.params['agentSize'].split(':')[1]]
 			else:
@@ -749,7 +749,7 @@ class AgentsPlot(ChartPlot):
 		#Select the next layout in the list
 		import networkx.drawing.layout as lay
 		layouts = ['patchgrid'] if self.viz.model.patches else []
-		if self.kind in self.viz.model.allEdges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
+		if self.kind in self.viz.model.agents.allEdges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]

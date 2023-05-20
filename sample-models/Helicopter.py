@@ -355,7 +355,7 @@ class CentralBank(baseAgent):
 				a.stocks[self.model.goods.money] += amt
 		else:
 			M0 = self.M0
-			for a in self.model.agents.all.values():
+			for a in self.model.agents.all:
 				a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
 
 	@property

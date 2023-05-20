@@ -90,9 +90,9 @@ viz = heli.useVisual(TimeSeries)
 @heli.reporter
 def population(model): return sum(len(d.agents['agent']) for d in model.agents['deme'])
 @heli.reporter
-def altruists(model): return sum(len(d.agent('altruist')) for d in model.agents['deme'])/population(model)
+def altruists(model): return sum(len(d.agents['agent']['altruist']) for d in model.agents['deme'])/population(model)
 @heli.reporter
-def selfish(model): return sum(len(d.agent('selfish')) for d in model.agents['deme'])/population(model)
+def selfish(model): return sum(len(d.agents['agent']['selfish']) for d in model.agents['deme'])/population(model)
 @heli.reporter
 def fitness(model): return sum(sum(a.stocks['payoff'] for a in d.agents['agent']) for d in model.agents['deme'])/population(model)
 

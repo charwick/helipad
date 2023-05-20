@@ -29,7 +29,7 @@ class baseAgent:
 		self.age = 0
 		self.dead = False
 		self.stocks = Stocks(breed, model.goods)
-		self.edges = {}
+		self.edges = Edges()
 		self.utils = 0
 		self.position = None #Overridden in spatial init
 		self.currentDemand = {g:0 for g in model.goods.keys()}
@@ -176,7 +176,7 @@ class baseAgent:
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot reproduce.'))
 
 		maxid = 0
-		for a in self.model.agents.all.values():
+		for a in self.model.agents.all:
 			if a.id > maxid:
 				maxid = a.id
 		newagent = type(self)(self.breed, maxid+1, self.model)
@@ -236,7 +236,7 @@ class baseAgent:
 	def die(self, updateGUI=True):
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot die.'))
 		self.model.agents[self.primitive].remove(self)
-		for edge in self.alledges: edge.cut()
+		for edge in self.edges.all: edge.cut()
 		self.dead = True
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
 
@@ -260,7 +260,7 @@ class baseAgent:
 
 	def outbound(self, kind='edge', undirected=False, obj='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
-		if kind is None: edges = self.alledges
+		if kind is None: edges = self.edges.all
 		else:
 			if kind not in self.edges: return []
 			edges = self.edges[kind]
@@ -269,7 +269,7 @@ class baseAgent:
 
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
-		if kind is None: edges = self.alledges
+		if kind is None: edges = self.edges.all
 		else:
 			if kind not in self.edges: return []
 			edges = self.edges[kind]
@@ -280,14 +280,14 @@ class baseAgent:
 		if kind is not None:
 			if kind not in self.edges: return []
 			edges = self.edges[kind]
-		else: edges = self.alledges
+		else: edges = self.edges.all
 		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
 
+	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	@property
 	def alledges(self):
-		edges = []
-		for e in self.edges.values(): edges += e
-		return edges
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.allEdges', 'Agent.edges.all'), FutureWarning, 2)
+		return self.edges.all
 
 	#==================
 	# OTHER METHODS
@@ -432,7 +432,25 @@ class Stocks:
 # CONTAINER CLASSES
 #==================
 
-class Agents(dict):
+#Basic methods for a dict of dicts
+class MultiDict(dict):
+	def __getitem__(self, val):
+		if isinstance(val, int):
+			for p in super().values():
+				for a in p:
+					if a.id==val: return a
+		else: return super().__getitem__(val)
+
+	def __len__(self):
+		return sum([len(a) for a in self])
+
+	@property
+	def all(self):
+		agents = []
+		for l in self.values(): agents += l
+		return agents
+
+class Agents(MultiDict):
 	def __init__(self, model):
 		self.model = model
 		self.order = 'linear'
@@ -443,13 +461,6 @@ class Agents(dict):
 	def values(self): yield from sorted(super().values(), key=lambda d: d.priority)
 	def keys(self): yield from [k[0] for k in sorted(super().items(), key=lambda d: d[1].priority)]
 	__iter__ = keys
-
-	def __getitem__(self, val):
-		if isinstance(val, int):
-			for p in super().values():
-				for a in p:
-					if a.id==val: return a
-		else: return super().__getitem__(val)
 
 	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
 		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
@@ -475,7 +486,7 @@ class Agents(dict):
 
 	def addBreed(self, name, color, prim=None):
 		if prim is None:
-			if len(self) == 1: prim = next(iter(self.keys()))
+			if len(super().keys()) == 1: prim = next(iter(self.keys()))
 			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
 		return self[prim].breeds.add(name, color)
 
@@ -483,7 +494,7 @@ class Agents(dict):
 	def createNetwork(self, density, kind='edge', prim=None):
 		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
 		from itertools import combinations
-		agents = self.all.values() if prim is None else self[prim]
+		agents = self.all if prim is None else self[prim]
 		for c in combinations(agents, 2):
 			if np.random.randint(0,100) < density*100:
 				c[0].newEdge(c[1], kind)
@@ -494,7 +505,7 @@ class Agents(dict):
 
 		#Have to use DiGraph in order to draw any arrows
 		G = nx.DiGraph(name=kind)
-		agents = list(self.all.values()) if prim is None else self[prim]
+		agents = list(self.all) if prim is None else self[prim]
 		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
 		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
 		ae = self.allEdges
@@ -518,7 +529,7 @@ class Agents(dict):
 
 		#Add agents
 		if diff > 0:
-			maxid = max(ids) if (ids := [a.id for a in self.all.values()]) else 0 #Figure out maximum existing ID
+			maxid = max(ids) if (ids := [a.id for a in self.all]) else 0 #Figure out maximum existing ID
 			for aId in range(maxid+1, maxid+int(diff)+1):
 				breed = self.model.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self[prim].breeds.keys(), self.model])
 				if breed is None: breed = list(self[prim].breeds.keys())[aId%len(self[prim].breeds)]
@@ -559,17 +570,10 @@ class Agents(dict):
 			print(k+': ', v)
 
 	@property
-	def all(self):
-		agents = {}
-		for l in self.values():
-			agents.update({a.id:a for a in l})
-		return agents
-
-	@property
 	def allEdges(self):
 		es = {}
-		for a in self.all.values():
-			for e in a.alledges:
+		for a in self.all:
+			for e in a.edges.all:
 				if not e.kind in es: es[e.kind] = []
 				if not e in es[e.kind]: es[e.kind].append(e)
 		return es
@@ -633,3 +637,6 @@ class Breeds(gandb):
 		super().__init__(model)
 
 	def add(self, name, color): return super().add('breed', name, color)
+
+class Edges(MultiDict):
+	pass

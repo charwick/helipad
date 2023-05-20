@@ -88,7 +88,7 @@ def modelPostSetup(model):
 
 #Stop the model when we have no more females left to reproduce
 @heli.event
-def nofemales(model): return len(model.agent('female')) <= 1
+def nofemales(model): return len(model.agents['agent']['female']) <= 1
 heli.param('stopafter', 'nofemales')
 heli.param('refresh', 1)
 
@@ -99,7 +99,7 @@ heli.param('refresh', 1)
 heli.data.addReporter('grass', heli.data.agentReporter('stocks', 'patch', good='energy', stat='sum'))
 heli.data.addReporter('age', heli.data.agentReporter('age', 'agent'))
 heli.data.addReporter('num_agent', lambda model: len(model.agents['agent']))
-heli.data.addReporter('sexratio', lambda model: len(model.agent('male', 'agent'))/len(model.agent('female', 'agent')))
+heli.data.addReporter('sexratio', lambda model: len(model.agents['agent']['male'])/len(model.agents['agent']['female']))
 heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
 

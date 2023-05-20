@@ -364,13 +364,13 @@ def expand(self, amount):
 			a.stocks[self.model.goods.money] += amt
 	else:
 		M0 = self.M0
-		for a in self.model.agents.all.values():
+		for a in self.model.agents.all:
 			a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
 CentralBank.expand = expand
 
 def M2(self):
 	if 'bank' not in self.model.agents or self.model.param('num_bank') == 0: return self.M0
-	return sum(a.balance for a in self.model.agents.all.values())
+	return sum(a.balance for a in self.model.agents.all)
 CentralBank.M2 = property(M2)
 
 #Price level

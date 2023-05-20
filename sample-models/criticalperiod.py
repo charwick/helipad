@@ -82,8 +82,8 @@ def agentDie(agent):
 			if a.hasReproduced or a.age<=1: continue
 			for n in range(round(a.language**3+1)): nominees.append(a.id) #+1 because otherwise we start out with no one able to reproduce
 	else: nominees = [a.id for a in heli.agents['agent'] if not a.hasReproduced and a.age>1]
-	n1 = n2 = heli.agent(random.choice(nominees))
-	while n1.id == n2.id: n2 = heli.agent(random.choice(nominees))
+	n1 = n2 = heli.agents[random.choice(nominees)]
+	while n1.id == n2.id: n2 = heli.agents[random.choice(nominees)]
 	
 	#Complicated inheritance so do it manually
 	baby = n1.reproduce(partners=[n2])

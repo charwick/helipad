@@ -554,6 +554,7 @@ class Helipad:
 	def agent(self, var, primitive=None):
 		if isinstance(var, str):
 			warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.agent(breed)', 'model.agents[primitive][breed]'), FutureWarning, 2)
+			if primitive is None: primitive = next(iter(self.agents))
 			return self.agents[primitive][var]
 		else:
 			warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.agent(id)', 'model.agents[id]'), FutureWarning, 2)

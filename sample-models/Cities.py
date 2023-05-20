@@ -53,7 +53,7 @@ class Land():
 		self.input = 0 #Reset productivity at the end of each period
 		return self.product
 	
-	def pop(self, model): return len(model.agent(self.loc))
+	def pop(self, model): return len(model.agents['agent'][self.loc])
 	
 	#The add argument calculates the productivity as if the agent were already there, if he's not
 	def agentProd(self, H, add=False):
@@ -119,7 +119,7 @@ def modelStep(model, stage):
 		for l in model.land.values():
 			inp = l.input								# = ∑P
 			Y = l.produce()								# = ln∑P (eq. 2)
-			for a in model.agent(l.loc):
+			for a in model.agents['agent'][l.loc]:
 				a.lastWage = a.prod/inp * Y	# = P/∑P * Y (eq. 3)
 				a.wealth += a.lastWage
 
@@ -166,7 +166,7 @@ def modelPostStep(model):
 	if len(model.agents['agent']) == 0: model.stop()
 	else:
 		for b in model.agents['agent'].breeds:
-			pop = len(model.agent(b))
+			pop = len(model.agents['agent'][b])
 			if pop > 0:
 				setattr(model,'moverate'+b, model.movers[b]/pop)
 				setattr(model,'birthrate'+b, model.births[b]/pop)
@@ -192,7 +192,7 @@ viz = heli.useVisual(TimeSeries)
 # returns ln(∑H²)
 @heli.reporter
 def hsum(model, loc='urban'):
-	upop = model.agent(loc)
+	upop = model.agents['agent'][loc]
 	return sum([a.H for a in upop]) if len(upop) > 0 else 1
 
 def perCapGdp(model, loc):
