@@ -29,7 +29,7 @@ class baseAgent:
 		self.age = 0
 		self.dead = False
 		self.stocks = Stocks(breed, model.goods)
-		self.edges = Edges()
+		self.edges = Edges(self)
 		self.utils = 0
 		self.position = None #Overridden in spatial init
 		self.currentDemand = {g:0 for g in model.goods.keys()}
@@ -227,7 +227,7 @@ class baseAgent:
 
 		newagent.id = maxid+1
 		for p in parents:
-			p.newEdge(newagent,'lineage', True) #Keep track of parent-child relationships
+			p.edges.add(newagent,'lineage', True) #Keep track of parent-child relationships
 		self.model.agents[self.primitive].append(newagent)
 
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
@@ -253,37 +253,25 @@ class baseAgent:
 
 	#==================
 	# NETWORK METHODS
+	# All deprecated in Helipad 1.6, remove in Helipad 1.8
 	#==================
 
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
-		return Edge(self, partner, kind, direction, weight)
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.newEdge()', 'Agent.edges.add()'), FutureWarning, 2)
+		return self.edges.add(partner, kind, direction, weight)
 
 	def outbound(self, kind='edge', undirected=False, obj='edge'):
-		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
-		if kind is None: edges = self.edges.all
-		else:
-			if kind not in self.edges: return []
-			edges = self.edges[kind]
-		ob = [edge for edge in edges if edge.startpoint == self or (undirected and not edge.directed)]
-		return ob if obj=='edge' else [e.partner(self) for e in ob]
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.outbound()', 'Agent.edges.outbound()'), FutureWarning, 2)
+		return self.edges.outbound(kind, undirected, obj)
 
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
-		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
-		if kind is None: edges = self.edges.all
-		else:
-			if kind not in self.edges: return []
-			edges = self.edges[kind]
-		ib = [edge for edge in edges if edge.endpoint == self or (undirected and not edge.directed)]
-		return ib if obj=='edge' else [e.partner(self) for e in ib]
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.inbound()', 'Agent.edges.inbound()'), FutureWarning, 2)
+		return self.edges.inbound(kind, undirected, obj)
 
 	def edgesWith(self, partner, kind='edge'):
-		if kind is not None:
-			if kind not in self.edges: return []
-			edges = self.edges[kind]
-		else: edges = self.edges.all
-		return [edge for edge in edges if self in edge.vertices and partner in edge.vertices]
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.edgesWith()', 'Agent.edges.With()'), FutureWarning, 2)
+		return self.edges.With(partner, kind)
 
-	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	@property
 	def alledges(self):
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.allEdges', 'Agent.edges.all'), FutureWarning, 2)
@@ -339,7 +327,7 @@ class Patch(baseAgent):
 
 	@property
 	def neighbors(self):
-		return [p for p in self.outbound('space', True, obj='agent') if not p.dead]
+		return [p for p in self.edges.outbound('space', True, obj='agent') if not p.dead]
 
 	def __repr__(self): return f'<Patch at {self.position[0]},{self.position[1]}>'
 
@@ -434,13 +422,6 @@ class Stocks:
 
 #Basic methods for a dict of dicts
 class MultiDict(dict):
-	def __getitem__(self, val):
-		if isinstance(val, int):
-			for p in super().values():
-				for a in p:
-					if a.id==val: return a
-		else: return super().__getitem__(val)
-
 	def __len__(self):
 		return sum([len(a) for a in self])
 
@@ -455,6 +436,14 @@ class Agents(MultiDict):
 		self.model = model
 		self.order = 'linear'
 		super().__init__()
+
+	#Allow retrieval by either primitive or agent ID
+	def __getitem__(self, val):
+		if isinstance(val, int):
+			for p in super().values():
+				for a in p:
+					if a.id==val: return a
+		else: return super().__getitem__(val)
 
 	#Act as if we've sorted by priority when looping
 	def items(self): yield from sorted(super().items(), key=lambda d: d[1].priority)
@@ -497,7 +486,7 @@ class Agents(MultiDict):
 		agents = self.all if prim is None else self[prim]
 		for c in combinations(agents, 2):
 			if np.random.randint(0,100) < density*100:
-				c[0].newEdge(c[1], kind)
+				c[0].edges.add(c[1], kind)
 		return self.network(kind, prim)
 
 	def network(self, kind='edge', prim=None, excludePatches=False):
@@ -639,4 +628,34 @@ class Breeds(gandb):
 	def add(self, name, color): return super().add('breed', name, color)
 
 class Edges(MultiDict):
-	pass
+	def __init__(self, agent):
+		self.agent = agent
+		super().__init__()
+
+	def add(self, partner, kind='edge', direction=None, weight=1):
+		return Edge(self.agent, partner, kind, direction, weight)
+
+	def outbound(self, kind='edge', undirected=False, obj='edge'):
+		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
+		if kind is None: edges = self.all
+		else:
+			if kind not in self: return []
+			edges = self[kind]
+		ob = [edge for edge in edges if edge.startpoint == self.agent or (undirected and not edge.directed)]
+		return ob if obj=='edge' else [e.partner(self.agent) for e in ob]
+
+	def inbound(self, kind='edge', undirected=False, obj='edge'):
+		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
+		if kind is None: edges = self.all
+		else:
+			if kind not in self: return []
+			edges = self[kind]
+		ib = [edge for edge in edges if edge.endpoint == self.agent or (undirected and not edge.directed)]
+		return ib if obj=='edge' else [e.partner(self.agent) for e in ib]
+
+	def With(self, partner, kind='edge'):
+		if kind is not None:
+			if kind not in self: return []
+			edges = self[kind]
+		else: edges = self.all
+		return [edge for edge in edges if self.agent in edge.vertices and partner in edge.vertices]

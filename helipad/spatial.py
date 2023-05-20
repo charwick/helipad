@@ -119,7 +119,7 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **
 			connections = patch.neighbors #Neighbors that already have a connection
 			for n, weight in neighbors:
 				if not n in connections:
-					patch.newEdge(n, 'space', weight=weight)
+					patch.edges.add(n, 'space', weight=weight)
 
 	#Don't reset the visualizer if charts is already registered
 	if model.visual is None or not isinstance(model.visual, Charts):
