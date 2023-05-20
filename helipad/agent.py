@@ -435,6 +435,7 @@ class Agents(MultiDict):
 	def __init__(self, model):
 		self.model = model
 		self.order = 'linear'
+		self.edges = ModelEdges(self)
 		super().__init__()
 
 	#Allow retrieval by either primitive or agent ID
@@ -497,14 +498,12 @@ class Agents(MultiDict):
 		agents = list(self.all) if prim is None else self[prim]
 		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
 		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
-		ae = self.allEdges
-		if kind in ae:
-			for e in ae[kind]:
-				if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
-					e.startpoint.id if e.directed else e.vertices[0].id,
-					e.endpoint.id if e.directed else e.vertices[1].id,
-					weight=e.weight, directed=e.directed
-				)
+		for e in self.edges[kind]:
+			if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
+				e.startpoint.id if e.directed else e.vertices[0].id,
+				e.endpoint.id if e.directed else e.vertices[1].id,
+				weight=e.weight, directed=e.directed
+			)
 		return G
 
 	#CALLBACK FOR DEFAULT PARAMETERS
@@ -557,15 +556,6 @@ class Agents(MultiDict):
 		}
 		for k, v in stats.items():
 			print(k+': ', v)
-
-	@property
-	def allEdges(self):
-		es = {}
-		for a in self.all:
-			for e in a.edges.all:
-				if not e.kind in es: es[e.kind] = []
-				if not e in es[e.kind]: es[e.kind].append(e)
-		return es
 
 	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	def add(self, *args, **kwargs):
@@ -659,3 +649,33 @@ class Edges(MultiDict):
 			edges = self[kind]
 		else: edges = self.all
 		return [edge for edge in edges if self.agent in edge.vertices and partner in edge.vertices]
+
+class ModelEdges(MultiDict):
+	def __init__(self, agents):
+		self.agents = agents
+		super().__init__()
+
+	def __getitem__(self, val): return [e for e in self.all if e.kind==val]
+	def items(self): yield from self._dict.items()
+	def values(self): yield from self._dict.values()
+	def keys(self):
+		ks = []
+		for e in self.all:
+			if not e.kind in ks: ks.append(e.kind)
+		yield from ks
+	__iter__ = keys
+	def __repr__(self): return self._dict.__repr__()
+
+	@property
+	def _dict(self):
+		es = {}
+		for e in self.all:
+			if not e.kind in es: es[e.kind] = []
+			if not e in es[e.kind]: es[e.kind].append(e)
+		return es
+
+	@property
+	def all(self):
+		es = []
+		for a in self.agents.all: es += a.edges.all
+		return es

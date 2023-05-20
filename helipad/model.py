@@ -548,8 +548,8 @@ class Helipad:
 
 	@property
 	def allEdges(self):
-		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allEdges', 'model.agents.allEdges'), FutureWarning, 2)
-		return self.agents.allEdges
+		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allEdges', 'model.agents.edges'), FutureWarning, 2)
+		return self.agents.edges._dict
 
 	def agent(self, var, primitive=None):
 		if isinstance(var, str):

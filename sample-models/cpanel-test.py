@@ -86,7 +86,7 @@ def newedge(model):
 #Cut one edge and create one edge
 @heli.hook
 def modelPostStep(model):
-	random.choice(model.agents.allEdges['edge']).cut()
+	random.choice(model.agents.edges['edge']).cut()
 	newedge(model)
 
 net = viz.addPlot('net', 'Network Structure', type='agents', layout='spring')
