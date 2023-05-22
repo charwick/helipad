@@ -86,7 +86,7 @@ def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **
 		else:
 			y1 = min(y1, ylim[1])
 			y1 = max(y1, ylim[0])
-		
+
 		if (not self.model.patches.offmap and not self.model.patches.at(x1,y1)): warnings.warn(ï('There is no patch at ({0}, {1}).').format(x1, y1), RuntimeWarning, 3)
 		else: self.position = [x1, y1]
 

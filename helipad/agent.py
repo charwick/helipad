@@ -423,7 +423,7 @@ class Stocks:
 #Basic methods for a dict of dicts
 class MultiDict(dict):
 	def __len__(self):
-		return sum([len(a) for a in self])
+		return sum(len(a) for a in super().values())
 
 	@property
 	def all(self):
@@ -445,6 +445,10 @@ class Agents(MultiDict):
 				for a in p:
 					if a.id==val: return a
 		else: return super().__getitem__(val)
+
+	def __contains__(self, val):
+		if isinstance(val, int): return self[val]
+		else: return super().__contains__(val)
 
 	#Act as if we've sorted by priority when looping
 	def items(self): yield from sorted(super().items(), key=lambda d: d[1].priority)
@@ -581,7 +585,7 @@ class gandb(funcStore):
 	def __init__(self, model):
 		self.model = model
 
-	def add(self, obj, name, color, prim=None, **kwargs):
+	def add(self, obj, name, color, **kwargs):
 		if name in self:
 			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
 
@@ -656,6 +660,7 @@ class ModelEdges(MultiDict):
 		super().__init__()
 
 	def __getitem__(self, val): return [e for e in self.all if e.kind==val]
+	def __contains__(self, val): return val in list(self.keys)
 	def items(self): yield from self._dict.items()
 	def values(self): yield from self._dict.values()
 	def keys(self):

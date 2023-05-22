@@ -239,7 +239,7 @@ class Helipad:
 
 			#Sort agents and step them
 			for prim, lst in self.agents.items():
-				order = self.agents[prim].order or self.agents.order
+				order = lst.order or self.agents.order
 				if isinstance(order, list): order = order[self.stage-1]
 				if order == 'random': shuffle(lst)
 
@@ -251,12 +251,12 @@ class Helipad:
 
 				#Copy the agent list to keep it constant for a given loop because modifying it
 				#while looping (e.g. if an agent dies or reproduces) will screw up the looping
-				agentpool = list(self.agents[prim])
+				agentpool = list(lst)
 
 				#Matching model
 				if 'match' in order:
 					matchN = int(mn[1]) if len(mn := order.split('-')) > 1 else 2
-					matchpool = list(self.agents[prim])
+					matchpool = list(lst)
 					while len(matchpool) > len(agentpool) % matchN and not self._cut:
 						agents = []
 						for a in range(matchN):
@@ -435,7 +435,7 @@ class Helipad:
 				code.interact(local=env)
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
 
-	def launchCpanel(self):
+	def launchCpanel(self, console=True):
 		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
 
 		self.doHooks('CpanelPreLaunch', [self])
@@ -456,7 +456,7 @@ class Helipad:
 			from helipad.cpanelTkinter import Cpanel
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
-			self.debugConsole()
+			if console: self.debugConsole()
 			self.cpanel.mainloop()		#Launch the control panel
 		else:
 			from helipad.cpanelJupyter import Cpanel, SilentExit

@@ -561,6 +561,7 @@ class BarChart(ChartPlot):
 			bar.errHist = []
 			bar.data = []
 
+		#Set bar names
 		cstlfunc, cstfunc = (axes.set_yticklabels, axes.set_yticks) if self.horizontal else (axes.set_xticklabels, axes.set_xticks)
 		cstfunc(range(len(self.bars)))
 		cstlfunc([bar.label for bar in self.bars])
@@ -609,9 +610,14 @@ class AgentsPlot(ChartPlot):
 	type = 'agents'
 	def __init__(self, **kwargs):
 		if 'prim' not in kwargs: kwargs['prim'] = None
-		if 'kind' not in kwargs: kwargs['kind'] = 'edge'
-		if 'layout' not in kwargs: kwargs['layout'] = 'spring'
+		if 'kind' in kwargs:
+			warnings.warn(ï('The kind= argument is deprecated and has been replaced with network=.')) #Deprecated in Helipad 1.6; remove in Helipad 1.8
+			kwargs['network'] = kwargs['kind']
+		if 'network' not in kwargs: kwargs['network'] = 'edge'
+		if 'scatter' not in kwargs: kwargs['scatter'] = None
+		if 'layout' not in kwargs: kwargs['layout'] = 'scatter' if 'scatter' in kwargs else 'spring'
 		super().__init__(**kwargs)
+		self.scatterLims = [[0,0],[0,0]]
 		self.ndata = {}
 
 		self.params = {
@@ -639,7 +645,27 @@ class AgentsPlot(ChartPlot):
 			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
 				return {i: (2*pi-(2*pi/self.viz.model.patches.dim[0] * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
 			else: return {i: data['position'] for i,data in G.nodes.items()}
+		def scatter_layout(G):
+			if not self.scatter: raise
+			self.axes.set_xlabel(self.scatter[0])
+			self.axes.set_ylabel(self.scatter[1])
+			self.axes.spines['top'].set_visible(False)
+			self.axes.spines['right'].set_visible(False)
+			data = {i: [data[self.scatter[0]], data[self.scatter[1]]] for i,data in G.nodes.items()}
+			
+			#Update limits if necessary
+			xs, ys = [d[0] for d in data.values()], [d[1] for d in data.values()]
+			self.scatterLims[0][0] = min(self.scatterLims[0][0], min(xs))
+			self.scatterLims[0][1] = max(self.scatterLims[0][1], max(xs))
+			self.scatterLims[1][0] = min(self.scatterLims[1][0], min(ys))
+			self.scatterLims[1][1] = max(self.scatterLims[1][1], max(ys))
+			self.axes.set_xlim(*self.scatterLims[0])
+			self.axes.set_ylim(*self.scatterLims[1])
+			
+			return data
 		lay.patchgrid_layout = patchgrid_layout
+		lay.scatter_layout = scatter_layout
+
 		self.nx = nx
 		self.layClass = getattr(lay, self.layout+'_layout')
 		self.components = {}
@@ -652,7 +678,7 @@ class AgentsPlot(ChartPlot):
 
 		elif event.name=='pick_event':
 			pk = list(self.pos.keys())
-			agents = [self.viz.model.agent(pk[i]) for i in event.ind]
+			agents = [self.viz.model.agents[pk[i]] for i in event.ind]
 			self.viz.model.doHooks('agentClick', [agents, self, self.viz.scrubval])
 
 		elif event.name=='button_press_event' and self.layout=='patchgrid':
@@ -666,22 +692,20 @@ class AgentsPlot(ChartPlot):
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
 
 	def update(self, data, t):
-		G = self.viz.model.agents.network(self.kind, self.prim, excludePatches=True)
+		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=True)
 
-		#Capture label and size data
-		if self.params['agentLabel'] and self.params['agentLabel'] is not True:
-			agents = {a.id:a for a in self.viz.model.agents.all}
-			if 'good:' in self.params['agentLabel']:
-				for n in G.nodes: G.nodes[n]['label'] = agents[n].stocks[self.params['agentLabel'].split(':')[1]]
+		#Capture data for label, size, and scatterplot position
+		vars = {}
+		if self.params['agentLabel'] and self.params['agentLabel'] is not True: vars['label'] = self.params['agentLabel']
+		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]: vars['size'] = self.params['agentSize']
+		if self.scatter:
+			for v in self.scatter: vars[v] = v
+		agents = {a.id:a for a in (self.viz.model.agents[self.prim] if self.prim else self.viz.model.agents.all)}
+		for k,v in vars.items():
+			if 'good:' in v:
+				for n in G.nodes: G.nodes[n][k] = agents[n].stocks[v.split(':')[1]]
 			else:
-				for n in G.nodes: G.nodes[n]['label'] = getattr(agents[n],self.params['agentLabel'])
-		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]:
-			agents = {a.id:a for a in self.viz.model.agents.all}
-			if 'good:' in self.params['agentSize']:
-				for n in G.nodes: G.nodes[n]['size'] = agents[n].stocks[self.params['agentSize'].split(':')[1]]
-			else:
-				for n in G.nodes: G.nodes[n]['size'] = getattr(agents[n],self.params['agentSize'])
-
+				for n in G.nodes: G.nodes[n][k] = getattr(agents[n],v)
 		self.ndata[t] = G
 
 		#Save spatial data even if we're on a different layout
@@ -699,15 +723,15 @@ class AgentsPlot(ChartPlot):
 	def draw(self, t=None, forceUpdate=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
-		if self.layout != 'patchgrid' or self.projection=='polar': self.axes.axis('off')
+		if self.layout not in ['patchgrid', 'scatter'] or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
-		cmap = cm.get_cmap(self.params['patchColormap'])
 
 		if self.layout == 'patchgrid':
+			cmap = cm.get_cmap(self.params['patchColormap'])
 			pd = self.patchData(t).T #Transpose because numpy is indexed col, row
 			if self.projection=='polar':
 				self.axes.set_ylim(0, self.viz.model.patches.dim[1])
-				norm = (pd - self.normal.vmin)/(self.normal.vmax-self.normal.vmin)
+				norm = (pd - int(self.normal.vmin))/(self.normal.vmax-int(self.normal.vmin))
 				space = linspace(0.0, 1.0, 100)
 				rgb = cmap(space)[newaxis, :, :3][0]
 
@@ -736,6 +760,7 @@ class AgentsPlot(ChartPlot):
 		if self.params['agentLabel']:
 			lab = None if self.params['agentLabel'] is True else {n:self.ndata[t].nodes[n]['label'] for n in self.ndata[t].nodes}
 			self.components['labels'] = self.nx.draw_networkx_labels(self.ndata[t], self.pos, ax=self.axes, labels=lab, font_size=self.params['labelSize'], font_color=self.params['labelColor'], font_family=self.params['labelFamily'], font_weight=self.params['labelWeight'], alpha=self.params['labelAlpha'], horizontalalignment=self.params['labelAlign'], verticalalignment=self.params['labelVerticalAlign'])
+		if self.layout=='scatter': self.axes.tick_params('both', left=True, bottom=True, labelleft=True, labelbottom=True)
 
 		self.components['nodes'].set_picker(True)	#Listen for mouse events on nodes
 		self.components['nodes'].set_pickradius(5)	#Set margin of valid events in pixels
@@ -749,7 +774,8 @@ class AgentsPlot(ChartPlot):
 		#Select the next layout in the list
 		import networkx.drawing.layout as lay
 		layouts = ['patchgrid'] if self.viz.model.patches else []
-		if self.kind in self.viz.model.agents.allEdges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
+		if self.scatter: layouts.append('scatter')
+		if self.network in self.viz.model.agents.edges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]

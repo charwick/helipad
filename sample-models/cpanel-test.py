@@ -4,6 +4,7 @@
 # PREAMBLE
 #===============
 
+from random import uniform
 from helipad import Helipad
 heli = Helipad()
 heli.name = 'Test'
@@ -67,12 +68,17 @@ viz = heli.useVisual(Charts)
 @heli.hook
 def agentInit(agent, model):
 	for i in range(20): setattr(agent, 'prop'+str(i), 0)
+	agent.s1 = 0
+	agent.s2 = 0
 
 @heli.hook
 def agentStep(agent, model, stage):
 	for i in range(20):
 		v = getattr(agent, 'prop'+str(i))
 		setattr(agent, 'prop'+str(i), v-1 if random.randint(0, 1) else v+1)
+	
+	agent.s1 += uniform(0,agent.id+model.t**0.75)
+	agent.s2 += uniform(0,agent.id+model.t**0.75)
 
 @heli.hook
 def modelPostSetup(model):
@@ -89,7 +95,7 @@ def modelPostStep(model):
 	random.choice(model.agents.edges['edge']).cut()
 	newedge(model)
 
-net = viz.addPlot('net', 'Network Structure', type='agents', layout='spring')
+net = viz.addPlot('net', 'Network Structure', type='agents', scatter=['s1', 's2'])
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
 net.config({
