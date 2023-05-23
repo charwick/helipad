@@ -8,21 +8,21 @@ from random import choice, randint, shuffle
 from math import degrees, radians, pi
 import numpy as np
 import pandas
-from helipad.helpers import ï, funcStore, Color, Item
+from helipad.helpers import ï, funcStore, Color, Item, isNotebook
 
 #Basic agent functions. This class should not be instantiated directly; instead it should be
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
 class baseAgent:
-	angleUnit = 'deg'
-	fixed = False
-	overdraft = 'continue-silent'
+	angleUnit: str = 'deg'
+	fixed: bool = False
+	overdraft: str = 'continue-silent'
 
 	#==================
 	# BASIC METHODS
 	#==================
 
-	def __init__(self, breed, aId, model):
+	def __init__(self, breed: str, aId: int, model):
 		self.breed = breed
 		self.id = int(aId)
 		self.model = model
@@ -43,7 +43,7 @@ class baseAgent:
 
 	def __repr__(self): return f'<{self.__class__.__name__} {self.id}>'
 
-	def step(self, stage):
+	def step(self, stage: int):
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
 		if stage == self.model.stages: self.age += 1
@@ -54,7 +54,7 @@ class baseAgent:
 
 	#Give amt1 of good 1, get amt2 of good 2
 	#Negative values of amt1 and amt2 allowed, which reverses the direction
-	def trade(self, partner, good1, amt1, good2, amt2):
+	def trade(self, partner, good1: str, amt1, good2: str, amt2):
 		go = True
 		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
 
@@ -111,7 +111,7 @@ class baseAgent:
 
 	#Price is per-unit
 	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
-	def buy(self, partner, good, q, p):
+	def buy(self, partner, good: str, q, p):
 		if self.model.goods.money is None: raise RuntimeError(ï('{} requires a monetary good to be specified.').format('Agent.buy()'))
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
@@ -172,7 +172,7 @@ class baseAgent:
 	# GENETIC METHODS
 	#==================
 
-	def reproduce(self, inherit=[], mutate={}, partners=[]):
+	def reproduce(self, inherit: list=[], mutate: dict={}, partners: list=[]):
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot reproduce.'))
 
 		maxid = 0
@@ -233,7 +233,7 @@ class baseAgent:
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
 
-	def die(self, updateGUI=True):
+	def die(self, updateGUI: bool=True):
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot die.'))
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.edges.all: edge.cut()
@@ -316,7 +316,7 @@ class Agent(baseAgent):
 
 #For spatial models
 class Patch(baseAgent):
-	fixed = True
+	fixed: bool = True
 
 	#Don't remove from the list; just mark as dead
 	def die(self):
@@ -326,7 +326,7 @@ class Patch(baseAgent):
 		self.model.doHooks(['baseAgentDie', 'PatchDie'], [self])
 
 	@property
-	def neighbors(self):
+	def neighbors(self) -> list:
 		return [p for p in self.edges.outbound('space', True, obj='agent') if not p.dead]
 
 	def __repr__(self): return f'<Patch at {self.position[0]},{self.position[1]}>'
@@ -335,7 +335,7 @@ class Patch(baseAgent):
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
 #or a boolean (False for undirected, True for agent1 to agent2)
 class Edge:
-	def __init__(self, agent1, agent2, kind='edge', direction=None, weight=1):
+	def __init__(self, agent1: baseAgent, agent2: baseAgent, kind: str='edge', direction=None, weight=1):
 		self.active = True
 		self.kind = kind
 		self.vertices = (agent1, agent2)
@@ -375,19 +375,19 @@ class Edge:
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
 
-	def partner(self, agent):
+	def partner(self, agent: baseAgent):
 		if agent==self.vertices[0]: return self.vertices[1]
 		elif agent==self.vertices[1]: return self.vertices[0]
 		else: raise ValueError(ï('Agent {} is not connected to this edge.').format(agent.id))
 
-	def reassign(self, oldagent, newagent):
+	def reassign(self, oldagent: baseAgent, newagent: baseAgent):
 		self.vertices = (self.partner(oldagent), newagent)
 		oldagent.edges[self.kind].remove(self)
 		newagent.edges[self.kind].append(self)
 		newagent.model.doHooks('edgeReassign', [self, oldagent, newagent])
 
 class Stocks:
-	def __init__(self, breed, goodslist):
+	def __init__(self, breed: str, goodslist: list):
 		self.goods = {g:{} for g in goodslist}
 		for good, ginfo in goodslist.items():
 			for p, fn in ginfo.props.items():
@@ -396,7 +396,7 @@ class Stocks:
 				elif isinstance(endow, (tuple, list)): self.goods[good][p] = randint(*endow)
 				else: self.goods[good][p] = endow
 
-	def __getitem__(self, key):
+	def __getitem__(self, key: str):
 		if isinstance(key, str): return self.goods[key]['quantity']
 		elif isinstance(key, tuple):
 			if isinstance(key[1], str): return self.goods[key[0]][key[1]]
@@ -404,7 +404,7 @@ class Stocks:
 			elif key[1] is False: return self.goods[key]['quantity']
 		raise KeyError
 
-	def __setitem__(self, key, val):
+	def __setitem__(self, key: str, val):
 		if isinstance(key, str): self.goods[key]['quantity'] = val
 		elif isinstance(key, tuple) and isinstance(key[1], str): self.goods[key[0]][key[1]] = val
 		else: raise KeyError
@@ -426,7 +426,7 @@ class MultiDict(dict):
 		return sum(len(a) for a in super().values())
 
 	@property
-	def all(self):
+	def all(self) -> list:
 		agents = []
 		for l in self.values(): agents += l
 		return agents
@@ -446,7 +446,7 @@ class Agents(MultiDict):
 					if a.id==val: return a
 		else: return super().__getitem__(val)
 
-	def __contains__(self, val):
+	def __contains__(self, val) -> bool:
 		if isinstance(val, int): return self[val]
 		else: return super().__contains__(val)
 
@@ -456,7 +456,7 @@ class Agents(MultiDict):
 	def keys(self): yield from [k[0] for k in sorted(super().items(), key=lambda d: d[1].priority)]
 	__iter__ = keys
 
-	def addPrimitive(self, name, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden=False, priority=100, order=None):
+	def addPrimitive(self, name: str, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden: bool=False, priority: int=100, order=None):
 		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
 		if not plural: plural = name+'s'
 		class_.primitive = name
@@ -474,18 +474,18 @@ class Agents(MultiDict):
 
 		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.initialize, getter=popget)
 
-	def removePrimitive(self, name):
+	def removePrimitive(self, name: str):
 		del self[name]
 		del self.model.params['num_'+name]
 
-	def addBreed(self, name, color, prim=None):
+	def addBreed(self, name: str, color, prim=None):
 		if prim is None:
 			if len(super().keys()) == 1: prim = next(iter(self.keys()))
 			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
 		return self[prim].breeds.add(name, color)
 
 	#Creates an unweighted and undirected network of a certain density
-	def createNetwork(self, density, kind='edge', prim=None):
+	def createNetwork(self, density: float, kind: str='edge', prim=None):
 		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
 		from itertools import combinations
 		agents = self.all if prim is None else self[prim]
@@ -494,7 +494,7 @@ class Agents(MultiDict):
 				c[0].edges.add(c[1], kind)
 		return self.network(kind, prim)
 
-	def network(self, kind='edge', prim=None, excludePatches=False):
+	def network(self, kind: str='edge', prim=None, excludePatches: bool=False):
 		import networkx as nx
 
 		#Have to use DiGraph in order to draw any arrows
@@ -512,7 +512,7 @@ class Agents(MultiDict):
 
 	#CALLBACK FOR DEFAULT PARAMETERS
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
-	def initialize(self, val, prim, model=None, force=False):
+	def initialize(self, val, prim: str, model=None, force: bool=False):
 		if not self.model.hasModel and not force: return val
 
 		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
@@ -543,7 +543,7 @@ class Agents(MultiDict):
 				else: continue
 
 	#Returns summary statistics on an agent variable at a single point in time
-	def summary(self, var, prim=None, breed=None, good=False):
+	def summary(self, var: str, prim=None, breed=None, good: bool=False):
 		if prim is None:
 			prim = 'agent' if 'agent' in self else next(iter(self))
 		agents = self[prim] if breed is None else self[prim][breed]
@@ -585,7 +585,7 @@ class gandb(funcStore):
 	def __init__(self, model):
 		self.model = model
 
-	def add(self, obj, name, color, **kwargs):
+	def add(self, obj: str, name: str, color, **kwargs):
 		if name in self:
 			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
 
@@ -600,7 +600,7 @@ class gandb(funcStore):
 
 		return self[name]
 
-	def remove(self, name):
+	def remove(self, name: str):
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 		if not name in self: return False
 
@@ -615,21 +615,21 @@ class gandb(funcStore):
 		return super().remove(name)
 
 class Breeds(gandb):
-	def __init__(self, model, primitive):
+	def __init__(self, model, primitive: str):
 		self.primitive = primitive
 		super().__init__(model)
 
-	def add(self, name, color): return super().add('breed', name, color)
+	def add(self, name: str, color): return super().add('breed', name, color)
 
 class Edges(MultiDict):
-	def __init__(self, agent):
+	def __init__(self, agent: baseAgent):
 		self.agent = agent
 		super().__init__()
 
-	def add(self, partner, kind='edge', direction=None, weight=1):
+	def add(self, partner: baseAgent, kind: str='edge', direction=None, weight=1):
 		return Edge(self.agent, partner, kind, direction, weight)
 
-	def outbound(self, kind='edge', undirected=False, obj='edge'):
+	def outbound(self, kind='edge', undirected: bool=False, obj: str='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.all
 		else:
@@ -638,7 +638,7 @@ class Edges(MultiDict):
 		ob = [edge for edge in edges if edge.startpoint == self.agent or (undirected and not edge.directed)]
 		return ob if obj=='edge' else [e.partner(self.agent) for e in ob]
 
-	def inbound(self, kind='edge', undirected=False, obj='edge'):
+	def inbound(self, kind='edge', undirected: bool=False, obj: str='edge'):
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.all
 		else:
@@ -647,7 +647,7 @@ class Edges(MultiDict):
 		ib = [edge for edge in edges if edge.endpoint == self.agent or (undirected and not edge.directed)]
 		return ib if obj=='edge' else [e.partner(self.agent) for e in ib]
 
-	def With(self, partner, kind='edge'):
+	def With(self, partner: baseAgent, kind='edge'):
 		if kind is not None:
 			if kind not in self: return []
 			edges = self[kind]
@@ -655,12 +655,12 @@ class Edges(MultiDict):
 		return [edge for edge in edges if self.agent in edge.vertices and partner in edge.vertices]
 
 class ModelEdges(MultiDict):
-	def __init__(self, agents):
+	def __init__(self, agents: Agents):
 		self.agents = agents
 		super().__init__()
 
 	def __getitem__(self, val): return [e for e in self.all if e.kind==val]
-	def __contains__(self, val): return val in list(self.keys())
+	def __contains__(self, val) -> bool: return val in list(self.keys())
 	def items(self): yield from self._dict.items()
 	def values(self): yield from self._dict.values()
 	def keys(self):
@@ -680,7 +680,7 @@ class ModelEdges(MultiDict):
 		return es
 
 	@property
-	def all(self):
+	def all(self) -> list:
 		es = []
 		for a in self.agents.all: es += a.edges.all
 		return es

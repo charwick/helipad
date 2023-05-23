@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, corners=False, geometry='rect', offmap=False, **kwargs):
+def spatialSetup(model, dim=10, corners: bool=False, geometry: str='rect', offmap: bool=False, **kwargs):
 	# Backward compatibility
 	if 'diag' in kwargs:	#Remove in Helipad 1.7
 		corners = kwargs['diag']
@@ -141,7 +141,7 @@ def NotPatches(function):
 
 #A 2D list of lists that lets us use [x,y] indices
 class Patches2D(list):
-	def __init__(self, dim, props=[], funcs=[], **kwargs):
+	def __init__(self, dim, props: list=[], funcs: list=[], **kwargs):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
@@ -241,13 +241,13 @@ class PatchesRect(Patches2D):
 
 	def at(self, x, y): return self[round(x), round(y)]
 
-	def neighbors(self, patch, corners):
+	def neighbors(self, patch: Patch, corners):
 		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
 		if corners: neighbors += [(patch.up.left, corners), (patch.right.up, corners), (patch.down.right, corners), (patch.left.down, corners)]
 		return [p for p in neighbors if p[0] is not None and p[0] is not self]
 
 	#Take a sequential list of self.count patches and position them appropriately in the internal list
-	def place(self, agent):
+	def place(self, agent: Patch):
 		if not super().__len__(): self += [[] for i in range(self.dim[0])]
 		x=0
 		while len(self[x]) >= self.dim[1]: x+=1		#Find a column that's not full yet
@@ -325,7 +325,7 @@ class PatchesPolar(PatchesRect):
 	def at(self, x, y): return self[floor(x), floor(y)]
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
-	def neighbors(self, patch, corners):
+	def neighbors(self, patch: Patch, corners):
 		neighbors = [(patch.inward, 1), (patch.outward, 1), (patch.clockwise, 1), (patch.counterclockwise, 1)]
 		if corners:
 			neighbors += [(patch.clockwise.inward, corners), (patch.counterclockwise.inward, corners), (patch.clockwise.outward, corners), (patch.counterclockwise.outward, corners)]

@@ -11,10 +11,10 @@ from io import BufferedWriter
 #Internationalization since using _ is a disaster
 #Can't install to global scope because it conflicts with readline;
 #Can't name it _ here because `import *` skips it (???)
-def ï(text): return helipad_gettext(text)
+def ï(text) -> str: return helipad_gettext(text)
 
 #Checks for any Ipython environment, including Spyder, for event loop purposes.
-def isIpy():
+def isIpy() -> bool:
 	try:
 		__IPYTHON__
 		return True
@@ -22,7 +22,7 @@ def isIpy():
 
 #Check whether Helipad is running in an interactive notebook. However, get_ipython() comes
 #back undefined inside callbacks. So cache the value once, the first time it runs.
-def isNotebook():
+def isNotebook() -> bool:
 	if not '__helipad_ipy' in globals():
 		try:
 			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
@@ -30,7 +30,7 @@ def isNotebook():
 
 	return __helipad_ipy
 
-def isBuffered():
+def isBuffered() -> bool:
 	return isinstance(__stdout__.buffer, BufferedWriter)
 
 #Generic extensible item class to store structured data

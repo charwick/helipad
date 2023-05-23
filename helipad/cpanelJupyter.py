@@ -6,7 +6,7 @@ from helipad.param import Param
 from helipad.helpers import ï
 
 class Cpanel(VBox):
-	def __init__(self, model, redraw=False):
+	def __init__(self, model, redraw: bool=False):
 		super().__init__()
 		self.model = model
 		if redraw:
@@ -40,7 +40,7 @@ class Cpanel(VBox):
 			#Consolidate value from bool and string, and toggle entry disabled state
 			#Have to return a different function since Ipywidgets bases the interactive off the function signature
 			if param.type=='checkentry':
-				def sv2(b,s):
+				def sv2(b: bool, s: str):
 					#Ipywidgets ≥8.0 runs the callback before the element is assigned
 					try:
 						els = param.element if item is None else param.elements[item]
@@ -57,7 +57,7 @@ class Cpanel(VBox):
 			else: return sv
 		Param.setVar = setVar
 
-		def renderParam(param, func, title, val, circle=None):
+		def renderParam(param, func, title: str, val, circle=None):
 			i=None
 			if param.type=='slider':
 				if isinstance(param.opts, dict): i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
@@ -128,7 +128,7 @@ class Cpanel(VBox):
 
 			return i
 
-		def constructAccordion(param, itemList):
+		def constructAccordion(param, itemList: dict):
 			param.elements = {}
 			for item, good in itemList.items():
 				param.elements[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
@@ -229,7 +229,7 @@ class Cpanel(VBox):
 				def __init__(self):
 					super().__init__(min=0, max=1)
 
-				def determinate(self, det):
+				def determinate(self, det: bool):
 					self.mode = 'determinate' if det else 'indeterminate'
 					if det: self.remove_class('indeterminate')
 					else:
@@ -282,14 +282,14 @@ class Cpanel(VBox):
 				self.postinstruct.layout = Layout(display='inline-block')
 				self.stopbutton.layout.visibility = 'hidden'
 
-	def displayAlert(self, text, inCpanel=True):
+	def displayAlert(self, text: str, inCpanel: bool=True):
 		element = HTML(value=text)
 		element.add_class('helipad_info') #Latter applies some built-in styles to the contents
 		if inCpanel: self.children += element,
 		else: display(element)
 		return element
 
-	def invalidate(self, message=ï('Model parameters changed, please re-launch the control panel with launchCpanel().')):
+	def invalidate(self, message: str=ï('Model parameters changed, please re-launch the control panel with launchCpanel().')):
 		self.valid = False
 		self.add_class('invalid')
 		warning = Label(value=message)

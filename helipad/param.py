@@ -32,7 +32,7 @@ class Param(Item):
 				for i in self.pKeys: self.setSpecific(self.default, i)
 
 	#Common code for the set methods
-	def setParent(self, val, item=None, updateGUI=True):
+	def setParent(self, val, item=None, updateGUI: bool=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 
 		#Jupyter requires an explicit update for all parameter types.
@@ -41,14 +41,14 @@ class Param(Item):
 			else: self.elements[item].children[0].value = val
 
 	#Don't override this one
-	def set(self, val, item=None, updateGUI=True):
+	def set(self, val, item=None, updateGUI: bool=True):
 		if getattr(self, 'setter', False):
 			val = self.setter(val, item)
 			if val is not None: self.setSpecific(val, item)
 		else: self.setSpecific(val, item, updateGUI)
 
 	#A generic set method to be overridden
-	def setSpecific(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI: bool=True):
 		self.setParent(val, item, updateGUI)
 		if self.per is None: self.value = val
 		else: self.value[item] = val
@@ -63,7 +63,7 @@ class Param(Item):
 	def getSpecific(self, item=None):
 		return self.value if self.per is None or item is None else self.value[item]
 
-	def disabled(self, disable):
+	def disabled(self, disable: bool):
 		if self.element is None: return
 		for e in ([self.element] if self.per is None else self.elements.values()):
 			if isNotebook():
@@ -78,7 +78,7 @@ class Param(Item):
 	def range(self): return None
 
 	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
-	def addKey(self, key):
+	def addKey(self, key: str):
 		if self.per is None: warnings.warn(ï('Can\'t add keys to a global parameter…'), None, 2)
 		elif not isinstance(self.default, dict):
 			self.value[key] = self.default
@@ -111,7 +111,7 @@ class CheckParam(Param):
 	defaultVal = False
 	type='check'
 
-	def setParent(self, val, item=None, updateGUI=True):
+	def setParent(self, val: bool, item=None, updateGUI: bool=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 		if updateGUI and not isNotebook() and self.element is not None:
 			sv = self.element if self.per is None else self.elements[item]
@@ -124,7 +124,7 @@ class CheckParam(Param):
 class SliderParam(Param):
 	type='slider'
 
-	def setSpecific(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI: bool=True):
 		#If we're receiving a value from a Jupyter logslider, it's an index and not a value
 		if not updateGUI and isNotebook() and isinstance(self.opts, list): val = self.opts[val]
 
@@ -146,12 +146,12 @@ class SliderParam(Param):
 		return v
 
 	@property
-	def range(self):
+	def range(self) -> list:
 		values = arange(self.opts['low'], self.opts['high'], self.opts['step']).tolist()
 		values.append(self.opts['high']) #arange doesn't include the high
 		return values
 
-	def addKey(self, key):
+	def addKey(self, key: str):
 		if super().addKey(key) is None: return
 		self.value[key] = 0
 
@@ -159,7 +159,7 @@ class SliderParam(Param):
 	def defaultVal(self): return self.opts['low'] if isinstance(self.opts, dict) else self.opts[0]
 
 	#Override in order to update log slider
-	def setParent(self, val, item=None, updateGUI=True):
+	def setParent(self, val, item=None, updateGUI: bool=True):
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 
 		if isNotebook() and self.element is not None and (self.per is None or item in self.elements):
@@ -201,7 +201,7 @@ class CheckentryParam(Param):
 			if hasattr(self, 'elements') and item in self.elements and not isNotebook(): return self.elements[item].get()
 			else: return self.svar[item] if self.bvar[item] else False
 
-	def setSpecific(self, val, item=None, updateGUI=True):
+	def setSpecific(self, val, item=None, updateGUI: bool=True):
 		self.setParent(val, item, False) #Don't update the GUI because it's a complex multivar type
 		if self.per is None:
 
@@ -275,7 +275,7 @@ class CheckgridParam(Param):
 		super().__init__(**kwargs)
 
 	@property
-	def pKeys(self): return list(self.vars.keys())
+	def pKeys(self) -> list: return list(self.vars.keys())
 
 	def getSpecific(self, item=None):
 		useElement = self.element is not None and not isNotebook() and not isinstance(self, Shocks)
@@ -283,14 +283,14 @@ class CheckgridParam(Param):
 		if item is not None: return vals[item]
 		else: return [k for k,v in vals.items() if (v.get() if useElement else v)]
 
-	def set(self, item, val=True, updateGUI=True):
+	def set(self, item, val=True, updateGUI: bool=True):
 		if getattr(self, 'setter', False):
 			val = self.setter(val, item)
 			if val is not None: self.setSpecific(item, val)
 		else: self.setSpecific(item, val, updateGUI)
 
 	#Takes a list of strings, or a key-bool pair
-	def setSpecific(self, item, val=True, updateGUI=True):
+	def setSpecific(self, item, val=True, updateGUI: bool=True):
 		if isinstance(item, list):
 			for i in self.pKeys: self.set(i, i in item)
 		else:
@@ -302,18 +302,18 @@ class CheckgridParam(Param):
 				except KeyError: return #Ipywidgets ≥8.0 runs the callback on instantiation before the element property is set
 
 	@property
-	def range(self):
+	def range(self) -> list:
 		combos = []
 		for i in range(len(self.vars)): combos += list(combinations(self.pKeys, i+1))
 		return combos
 
-	def disabled(self, disable):
+	def disabled(self, disable: bool):
 		if hasattr(self, 'elements') and isNotebook():
 			for e in self.elements.values():
 				if hasattr(e, 'children'): e.children[0].disabled = disable
 		else: super().disabled(disable)
 
-	def addItem(self, name, label, position=None, selected=False):
+	def addItem(self, name: str, label: str, position=None, selected: bool=False):
 		if self.element is not None and not isNotebook(): raise RuntimeError(ï('Cannot add checkgrid items after control panel is drawn.'))
 
 		if position is None or position > len(self.vars): self.opts[name] = label
@@ -337,7 +337,7 @@ class CheckgridParam(Param):
 		if selected: self.default.append(name)
 
 class ParamGroup:
-	def __init__(self, name, members, opened):
+	def __init__(self, name: str, members, opened: bool):
 		self.title = name
 		self.members = members
 		self.element = None
@@ -347,16 +347,16 @@ class ParamGroup:
 			if p.per is not None or p.type=='checkgrid': raise TypeError(ï('Cannot add checkgrids or per-item parameters to groups.'))
 			p.group = name
 
-	def get(self):
+	def get(self) -> dict:
 		return {name: p.get() for name, p in self.members.items()}
 
 	def toggle(self): self.open = not self.open
 
 	@property
-	def open(self): return self._open
+	def open(self) -> bool: return self._open
 
 	@open.setter
-	def open(self, val):
+	def open(self, val: bool):
 		self._open = val
 		if self.element is not None:
 			if isNotebook(): self.element.selected_index = 0 if val else None
@@ -368,7 +368,7 @@ class ParamGroup:
 
 #Also delete any interface elements
 class fStoreWithInterface(funcStore):
-	def remove(self, name):
+	def remove(self, name: str):
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 
 		if name not in self: return False
@@ -391,7 +391,7 @@ class Params(fStoreWithInterface):
 		self.model = model
 		self.groups = []
 
-	def add(self, name, title, type, dflt, opts={}, runtime=True, callback=None, per=None, desc=None, prim=None, getter=None, setter=None, **args):
+	def add(self, name: str, title: str, type: str, dflt, opts={}, runtime: bool=True, callback=None, per=None, desc=None, prim=None, getter=None, setter=None, **args):
 		if name in self: warnings.warn(ï('Parameter \'{}\' already defined. Overriding…').format(name), None, 2)
 
 		if callable(getter):
@@ -426,7 +426,7 @@ class Params(fStoreWithInterface):
 		if self.model.cpanel and isNotebook(): self.model.cpanel.__init__(self, redraw=True) #Redraw if necessary
 		return self[name]
 
-	def group(self, name, params, opened=True):
+	def group(self, name: str, params, opened: bool=True):
 		pg = ParamGroup(name, {p: self[p] for p in params}, opened)
 		self.groups.append(pg)
 		return pg
@@ -451,7 +451,7 @@ class Params(fStoreWithInterface):
 
 #This object is instantiated once and lives in model.shocks
 class Shocks(CheckgridParam, fStoreWithInterface):
-	multi = False
+	multi: bool = False
 
 	def __init__(self, model):
 		dict.__init__(self)
@@ -460,12 +460,12 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 		class Shock(Item):
 			@property
-			def selected(self2): return self.get(self2.name)
+			def selected(self2) -> bool: return self.get(self2.name)
 
 			@selected.setter
-			def selected(self, val): self.active(val)
+			def selected(self2, val: bool): self2.active(val)
 
-			def active(self2, val, updateGUI=True):
+			def active(self2, val: bool, updateGUI: bool=True):
 				self.set(self2.name, bool(val))
 				if updateGUI and not isNotebook() and self2.element is not None:
 					self2.element.BooleanVar.set(val)
@@ -499,7 +499,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 	#    or the string 'button' in which case it draws a button in the control panel that shocks on press
 	#The variable is shocked when timerFunc returns true
 	#Can pass in param=None to run an open-ended valFunc that takes the model as an object instead
-	def add(self, name, param, valFunc, timerFunc, active=True, desc=None):
+	def add(self, name: str, param, valFunc, timerFunc, active: bool=True, desc=None):
 		if param is not None:
 			item = param[2] if isinstance(param, tuple) and len(param)>2 else None	#The good or breed whose parameter to shock
 			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]
@@ -545,13 +545,13 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 		return fn
 
 	#Once at t=n. n can be an int or a list of periods
-	def atperiod(self, n):
+	def atperiod(self, n: int):
 		def fn(t):
 			if isinstance(n, list): return t in n
 			else: return t==n
 		return fn
 
 	#Regularly every n periods
-	def everyn(self, n, offset=0):
+	def everyn(self, n: int, offset: int=0):
 		def fn(t): return t%n-offset==0
 		return fn

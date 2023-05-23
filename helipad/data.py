@@ -17,13 +17,14 @@ class Data:
 		r = self.columns[index]
 		return r.data if index==r.name else r.children[index][1]
 
+	def __contains__(self, index): return index in self.columns
 	def __repr__(self): return f'<{self.__class__.__name__}: {len(self.reporters)} reporters>'
 
 	#First arg is the name of the reporter
 	#Second arg can be either a function that takes one argument – the model –
 	#or a string, either 'model' or the name of a primitive.
 	#Subsequent args get passed to the reporter functions below
-	def addReporter(self, key, func, **kwargs):
+	def addReporter(self, key: str, func, **kwargs):
 		func, children = func if isinstance(func, tuple) else (func, {})
 
 		if not callable(func): raise TypeError(ï('Second argument of addReporter must be callable.'))
@@ -31,7 +32,7 @@ class Data:
 		return self.reporters[key]
 
 	#Removes a reporter, its columns from the data, and the series corresponding to it.
-	def removeReporter(self, key):
+	def removeReporter(self, key: str):
 		if self.model.hasModel:
 			raise RuntimeError(ï('removeReporter cannot be called while a model is active.'))
 		self.model.doHooks('removeReporter', [self, key])
@@ -45,7 +46,7 @@ class Data:
 		for v in self.reporters.values(): v.clear()
 
 	@property
-	def all(self):
+	def all(self) -> dict:
 		data = {}
 		for k,r in self.reporters.items():
 			data[k] = r.data
@@ -53,7 +54,7 @@ class Data:
 		return data
 
 	@property
-	def columns(self):
+	def columns(self) -> dict:
 		cols = {}
 		for k,r in self.reporters.items():
 			cols[k] = r
@@ -74,7 +75,7 @@ class Data:
 
 	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
-	def agentReporter(self, key, prim=None, breed=None, good=None, stat='mean', **kwargs):
+	def agentReporter(self, key: str, prim=None, breed=None, good=None, stat: str='mean', **kwargs):
 		if prim is None: prim = next(iter(self.model.agents))
 		# if breed and isinstance(breed, bool): return [self.agentReporter(key+'-'+br, prim, br, good, stat, **kwargs) for br in self.model.agents[prim].breeds]
 		if 'percentiles' in kwargs:
@@ -118,7 +119,7 @@ class Data:
 
 	#Slices the last n records for the key registered as a reporter
 	#Returns a value if n=1, otherwise a list
-	def getLast(self, key, n=1):
+	def getLast(self, key: str, n: int=1):
 		if isinstance(key, str):
 			if len(self[key])==0: return 0
 			data = self[key][-n:]
@@ -127,7 +128,7 @@ class Data:
 			return {k: v[-key:] for k,v in self.all.items()}
 		else: raise TypeError(ï('First argument of Data.getLast() must be either a key name or an int.'))
 
-	def saveCSV(self, filename='data'):
+	def saveCSV(self, filename: str='data'):
 		file = filename + '.csv'
 		i=0
 		while os.path.isfile(file): #Avoid filename collisions

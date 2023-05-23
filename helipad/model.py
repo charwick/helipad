@@ -17,22 +17,23 @@ from helipad.agent import *
 class Helipad:
 	runInit = True #for multiple inheritance. Has to be a static property
 
-	def __init__(self, locale='en'):
+	def __init__(self, locale: str='en'):
 		#Have to do this first so that i18n is available early.
 		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console, which overwrites _.
 		if not hasattr(self, 'breed'):
 			import builtins
 			builtins.__dict__['helipad_gettext'] = gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).gettext
 
+		#Containers
+		self.agents = Agents(self)
 		self.data = Data(self)
 		self.params = Params(self)
 		self.shocks = Shocks(self)
 		self.events = Events()
 		self.hooks = Hooks()
-		self.goods = Goods(self)				#List of goods
+		self.goods = Goods(self)
 
 		self.name = ''
-		self.agents = Agents(self)
 		self.patches = []
 		self.stages = 1
 		self.hasModel = False		#Have we initialized?
@@ -103,7 +104,7 @@ class Helipad:
 		if self.name: return f'<Helipad: {self.name}>'
 		else: return '<Helipad object>'
 
-	def addButton(self, text, func, desc=None):
+	def addButton(self, text: str, func, desc=None):
 		self.shocks.add(text, None, func, 'button', True, desc)
 
 	#Get or set a parameter, depending on whether there are two or three arguments
@@ -115,7 +116,7 @@ class Helipad:
 		else: return param.get(item)
 
 	#Returns the value of the last function in the list
-	def doHooks(self, place, args):
+	def doHooks(self, place: str, args: list):
 		#Take a list of hooks; go until we get a response
 		if isinstance(place, list):
 			for f in place:
@@ -127,7 +128,7 @@ class Helipad:
 		for f in self.hooks[place]: r = f(*args)
 		return r
 
-	def useVisual(self, viz):
+	def useVisual(self, viz: BaseVisualization):
 		if hasattr(self, 'breed'):
 			warnings.warn(ï('Visualizations can only be registered on the top-level model.'), None, 2)
 			return #Doesn't matter if it's not the top-level model
@@ -218,7 +219,7 @@ class Helipad:
 
 	def cutStep(self): self._cut = True
 
-	def step(self, stage=1):
+	def step(self, stage: int=1):
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
 
@@ -229,7 +230,7 @@ class Helipad:
 
 		self.shocks.step()
 
-		def sortFunc(model, stage, func):
+		def sortFunc(model: Helipad, stage: int, func):
 			def sf(agent): return func(agent, model, stage)
 			return sf
 
@@ -435,7 +436,7 @@ class Helipad:
 				code.interact(local=env)
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
 
-	def launchCpanel(self, console=True):
+	def launchCpanel(self, console: bool=True):
 		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
 
 		self.doHooks('CpanelPreLaunch', [self])
@@ -577,7 +578,7 @@ class Events(funcStore):
 	def __init__(self):
 		super().__init__()
 		class Event:
-			def __init__(self, name, trigger, repeat=False, **kwargs):
+			def __init__(self, name: str, trigger, repeat: bool=False, **kwargs):
 				self.name = name
 				self.trigger = trigger
 				self.repeat = repeat
@@ -586,7 +587,7 @@ class Events(funcStore):
 				self.triggered = []
 				self.reset()
 
-			def check(self, model):
+			def check(self, model: Helipad) -> bool:
 				if self.triggered and not self.repeat: return False
 				if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
 					data = {k: v[0] for k,v in model.data.getLast(1).items()}
@@ -607,11 +608,12 @@ class Events(funcStore):
 					self.triggered = False
 		self.Event = Event
 
-	def add(self, name, function, **kwargs):
+	def add(self, name: str, function, **kwargs):
 		return super().add(name, self.Event(name, function, **kwargs))
 
 class Goods(gandb):
-	def add(self, name, color, endowment=None, money=False, props={}):
+	def add(self, name: str, color, endowment=None, money: bool=False, props=None):
+		if not props: props = {}
 		if money:
 			if self.money is not None:
 				print(ï('Money good already specified as {}. Overriding…').format(self.money))
@@ -641,13 +643,13 @@ class Goods(gandb):
 		return None
 
 	@property
-	def nonmonetary(self):
+	def nonmonetary(self) -> dict:
 		return {k:v for k,v in self.items() if not v.money}
 
 class Hooks(funcStore):
-	multi = True
+	multi: bool = True
 
-	def add(self, name, function, prioritize=False):
+	def add(self, name: str, function, prioritize: bool=False):
 		if not name in self: self[name] = []
 		if prioritize: self[name].insert(0, function)
 		else: self[name].append(function)

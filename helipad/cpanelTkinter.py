@@ -45,11 +45,11 @@ class Cpanel(tk.Tk):
 
 		#For shock buttons.
 		#Can't do an inline lambda here because lambdas apparently don't preserve variable context
-		def shockCallback(name):
+		def shockCallback(name: str):
 			return lambda: self.model.shocks[name].do(self.model)
 
 		class progressBar(Progressbar):
-			def __init__(self, determinate=True, root=None):
+			def __init__(self, determinate: bool=True, root=None):
 				super().__init__(root, length=250, style="whitebg.Horizontal.TProgressbar")
 				self.determinate(determinate, False)
 				self.running = False
@@ -60,7 +60,7 @@ class Cpanel(tk.Tk):
 				mode = self.cget('mode')
 				return mode if isinstance(mode, str) else self.cget('mode').string
 
-			def determinate(self2, det, refresh=True):
+			def determinate(self2, det: bool, refresh: bool=True):
 				self2.config(mode='determinate' if det else 'indeterminate')
 				if det: super().stop()
 				elif self2.running: super().start()
@@ -322,7 +322,7 @@ class Cpanel(tk.Tk):
 
 	#Step one period at a time and update the graph
 	#For use in debugging
-	def step(self):
+	def step(self) -> int:
 		t = self.model.step()
 		self.model.graph.update(self.model.data.getLast(1))
 		return t
@@ -378,7 +378,7 @@ class logSlider(tk.Frame):
 
 #A frame that can be expanded and collapsed by clicking on the title
 class expandableFrame(tk.Frame):
-	def __init__(self, parent=None, text="", fg='#333', bg='#FFF', padx=8, pady=None, font=None, startOpen=True):
+	def __init__(self, parent=None, text: str='', fg='#333', bg='#FFF', padx: int=8, pady=None, font=None, startOpen=True):
 		tk.Frame.__init__(self, parent, bg=bg)
 		self.columnconfigure(1, weight=1)
 
@@ -563,7 +563,7 @@ class checkEntry(tk.Frame):
 
 #An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):
-	def __init__(self, parent=None, text="", columns=3, fg='#333', bg='#FFF', padx=8, pady=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True, callback=None):
+	def __init__(self, parent=None, text: str='', columns: int=3, fg='#333', bg='#FFF', padx: int=8, pady: int=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True, callback=None):
 		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
 		self.bg = bg
 		self.columns = columns
@@ -574,7 +574,7 @@ class checkGrid(expandableFrame):
 		for i in range(columns): self.subframe.columnconfigure(i, weight=1)
 		self.buttons['right'].setup('✔︎', self.toggleAll)
 
-	def addCheck(self, var, text, defaultValue=True, desc=None):
+	def addCheck(self, var, text: str, defaultValue: bool=True, desc: bool=None):
 		if self.callback is not None:
 			def cbWrap(val): self.callback((var, val))
 		else: cbWrap = None

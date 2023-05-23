@@ -19,20 +19,20 @@ mlpstyle.use('fast')
 
 #Used for creating an entirely new visualization window
 class BaseVisualization(ABC):
-	isNull = True
+	isNull: bool = True
 
 	#Create the window. Mandatory to implement
 	@abstractmethod
-	def launch(self, title): pass
+	def launch(self, title: str): pass
 
 	#Refresh every so many periods. Mandatory to implement
 	#data is the *incremental* data
 	@abstractmethod
-	def update(self, data): pass
+	def update(self, data: dict): pass
 
 	#Do something when events happen. Mandatory to implement
 	@abstractmethod
-	def event(self, t, color, **kwargs): pass
+	def event(self, t: int, color, **kwargs): pass
 
 	#Called from model.terminate(). Optional to implement
 	def terminate(self, model): pass
@@ -64,7 +64,7 @@ class MPLVisualization(BaseVisualization):
 
 	#Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
-	def launch(self, title, dim=None, pos=None):
+	def launch(self, title: str, dim=None, pos=None):
 		if not isNotebook():
 			self.fig.canvas.manager.set_window_title(title)
 			if self.model.cpanel: self.model.cpanel.setAppIcon()
@@ -111,16 +111,16 @@ class MPLVisualization(BaseVisualization):
 		if event.name=='key_press_event' and event.key in self.keys:
 			for f in self.keys[event.key]: f(self.model, event)
 
-	def addKeypress(self, key, fn):
+	def addKeypress(self, key: str, fn):
 		if not key in self.keys: self.keys[key] = []
 		self.keys[key].append(fn)
 
 	@property
-	def activePlots(self):
+	def activePlots(self) -> dict:
 		return {k:plot for k,plot in self.plots.items() if plot.selected}
 
 	@property
-	def isNull(self):
+	def isNull(self) -> bool:
 		return not [plot for plot in self.plots.values() if plot.selected]
 
 class TimeSeries(MPLVisualization):
@@ -163,7 +163,7 @@ class TimeSeries(MPLVisualization):
 			model.params['plots'] = model.params.pop('plots')
 
 	#listOfPlots is the trimmed model.plots list
-	def launch(self, title):
+	def launch(self, title: str):
 		if not self.activePlots: return #Windowless mode
 
 		self.resolution = 1
@@ -212,7 +212,7 @@ class TimeSeries(MPLVisualization):
 		self.fig.canvas.flush_events() #Listen for user input
 
 	#Position is the number you want it to be, *not* the array position
-	def addPlot(self, name, label, position=None, selected=True, logscale=False, stack=False):
+	def addPlot(self, name: str, label: str, position=None, selected: bool=True, logscale: bool=False, stack: bool=False):
 		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
 
 		self.selector.addItem(name, label, position, selected)
@@ -229,7 +229,7 @@ class TimeSeries(MPLVisualization):
 		plot.selected = selected #Do this after CheckgridParam.addItem
 		return plot
 
-	def removePlot(self, name, reassign=None):
+	def removePlot(self, name: str, reassign=None):
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
@@ -246,7 +246,7 @@ class TimeSeries(MPLVisualization):
 		if name in self.selector.default: self.selector.default.remove(name)
 		return True
 
-	def event(self, t, color='#CC0000', linestyle='--', linewidth=1, **kwargs):
+	def event(self, t: int, color='#CC0000', linestyle: str='--', linewidth=1, **kwargs):
 		if self.fig is None: return
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 
@@ -264,7 +264,7 @@ class Charts(MPLVisualization):
 		self.refresh = model.params['refresh']
 		self.model = model # :(
 
-	def launch(self, title):
+	def launch(self, title: str):
 		if not self.activePlots: return #Windowless mode
 		from matplotlib.widgets import Slider
 
@@ -293,7 +293,7 @@ class Charts(MPLVisualization):
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
 
-	def update(self, data):
+	def update(self, data: dict):
 		data = {k:v[-1] for k,v in data.items()}
 		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
@@ -308,12 +308,12 @@ class Charts(MPLVisualization):
 		self.fig.canvas.flush_events() #Listen for user input
 
 	#Update the graph to a particular model time
-	def scrub(self, t):
+	def scrub(self, t: int):
 		self.scrubval = t
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 
-	def addPlot(self, name, label, type=None, position=None, selected=True, **kwargs):
+	def addPlot(self, name: str, label: str, type=None, position=None, selected=True, **kwargs):
 		self.selector.addItem(name, label, position, selected)
 		if type == 'network': #Deprecated in Helipad 1.6; remove in 1.8
 			warnings.warn(ï('The `network` plot type is deprecated. Use `agents` instead.'), FutureWarning, 2)
@@ -329,7 +329,7 @@ class Charts(MPLVisualization):
 		if not issubclass(clss, ChartPlot): raise TypeError(ï('New plot types must subclass ChartPlot.'))
 		self.plotTypes[clss.type] = clss
 
-	def removePlot(self, name):
+	def removePlot(self, name: str):
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p)
@@ -342,7 +342,7 @@ class Charts(MPLVisualization):
 		del self.plots[name]
 		return True
 
-	def event(self, t, color='#FDC', **kwargs):
+	def event(self, t: int, color='#FDC', **kwargs):
 		ref = self.refresh.get()
 		self.events[ceil(t/ref)*ref] = color
 
@@ -365,9 +365,9 @@ class ChartPlot(Item):
 	def selected(self): return self.viz.model.params['plots'].get(self.name)
 
 	@selected.setter
-	def selected(self, val): self.active(val)
+	def selected(self, val: bool): self.active(val)
 
-	def active(self, val, updateGUI=True):
+	def active(self, val: bool, updateGUI: bool=True):
 		self.viz.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isNotebook() and hasattr(self, 'check'):
 			self.check.set(val)
@@ -381,11 +381,11 @@ class ChartPlot(Item):
 	#Receives a 1-dimensional dict with only the most recent value of each column
 	#The subclass is responsible for storing the relevant data internally
 	@abstractmethod
-	def update(self, data, t): pass
+	def update(self, data: dict, t: int): pass
 
 	#Receives the time to scrub to
 	@abstractmethod
-	def draw(self, t, forceUpdate=False):
+	def draw(self, t: int, forceUpdate: bool=False):
 		if forceUpdate: self.viz.fig.canvas.draw_idle()
 
 	def remove(self):
@@ -406,7 +406,7 @@ class TimeSeriesPlot(ChartPlot):
 	#First arg is a reporter name registered in DataCollector, or a lambda function
 	#Second arg is the series name. Use '' to not show in the legend.
 	#Third arg is the plot's hex color, or a Color object
-	def addSeries(self, reporter, label, color, style='-', visible=True):
+	def addSeries(self, reporter, label: str, color, style: str='-', visible: bool=True):
 		if not isinstance(color, Color): color = Color(color)
 
 		#Check against columns and not reporters so subseries work
@@ -463,7 +463,7 @@ class TimeSeriesPlot(ChartPlot):
 		for series in self.series: #Make sure we start out with the user-set visibility
 			if series.label and not series._visible: series.visible = False
 
-	def update(self, data, t):
+	def update(self, data: dict, t: str):
 		firstdata = next(iter(data.values()))
 		if isinstance(firstdata, list): newlen, res = len(firstdata), self.resolution
 		else:
@@ -477,7 +477,7 @@ class TimeSeriesPlot(ChartPlot):
 			elif serie.reporter in data: serie.fdata += data[serie.reporter] #Actual data
 			else: continue									#No data
 
-	def draw(self, t, forceUpdate=False):
+	def draw(self, t: int, forceUpdate: bool=False):
 		if self.scrubline is not None:
 			self.scrubline.remove()
 			self.scrubline = None
@@ -522,7 +522,7 @@ class TimeSeriesPlot(ChartPlot):
 					break
 
 	@property
-	def resolution(self):
+	def resolution(self) -> int:
 		return self.viz.resolution if hasattr(self.viz, 'resolution') else int(self.viz.model.param('refresh'))
 
 class BarChart(ChartPlot):
@@ -533,7 +533,7 @@ class BarChart(ChartPlot):
 		super().__init__(**kwargs)
 		self.bars = []
 
-	def addBar(self, reporter, label, color='blue', position=None):
+	def addBar(self, reporter, label: str, color='blue', position=None):
 		if not isinstance(color, Color): color = Color(color)
 		bar = Item(reporter=reporter, label=label, color=color)
 
@@ -576,7 +576,7 @@ class BarChart(ChartPlot):
 				axes.set_yscale('log')
 				axes.set_ylim(1/2, 2, auto=True)
 
-	def update(self, data, t):
+	def update(self, data: dict, t: int):
 		getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
 		lims = list(getlim())
 		for b in self.bars:
@@ -595,7 +595,7 @@ class BarChart(ChartPlot):
 		setlim(lims)
 		self.axes.autoscale_view(tight=False)
 
-	def draw(self, t=None, forceUpdate=False):
+	def draw(self, t: int=None, forceUpdate: bool=False):
 		if t is None: t=self.viz.scrubval
 		i = int(t/self.viz.refresh.get())-1
 		for b in self.bars:
@@ -649,6 +649,7 @@ class AgentsPlot(ChartPlot):
 			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
 				return {i: (2*pi-(2*pi/self.viz.model.patches.dim[0] * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
 			else: return {i: data['position'] for i,data in G.nodes.items()}
+
 		def scatter_layout(G):
 			if not self.scatter: raise
 			self.axes.set_xlabel(self.scatter[0])
@@ -656,7 +657,7 @@ class AgentsPlot(ChartPlot):
 			self.axes.spines['top'].set_visible(False)
 			self.axes.spines['right'].set_visible(False)
 			data = {i: [data[self.scatter[0]], data[self.scatter[1]]] for i,data in G.nodes.items()}
-			
+
 			#Update limits if necessary
 			xs, ys = array([d[0] for d in data.values()]), array([d[1] for d in data.values()])
 			self.scatterLims[0][0] = min(self.scatterLims[0][0], xs.min())
@@ -675,7 +676,7 @@ class AgentsPlot(ChartPlot):
 					color = self.params['regColor'],
 					linewidth = self.params['regWidth']
 			    ))
-	
+
 			return data
 		lay.patchgrid_layout = patchgrid_layout
 		lay.scatter_layout = scatter_layout
@@ -705,7 +706,7 @@ class AgentsPlot(ChartPlot):
 			if x > self.viz.model.patches.dim[0]-1 or y > self.viz.model.patches.dim[1]-1: return
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
 
-	def update(self, data, t):
+	def update(self, data: dict, t: int):
 		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=True)
 
 		#Capture data for label, size, and scatterplot position
@@ -734,7 +735,7 @@ class AgentsPlot(ChartPlot):
 			self.normal = plt.cm.colors.Normalize(nmin if not hasattr(self,'normal') or nmin<self.normal.vmin else self.normal.vmin, nmax if not hasattr(self,'normal') or nmax>self.normal.vmax else self.normal.vmax)
 
 
-	def draw(self, t=None, forceUpdate=False):
+	def draw(self, t: int=None, forceUpdate: bool=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
 		if self.layout not in ['patchgrid', 'scatter'] or self.projection=='polar': self.axes.axis('off')
@@ -806,18 +807,18 @@ class AgentsPlot(ChartPlot):
 		except: self.rotateLayout()
 
 	#Helper function
-	def getPatchParamValue(self, patch, t=None):
+	def getPatchParamValue(self, patch, t: int=None):
 		if t is not None: return patch.colorData[t]
 		if patch.dead: return float('nan')
 		elif 'patchProperty' not in self.params: return 0
 		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
 		else: return getattr(patch, self.params['patchProperty'])
 
-	def patchData(self, t=None):
+	def patchData(self, t: int=None):
 		if not self.viz.model.patches: return
 		return array([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches])
 
-	def config(self, param, val=None):
+	def config(self, param: str, val=None):
 		if isinstance(param, dict):
 			for k,v in param.items(): self.config(k,v)
 		elif val is None: return self.params[param]
@@ -830,13 +831,13 @@ class AgentsPlot(ChartPlot):
 
 class Series(Item):
 	@property
-	def visible(self):
+	def visible(self) -> bool:
 		if not hasattr(self, 'line'): return self._visible
 		elif hasattr(self, 'poly'): return True #If it's a stackplot
 		else: return self.line.get_visible()
 
 	@visible.setter
-	def visible(self, val):
+	def visible(self, val: bool):
 		if not hasattr(self, 'line'): #If we haven't drawn it yet
 			self._visible = val
 			return
@@ -863,7 +864,7 @@ class Series(Item):
 # HELPER FUNCTIONS
 #======================
 
-def keepEvery(lst, n):
+def keepEvery(lst: list, n: int):
 	i,l = (1, [])
 	for k in lst:
 		if i%n==0: l.append(k)
