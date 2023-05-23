@@ -6,8 +6,9 @@
 import sys
 from abc import ABC, abstractmethod
 from math import sqrt, ceil, floor, pi, isnan
-from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like
+from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like, linalg, ones, vstack
 import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
+from matplotlib.lines import Line2D
 from helipad.helpers import *
 mlpstyle.use('fast')
 
@@ -635,7 +636,10 @@ class AgentsPlot(ChartPlot):
 			'labelVerticalAlign': 'center',
 			'lockLayout': False,
 			'patchAspect': 1,
-			'mapBg': 'black'
+			'mapBg': 'black',
+			'regLine': False,
+			'regColor': 'red',
+			'regWidth': 1
 		}
 
 	def launch(self, axes):
@@ -654,14 +658,24 @@ class AgentsPlot(ChartPlot):
 			data = {i: [data[self.scatter[0]], data[self.scatter[1]]] for i,data in G.nodes.items()}
 			
 			#Update limits if necessary
-			xs, ys = [d[0] for d in data.values()], [d[1] for d in data.values()]
-			self.scatterLims[0][0] = min(self.scatterLims[0][0], min(xs))
-			self.scatterLims[0][1] = max(self.scatterLims[0][1], max(xs))
-			self.scatterLims[1][0] = min(self.scatterLims[1][0], min(ys))
-			self.scatterLims[1][1] = max(self.scatterLims[1][1], max(ys))
+			xs, ys = array([d[0] for d in data.values()]), array([d[1] for d in data.values()])
+			self.scatterLims[0][0] = min(self.scatterLims[0][0], xs.min())
+			self.scatterLims[0][1] = max(self.scatterLims[0][1], xs.max())
+			self.scatterLims[1][0] = min(self.scatterLims[1][0], ys.min())
+			self.scatterLims[1][1] = max(self.scatterLims[1][1], ys.max())
 			self.axes.set_xlim(*self.scatterLims[0])
 			self.axes.set_ylim(*self.scatterLims[1])
-			
+
+			#Add regression line if applicable
+			if self.params['regLine']:
+				b0, b1 = linalg.lstsq(vstack([xs, ones(len(xs))]).T, ys, rcond=None)[0]
+				self.axes.add_line(Line2D(
+					[self.scatterLims[0][0], self.scatterLims[0][1]], [b0*self.scatterLims[0][0]+b1, b0*self.scatterLims[0][1]+b1],
+					linestyle = '--' if self.params['regLine'] is True else self.params['regLine'],
+					color = self.params['regColor'],
+					linewidth = self.params['regWidth']
+			    ))
+	
 			return data
 		lay.patchgrid_layout = patchgrid_layout
 		lay.scatter_layout = scatter_layout
@@ -725,6 +739,7 @@ class AgentsPlot(ChartPlot):
 		self.axes.clear()
 		if self.layout not in ['patchgrid', 'scatter'] or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
+		self.pos = self.layClass(self.ndata[t])
 
 		if self.layout == 'patchgrid':
 			cmap = cm.get_cmap(self.params['patchColormap'])
@@ -750,7 +765,6 @@ class AgentsPlot(ChartPlot):
 				# self.components['patches'].set_data(pd)
 
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
-		self.pos = self.layClass(self.ndata[t])
 		sizes = self.params['agentSize']*10 if type(self.params['agentSize']) in [int, float] else [n[1]['size']*10 for n in self.ndata[t].nodes(data=True)]
 		self.components['nodes'] = self.nx.draw_networkx_nodes(self.ndata[t], self.pos, ax=self.axes, node_color=[self.viz.model.agents[n[1]['primitive']].breeds[n[1]['breed']].color.hex for n in self.ndata[t].nodes(data=True)], node_size=sizes, node_shape=self.params['agentMarker'])
 		e_directed = [e for e in self.ndata[t].edges.data() if e[2]['directed']]

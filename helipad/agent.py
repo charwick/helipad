@@ -660,7 +660,7 @@ class ModelEdges(MultiDict):
 		super().__init__()
 
 	def __getitem__(self, val): return [e for e in self.all if e.kind==val]
-	def __contains__(self, val): return val in list(self.keys)
+	def __contains__(self, val): return val in list(self.keys())
 	def items(self): yield from self._dict.items()
 	def values(self): yield from self._dict.values()
 	def keys(self):

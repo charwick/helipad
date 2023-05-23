@@ -95,7 +95,7 @@ def modelPostStep(model):
 	random.choice(model.agents.edges['edge']).cut()
 	newedge(model)
 
-net = viz.addPlot('net', 'Network Structure', type='agents', scatter=['s1', 's2'])
+net = viz.addPlot('net', 'Network Structure', type='agents', scatter=['s1', 's2'], network=None)
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
 net.config({
@@ -105,7 +105,8 @@ net.config({
 	'agentMarker': 'H',
 	'labelAlpha': 0.75,
 	'labelWeight': 'bold',
- 	'labelSize': 8
+ 	'labelSize': 8,
+	 'regLine': True
 })
 
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
