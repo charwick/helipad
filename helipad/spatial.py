@@ -15,7 +15,7 @@ from helipad.helpers import ï, Number
 # Create parameters, add functions, and so on
 #===============
 
-def spatialSetup(model, dim=10, corners: bool=False, geometry: str='rect', offmap: bool=False, **kwargs):
+def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: bool=False, **kwargs):
 	# Backward compatibility
 	if 'diag' in kwargs:	#Remove in Helipad 1.7
 		corners = kwargs['diag']
@@ -27,7 +27,7 @@ def spatialSetup(model, dim=10, corners: bool=False, geometry: str='rect', offma
 	if not isinstance(geometry, str): #We're gonna throw an error anyway if it's not a class or a string
 		pClasses[geometry.geometry] = geometry
 		geometry = geometry.geometry
-	model.patches = pClasses[geometry](dim, offmap=offmap, **kwargs)
+	model.patches = pClasses[geometry](dim, corners=corners, offmap=offmap, **kwargs)
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
@@ -111,15 +111,8 @@ def spatialSetup(model, dim=10, corners: bool=False, geometry: str='rect', offma
 		model.patches.place(agent)
 		agent.colorData = {}
 
-	#Establish grid links
-	@model.hook(prioritize=True)
-	def modelPostSetup(model):
-		for patch in model.agents['patch']:
-			neighbors = model.patches.neighbors(patch, corners)
-			connections = patch.neighbors #Neighbors that already have a connection
-			for n, weight in neighbors:
-				if not n in connections:
-					patch.edges.add(n, 'space', weight=weight)
+	#Establish grid links all at once at the end.
+	model.hooks.add('modelPostSetup', model.patches.neighbors, True)
 
 	#Don't reset the visualizer if charts is already registered
 	if model.visual is None or not isinstance(model.visual, Charts):
@@ -146,6 +139,7 @@ class Patches2D(list):
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
 		self.offmap = kwargs['offmap']
+		self.corners = kwargs['corners']
 		super().__init__([])
 
 		#Attach coordinate-specific functions and properties to agent objects
@@ -241,10 +235,12 @@ class PatchesRect(Patches2D):
 
 	def at(self, x, y): return self[round(x), round(y)]
 
-	def neighbors(self, patch: Patch, corners):
-		neighbors = [(patch.up, 1), (patch.right, 1), (patch.down, 1), (patch.left, 1)]
-		if corners: neighbors += [(patch.up.left, corners), (patch.right.up, corners), (patch.down.right, corners), (patch.left.down, corners)]
-		return [p for p in neighbors if p[0] is not None and p[0] is not self]
+	def neighbors(self, model):
+		for patch in model.agents['patch']:
+			neighbors = [(patch.right, 1), (patch.down, 1)]
+			if self.corners: neighbors += [(patch.down.right, self.corners), (patch.left.down, self.corners)]
+			for n, weight in neighbors:
+				if n: patch.edges.add(n, 'space', weight=weight)
 
 	#Take a sequential list of self.count patches and position them appropriately in the internal list
 	def place(self, agent: Patch):
@@ -325,17 +321,19 @@ class PatchesPolar(PatchesRect):
 	def at(self, x, y): return self[floor(x), floor(y)]
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
-	def neighbors(self, patch: Patch, corners):
-		neighbors = [(patch.inward, 1), (patch.outward, 1), (patch.clockwise, 1), (patch.counterclockwise, 1)]
-		if corners:
-			neighbors += [(patch.clockwise.inward, corners), (patch.counterclockwise.inward, corners), (patch.clockwise.outward, corners), (patch.counterclockwise.outward, corners)]
-			if patch.y==0:
-				flatneighbors = [n[0] for n in neighbors]
-				for p in patch.model.patches[None, 0]:
-					if p not in flatneighbors:
-						neighbors.append((p, corners))
+	def neighbors(self, model):
+		for patch in model.agents['patch']:
+			neighbors = [(patch.clockwise, 1), (patch.inward, 1)]
+			if self.corners:
+				neighbors += [(patch.clockwise.inward, self.corners), (patch.counterclockwise.inward, self.corners)]
+				if patch.y==0:
+					pc = neighbors[0][0].clockwise
+					while pc.x > patch.x and pc is not patch.counterclockwise:
+						neighbors.append((pc, self.corners))
+						pc = pc.clockwise
 
-		return [p for p in neighbors if p[0] is not None and p[0] is not self]
+			for n, weight in neighbors:
+				if n: patch.edges.add(n, 'space', weight=weight)
 
 	@property #((xmin, xmax),(ymin, ymax))
 	def boundaries(self): return ((0, self.dim[0]), (0, self.dim[1]))
