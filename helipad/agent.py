@@ -450,12 +450,6 @@ class Agents(MultiDict):
 		if isinstance(val, int): return self[val]
 		else: return super().__contains__(val)
 
-	#Act as if we've sorted by priority when looping
-	def items(self): yield from sorted(super().items(), key=lambda d: d[1].priority)
-	def values(self): yield from sorted(super().values(), key=lambda d: d.priority)
-	def keys(self): yield from [k[0] for k in sorted(super().items(), key=lambda d: d[1].priority)]
-	__iter__ = keys
-
 	def addPrimitive(self, name: str, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden: bool=False, priority: int=100, order=None):
 		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
 		if not plural: plural = name+'s'
@@ -467,11 +461,14 @@ class Agents(MultiDict):
 			order=order,
 			breeds=Breeds(self.model, name)
 		)
+		sort = dict(sorted(self.items(), key=lambda d: d[1].priority))
+		self.clear()
+		self.update(sort)
+
 		def popget(name, model):
 			prim = name.split('_')[1]
 			if not model.hasModel: return None
 			else: return len(model.agents[prim])
-
 		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.initialize, getter=popget)
 
 	def removePrimitive(self, name: str):
