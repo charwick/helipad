@@ -57,7 +57,12 @@ def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: boo
 	def baseAgentInit(agent, model):
 		if agent.primitive == 'patch': return #Patch position is fixed
 		p = model.doHooks(['baseAgentPosition', agent.primitive+'Position'], [agent, agent.model])
-		agent.position = list(p) if p and len(p) >= 2 else [uniform(*model.patches.boundaries[0]), uniform(*model.patches.boundaries[1])]
+		if p and len(p) >= 2:
+			agent.position = list(p)
+			if not offmap and not agent.patch: raise ValueError(ï('Agent is not on a patch.'))
+		else:
+			while not offmap and not agent.patch:
+				agent.position = [uniform(*model.patches.boundaries[0]), uniform(*model.patches.boundaries[1])]
 
 	#MOVEMENT AND POSITION
 
@@ -129,22 +134,18 @@ def NotPatches(function):
 	return np2
 
 #===============
-# COORDINATE SYSTEMS
+# PATCH GEOMETRIES
 #===============
 
 #A 2D list of lists that lets us use [x,y] indices
 class Patches2D(list):
-	def __init__(self, dim, props: list=[], funcs: list=[], **kwargs):
+	def __init__(self, dim, **kwargs):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
 		self.offmap = kwargs['offmap']
 		self.corners = kwargs['corners']
 		super().__init__([])
-
-		#Attach coordinate-specific functions and properties to agent objects
-		for p in props: setattr(Patch, p.__name__, property(p))
-		for f in funcs: setattr(baseAgent, f.__name__, NotPatches(f))
 
 	def __getitem__(self, key):
 		if isinstance(key, int): return super().__getitem__(key)
@@ -165,73 +166,15 @@ class Patches2D(list):
 
 #Each row and column of equal length
 class PatchesRect(Patches2D):
-	geometry = 'rect'
+	geometry: str = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
 	def __init__(self, dim, wrap=True, **kwargs):
-		def up(patch):
-			if patch.y==0 and not self.wrap[1]: return None
-			return self[patch.x, patch.y-1 if patch.y > 0 else self.dim[1]-1]
-
-		def right(patch):
-			if patch.x>=self.dim[0]-1 and not self.wrap[0]: return None
-			return self[patch.x+1 if patch.x < self.dim[0]-1 else 0, patch.y]
-
-		def down(patch):
-			if patch.y>=self.dim[1]-1 and not self.wrap[1]: return None
-			return self[patch.x, patch.y+1 if patch.y < self.dim[1]-1 else 0]
-
-		def left(patch):
-			if patch.x==0 and not self.wrap[0]: return None
-			return self[patch.x-1 if patch.x > 0 else self.dim[0]-1, patch.y]
-
-		def agentsOn(patch):
-			for prim, lst in patch.model.agents.items():
-				if prim=='patch': continue
-				yield from [a for a in lst if patch.x-0.5<=a.x<patch.x+0.5 and patch.y-0.5<=a.y<patch.y+0.5]
-
-		def center(patch): return patch.position
-		def area(patch): return 1
-		def vertices(patch):
-			pp = patch.position
-			return ((pp[0]-0.5, pp[1]-0.5), (pp[0]-0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]-0.5))
-
-		def moveUp(agent): agent.move(0, -1)
-		def moveRight(agent): agent.move(1, 0)
-		def moveDown(agent): agent.move(0, 1)
-		def moveLeft(agent): agent.move(-1, 0)
-		def forward(self, steps=1):
-			self.move(steps * cos(self.rads-pi/2), steps * sin(self.rads-pi/2))
-
-		#Internal function  to calculate x,y distances s.t. wrap constraints for distance and orientation purposes
-		def _offset(agent, x, y):
-			difx, dify = x - agent.x, y - agent.y
-			if self.wrap[0]:
-				crossx = difx - copysign(self.dim[0], difx)
-				if abs(crossx) < abs(difx): difx = crossx
-			if self.wrap[1]:
-				crossy = dify - copysign(self.dim[1], dify)
-				if abs(crossy) < abs(dify): dify = crossy
-			return (difx, dify)
-		baseAgent._offset = _offset
-
-		def distanceFrom(agent, agent2):
-			difx, dify = agent._offset(agent2.x, agent2.y)
-			return sqrt(difx**2 + dify**2)
-		baseAgent.distanceFrom = distanceFrom
-
-		def orientTo(agent, x, y=None):
-			if not isinstance(x, Number): x,y = x.position
-			difx, dify = agent._offset(x, y)
-			agent.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
-
 		if isinstance(wrap, bool): wrap = (wrap, wrap)
 		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
 		self.wrap = wrap
-		super().__init__(dim, wrap=wrap,
-			props=[up, right, down, left, agentsOn, center, area, vertices],
-			funcs=[moveUp, moveRight, moveDown, moveLeft, forward, orientTo],
-			**kwargs)
+		RectFuncs.install()
+		super().__init__(dim, wrap=wrap, **kwargs)
 
 	def at(self, x, y): return self[round(x), round(y)]
 
@@ -258,65 +201,12 @@ class PatchesRect(Patches2D):
 #x,y placement is the same; just need to redefine patch functions and neighbors
 #x is number around, y is number out
 class PatchesPolar(PatchesRect):
-	geometry = 'polar'
+	geometry: str = 'polar'
 	wrap = (True, False) #Wrap around, but not in-to-out.
 
 	def __init__(self, dim, **kwargs):
-		def inward(patch):
-			if patch.y==0: return None
-			return self[patch.x, patch.y-1]
-
-		def outward(patch):
-			if patch.y>=self.dim[1]-1: return None
-			return self[patch.x, patch.y+1]
-
-		def clockwise(patch):
-			return self[patch.x+1 if patch.x < self.dim[0]-1 else 0, patch.y]
-
-		def counterclockwise(patch):
-			return self[patch.x-1 if patch.x > 0 else self.dim[0]-1, patch.y]
-
-		def agentsOn(patch):
-			for prim, lst in patch.model.agents.items():
-				if prim=='patch': continue
-				yield from [a for a in lst if floor(a.x)==patch.x and floor(a.y)==patch.y]
-
-		def center(patch): return (patch.position[0]+0.5, patch.position[1]+0.5)
-		def area(patch): return (1/self.dim[0])*pi*((patch.position[1]+1)**2-patch.position[1]**2)
-		def vertices(patch):
-			pp = patch.position
-			return (pp, (pp[0], pp[1]+1), (pp[0]+1, pp[1]+1), (pp[0]+1, pp[1]))
-
-		def moveInward(agent): agent.move(0, -1)
-		def moveOutward(agent): agent.move(0, 1)
-		def moveClockwise(agent): agent.move(1, 0)
-		def moveCounterclockwise(agent): agent.move(-1, 0)
-		def forward(agent, steps=1):
-			#2π-self.rads to make it go clockwise
-			th1 = 2*pi-(2*pi/self.dim[0] * agent.x)
-			newth = th1 + atan2(steps*sin(2*pi-agent.rads-th1), agent.y+steps*cos(2*pi-agent.rads-th1))
-			newx = (2*pi-newth)/(2*pi/self.dim[0])
-			if newx > self.dim[0]: newx -= self.dim[0]
-			newr = sqrt(agent.y**2 + steps**2 + 2*agent.y*steps*cos(2*pi-agent.rads-th1))
-			agent.move(newx-agent.x, newr-agent.y)
-
-		def distanceFrom(agent, agent2):
-			th1 = agent.x * 2*pi /self.dim[0]
-			th2 = agent2.x * 2*pi /self.dim[0]
-			return sqrt(agent.y**2 + agent2.y**2 - 2*agent.y*agent2.y*cos(th1-th2))
-		baseAgent.distanceFrom = distanceFrom
-
-		def orientTo(agent, x, y=None):
-			if not isinstance(x, Number): x,y = x.position
-			th1 = 2*pi-(2*pi/self.dim[0] * agent.x)
-			th2 = 2*pi-(2*pi/self.dim[0] * x)
-			agent.rads = pi - atan2(agent.y * sin(th1) - y * sin(th2), agent.y * cos(th1) - y * cos(th2))
-
-		#Skip PatchesRect.__init__
-		Patches2D.__init__(self, dim,
-			props=[inward, outward, clockwise, counterclockwise, agentsOn, center, area, vertices],
-			funcs=[moveInward, moveOutward, moveClockwise, moveCounterclockwise, forward, orientTo],
-			**kwargs)
+		PolarFuncs.install()
+		Patches2D.__init__(self, dim, **kwargs) #Skip PatchesRect.__init__
 
 	def at(self, x, y): return self[floor(x), floor(y)]
 
@@ -337,3 +227,134 @@ class PatchesPolar(PatchesRect):
 
 	@property #((xmin, xmax),(ymin, ymax))
 	def boundaries(self): return ((0, self.dim[0]), (0, self.dim[1]))
+
+class PatchesGeo(list):
+# COORDINATE SYSTEMS
+# Attach coordinate-specific functions and properties to agent objects
+#===============
+
+class RectFuncs:
+	def install(patches=True, agents=True, all=True):
+		if patches:
+			for p in ['up', 'right', 'down', 'left', 'agentsOn', 'center', 'area', 'vertices']:
+				setattr(Patch, p, property(getattr(RectFuncs,p)))
+		if agents:
+			for f in ['moveUp', 'moveRight', 'moveDown', 'moveLeft', 'forward', 'orientTo']:
+				setattr(baseAgent, f, NotPatches(getattr(RectFuncs,f)))
+		if all:
+			for h in ['_offset', 'distanceFrom']:
+				setattr(baseAgent, h, getattr(RectFuncs,h))
+
+	def up(patch):
+		if patch.y==0 and not patch.model.patches.wrap[1]: return None
+		return patch.model.patches[patch.x, patch.y-1 if patch.y > 0 else patch.model.patches.dim[1]-1]
+
+	def right(patch):
+		if patch.x>=patch.model.patches.dim[0]-1 and not patch.model.patches.wrap[0]: return None
+		return patch.model.patches[patch.x+1 if patch.x < patch.model.patches.dim[0]-1 else 0, patch.y]
+
+	def down(patch):
+		if patch.y>=patch.model.patches.dim[1]-1 and not patch.model.patches.wrap[1]: return None
+		return patch.model.patches[patch.x, patch.y+1 if patch.y < patch.model.patches.dim[1]-1 else 0]
+
+	def left(patch):
+		if patch.x==0 and not patch.model.patches.wrap[0]: return None
+		return patch.model.patches[patch.x-1 if patch.x > 0 else patch.model.patches.dim[0]-1, patch.y]
+
+	def agentsOn(patch):
+		for prim, lst in patch.model.agents.items():
+			if prim=='patch': continue
+			yield from [a for a in lst if patch.x-0.5<=a.x<patch.x+0.5 and patch.y-0.5<=a.y<patch.y+0.5]
+
+	def center(patch): return patch.position
+	def area(patch): return 1
+	def vertices(patch):
+		pp = patch.position
+		return ((pp[0]-0.5, pp[1]-0.5), (pp[0]-0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]+0.5), (pp[0]+0.5, pp[1]-0.5))
+
+	def moveUp(agent): agent.move(0, -1)
+	def moveRight(agent): agent.move(1, 0)
+	def moveDown(agent): agent.move(0, 1)
+	def moveLeft(agent): agent.move(-1, 0)
+	def forward(self, steps=1):
+		self.move(steps * cos(self.rads-pi/2), steps * sin(self.rads-pi/2))
+
+	def orientTo(agent, x, y=None):
+		if not isinstance(x, Number): x,y = x.position
+		difx, dify = agent._offset(x, y)
+		agent.rads = atan2(dify,difx) + 0.5*pi #atan calculates 0º pointing East. We want 0º pointing North
+
+	#Internal function  to calculate x,y distances s.t. wrap constraints for distance and orientation purposes
+	def _offset(agent, x, y):
+		difx, dify = x - agent.x, y - agent.y
+		if agent.model.patches.wrap[0]:
+			crossx = difx - copysign(agent.model.patches.dim[0], difx)
+			if abs(crossx) < abs(difx): difx = crossx
+		if agent.model.patches.wrap[1]:
+			crossy = dify - copysign(agent.model.patches.dim[1], dify)
+			if abs(crossy) < abs(dify): dify = crossy
+		return (difx, dify)
+
+	def distanceFrom(agent, agent2):
+		difx, dify = agent._offset(agent2.x, agent2.y)
+		return sqrt(difx**2 + dify**2)
+
+class PolarFuncs:
+	def install(patches=True, agents=True, all=True):
+		if patches:
+			for p in ['inward', 'outward', 'clockwise', 'counterclockwise', 'agentsOn', 'center', 'area', 'vertices']:
+				setattr(Patch, p, property(getattr(PolarFuncs,p)))
+		if agents:
+			for f in ['moveInward', 'moveOutward', 'moveClockwise', 'moveCounterclockwise', 'forward', 'orientTo']:
+				setattr(baseAgent, f, NotPatches(getattr(PolarFuncs,f)))
+		if all:
+			baseAgent.distanceFrom = PolarFuncs.distanceFrom
+
+	def inward(patch):
+		if patch.y==0: return None
+		return patch.model.patches[patch.x, patch.y-1]
+
+	def outward(patch):
+		if patch.y>=patch.model.patches.dim[1]-1: return None
+		return patch.model.patches[patch.x, patch.y+1]
+
+	def clockwise(patch):
+		return patch.model.patches[patch.x+1 if patch.x < patch.model.patches.dim[0]-1 else 0, patch.y]
+
+	def counterclockwise(patch):
+		return patch.model.patches[patch.x-1 if patch.x > 0 else patch.model.patches.dim[0]-1, patch.y]
+
+	def agentsOn(patch):
+		for prim, lst in patch.model.agents.items():
+			if prim=='patch': continue
+			yield from [a for a in lst if floor(a.x)==patch.x and floor(a.y)==patch.y]
+
+	def center(patch): return (patch.position[0]+0.5, patch.position[1]+0.5)
+	def area(patch): return (1/patch.model.patches.dim[0])*pi*((patch.position[1]+1)**2-patch.position[1]**2)
+	def vertices(patch):
+		pp = patch.position
+		return (pp, (pp[0], pp[1]+1), (pp[0]+1, pp[1]+1), (pp[0]+1, pp[1]))
+
+	def moveInward(agent): agent.move(0, -1)
+	def moveOutward(agent): agent.move(0, 1)
+	def moveClockwise(agent): agent.move(1, 0)
+	def moveCounterclockwise(agent): agent.move(-1, 0)
+	def forward(agent, steps=1):
+		#2π-self.rads to make it go clockwise
+		th1 = 2*pi-(2*pi/agent.model.patches.dim[0] * agent.x)
+		newth = th1 + atan2(steps*sin(2*pi-agent.rads-th1), agent.y+steps*cos(2*pi-agent.rads-th1))
+		newx = (2*pi-newth)/(2*pi/agent.model.patches.dim[0])
+		if newx > agent.model.patches.dim[0]: newx -= agent.model.patches.dim[0]
+		newr = sqrt(agent.y**2 + steps**2 + 2*agent.y*steps*cos(2*pi-agent.rads-th1))
+		agent.move(newx-agent.x, newr-agent.y)
+
+	def orientTo(agent, x, y=None):
+		if not isinstance(x, Number): x,y = x.position
+		th1 = 2*pi-(2*pi/agent.model.patches.dim[0] * agent.x)
+		th2 = 2*pi-(2*pi/agent.model.patches.dim[0] * x)
+		agent.rads = pi - atan2(agent.y * sin(th1) - y * sin(th2), agent.y * cos(th1) - y * cos(th2))
+
+	def distanceFrom(agent, agent2):
+		th1 = agent.x * 2*pi /agent.model.patches.dim[0]
+		th2 = agent2.x * 2*pi /agent.model.patches.dim[0]
+		return sqrt(agent.y**2 + agent2.y**2 - 2*agent.y*agent2.y*cos(th1-th2))
