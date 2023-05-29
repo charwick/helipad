@@ -1,7 +1,6 @@
-# ==========
-# Basic extensible agent class
-# Do not run this file; import model.py and run from your file.
-# ==========
+"""
+The `Agent` class and the `Agents` container. This module can be imported to extend `baseAgent` to create new primitives.
+"""
 
 import warnings
 from random import choice, randint, shuffle

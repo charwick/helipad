@@ -1,7 +1,6 @@
-# ==========
-# Utility functions
-# Do not run this file; import model.py and run your file.
-# ==========
+"""
+Classes to give agents utility functions, and a base `Utility` class to subclass new utility functions. Built-in utility functions include `CES`, `Leontief`, and `CobbDouglas`.
+"""
 
 from abc import ABC, abstractmethod
 from helipad.helpers import ï

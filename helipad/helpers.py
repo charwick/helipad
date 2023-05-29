@@ -1,7 +1,6 @@
-# ==========
-# Helper classes and functions used in multiple modules
-# None of these are intended to be user-facing
-# ==========
+"""
+Helper classes and functions used internally in Helipad. This module should not be imported directly.
+"""
 
 import warnings
 from numbers import Number

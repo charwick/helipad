@@ -1,11 +1,10 @@
-# ==========
-# The matplotlib interface for plotting
-# Do not run this file; import model.py and run from your file.
-# ==========
+"""
+Base classes for visualizing Helipad models with Matplotlib, to be passed to `model.useVisual()`. Main visualizers are `TimeSeries` to display diachronic data, and `Charts` to display synchronic data.
+"""
 
 import sys
 from abc import ABC, abstractmethod
-from math import sqrt, ceil, floor, pi, isnan
+from math import sqrt, ceil, pi, isnan
 from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like, linalg, ones, vstack
 import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
 from matplotlib.lines import Line2D

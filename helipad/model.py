@@ -1,7 +1,6 @@
-# ==========
-# Basic model infrastructure
-# Do not run this file; import it and run your file.
-# ==========
+"""
+The main model module. Import and instantiate the `Helipad` class to set up and launch a model. See https://helipad.dev for API documentation.
+"""
 
 import os, sys, warnings, asyncio, time
 import gettext

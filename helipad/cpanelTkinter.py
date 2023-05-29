@@ -1,7 +1,6 @@
-# ==========
-# The standalone Tkinter-based control panel interface
-# Do not run this file; import model.py and run from your file.
-# ==========
+"""
+The Tkinter-based control panel class for use in standalone models. This module should not be imported directly; use `model.launchCpanel()` instead.
+"""
 
 import tkinter as tk
 import os, sys

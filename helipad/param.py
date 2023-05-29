@@ -1,7 +1,6 @@
-# ==========
-# Classes to abstract the interface between model parameters and GUI elements.
-# Do not run this file; import model.py and run from your file.
-# ==========
+"""
+Classes to abstract the interface between model parameters and GUI elements. This module should not be imported directly; use `model.params.add()` instead.
+"""
 
 from itertools import combinations
 import warnings

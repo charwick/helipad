@@ -1,7 +1,6 @@
-# ==========
-# Code for collecting and exporting data from model runs
-# Do not run this file; import model.py and run from your file.
-# ==========
+"""
+Classes for collecting and exporting data from model runs. This module should not be imported directly; interface with the `model.data` container object instead. See https://helipad.dev/functions/data/
+"""
 
 import pandas, os.path
 import numpy as np

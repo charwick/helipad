@@ -1,7 +1,6 @@
-#===============
-# Functions to initialize a grid network of Patch agents
-# and add orientation and motion functions to other agents.
-#===============
+"""
+Functions and classes to initialize a network of Patch agents and add orientation and motion functions to other agents. This module should not be imported directly; use `model.spatial()` to set up a spatial model instead. See https://helipad.dev/functions/model/spatial/
+"""
 
 import warnings
 from random import uniform

@@ -1,3 +1,7 @@
+"""
+The control panel class for use in Jupyter notebooks. This module should not be imported directly; use `model.launchCpanel()` instead.
+"""
+
 import os
 from collections import ChainMap
 from ipywidgets import interactive, Layout, Accordion, HBox, VBox, HTML, Label, Button, FloatProgress
