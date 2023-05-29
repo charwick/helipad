@@ -500,7 +500,7 @@ class Agents(MultiDict):
 		G = nx.DiGraph(name=kind)
 		agents = list(self.all) if prim is None else self[prim]
 		if excludePatches: agents = [a for a in agents if a.primitive!='patch']
-		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else a.position.copy()}) for a in agents])
+		G.add_nodes_from([(a.id, {'breed': a.breed, 'primitive': a.primitive, 'position': None if a.position is None else list(a.position)}) for a in agents])
 		for e in self.edges[kind]:
 			if prim is None or (e.vertices[0].primitive==prim and e.vertices[1].primitive==prim): G.add_edge(
 				e.startpoint.id if e.directed else e.vertices[0].id,

@@ -616,8 +616,8 @@ class AgentsPlot(ChartPlot):
 			warnings.warn(ï('The kind= argument is deprecated and has been replaced with network=.')) #Deprecated in Helipad 1.6; remove in Helipad 1.8
 			kwargs['network'] = kwargs['kind']
 		if 'network' not in kwargs: kwargs['network'] = 'edge'
-		if 'scatter' not in kwargs: kwargs['scatter'] = None
 		if 'layout' not in kwargs: kwargs['layout'] = 'scatter' if 'scatter' in kwargs else 'spring'
+		if 'scatter' not in kwargs: kwargs['scatter'] = None
 		super().__init__(**kwargs)
 		self.scatterLims = [[0,0],[0,0]]
 		self.ndata = {}
@@ -645,14 +645,14 @@ class AgentsPlot(ChartPlot):
 
 	def launch(self, axes):
 		import networkx as nx, networkx.drawing.layout as lay
-		def patchgrid_layout(G):
-			if not self.viz.model.patches: raise
+		self.layouts = {l: getattr(lay, l+'_layout') for l in ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']}
+
+		def spatial_layout(G):
 			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
 				return {i: (2*pi-(2*pi/self.viz.model.patches.dim[0] * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
 			else: return {i: data['position'] for i,data in G.nodes.items()}
 
 		def scatter_layout(G):
-			if not self.scatter: raise
 			self.axes.set_xlabel(self.scatter[0])
 			self.axes.set_ylabel(self.scatter[1])
 			self.axes.spines['top'].set_visible(False)
@@ -679,11 +679,10 @@ class AgentsPlot(ChartPlot):
 			    ))
 
 			return data
-		lay.patchgrid_layout = patchgrid_layout
-		lay.scatter_layout = scatter_layout
+		self.layouts['spatial'] = spatial_layout
+		self.layouts['scatter'] = scatter_layout
 
 		self.nx = nx
-		self.layClass = getattr(lay, self.layout+'_layout')
 		self.components = {}
 
 		super().launch(axes)
@@ -697,7 +696,7 @@ class AgentsPlot(ChartPlot):
 			agents = [self.viz.model.agents[pk[i]] for i in event.ind]
 			self.viz.model.doHooks('agentClick', [agents, self, self.viz.scrubval])
 
-		elif event.name=='button_press_event' and self.layout=='patchgrid':
+		elif event.name=='button_press_event' and self.layout=='spatial':
 			if self.projection=='polar':
 				x = 2*pi-event.xdata+1/2*pi
 				if x > 2*pi: x-=2*pi
@@ -708,7 +707,7 @@ class AgentsPlot(ChartPlot):
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches.at(x,y), self, self.viz.scrubval])
 
 	def update(self, data: dict, t: int):
-		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=True)
+		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=(self.prim!='patch'))
 
 		#Capture data for label, size, and scatterplot position
 		vars = {}
@@ -738,14 +737,14 @@ class AgentsPlot(ChartPlot):
 	def draw(self, t: int=None, forceUpdate: bool=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
-		if self.layout not in ['patchgrid', 'scatter'] or self.projection=='polar': self.axes.axis('off')
+		if self.layout not in ['spatial', 'scatter'] or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
-		if self.layout != 'patchgrid' or self.viz.model.patches.geometry != 'geo':
+		if self.layout != 'spatial' or self.viz.model.patches.geometry != 'geo':
 			self.axes.set_facecolor('white')
 			self.axes.set_aspect('auto')
-		self.pos = self.layClass(self.ndata[t])
+		self.pos = self.layouts[self.layout](self.ndata[t])
 
-		if self.layout == 'patchgrid':
+		if self.layout == 'spatial':
 			cmap = cm.get_cmap(self.params['patchColormap'])
 			if self.viz.model.patches.geometry == 'geo': pd = array([self.getPatchParamValue(p,t) for p in self.viz.model.patches])
 			else:
@@ -807,17 +806,15 @@ class AgentsPlot(ChartPlot):
 		if self.params['lockLayout']: return
 
 		#Select the next layout in the list
-		import networkx.drawing.layout as lay
-		layouts = ['patchgrid'] if self.viz.model.patches else []
+		layouts = ['spatial'] if self.viz.model.patches else []
 		if self.scatter: layouts.append('scatter')
 		if self.network in self.viz.model.agents.edges or not layouts: layouts += ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']
 		li = layouts.index(self.layout)+1
 		while li>=len(layouts): li -= len(layouts)
 		self.layout = layouts[li]
-		self.layClass = getattr(lay, self.layout+'_layout')
 
 		#Replace the axes object if we need to switch projections
-		if self.projection == 'polar' or (self.layout=='patchgrid' and self.viz.model.patches and self.viz.model.patches.geometry=='polar'):
+		if self.projection == 'polar' or (self.layout=='spatial' and self.viz.model.patches and self.viz.model.patches.geometry=='polar'):
 			self.projection = None if self.projection=='polar' else 'polar'
 			self.viz.fig.delaxes(self.axes)
 			super().launch(self.viz.fig.add_subplot(*self.subplot_position, projection=self.projection))

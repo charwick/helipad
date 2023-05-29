@@ -123,7 +123,7 @@ def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: boo
 	if model.visual is None or not isinstance(model.visual, Charts):
 		model.useVisual(Charts)
 
-	mapPlot = model.visual.addPlot('map', 'Map', type='agents', layout='patchgrid', projection=geometry if geometry=='polar' else None)
+	mapPlot = model.visual.addPlot('map', 'Map', type='agents', layout='spatial', projection=geometry if geometry=='polar' else None)
 	return mapPlot
 
 #Functions for all primitives except patches, which are spatially fixed
