@@ -9,6 +9,7 @@ from math import sqrt, ceil, floor, pi, isnan
 from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like, linalg, ones, vstack
 import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
 from matplotlib.lines import Line2D
+from matplotlib.patches import Polygon
 from helipad.helpers import *
 mlpstyle.use('fast')
 
@@ -700,11 +701,11 @@ class AgentsPlot(ChartPlot):
 			if self.projection=='polar':
 				x = 2*pi-event.xdata+1/2*pi
 				if x > 2*pi: x-=2*pi
-				x,y = floor(x/(2*pi/self.viz.model.patches.dim[0])), floor(event.ydata)
+				x,y = x/(2*pi/self.viz.model.patches.dim[0]), event.ydata
 			else:
-				x,y = round(event.xdata), round(event.ydata)
-			if x > self.viz.model.patches.dim[0]-1 or y > self.viz.model.patches.dim[1]-1: return
-			self.viz.model.doHooks('patchClick', [self.viz.model.patches[x,y], self, self.viz.scrubval])
+				x,y = event.xdata, event.ydata
+			if x > self.viz.model.patches.boundaries[0][1] or y > self.viz.model.patches.boundaries[1][1]: return
+			self.viz.model.doHooks('patchClick', [self.viz.model.patches.at(x,y), self, self.viz.scrubval])
 
 	def update(self, data: dict, t: int):
 		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=True)
@@ -725,29 +726,34 @@ class AgentsPlot(ChartPlot):
 
 		#Save spatial data even if we're on a different layout
 		if self.viz.model.patches:
-			pd = self.patchData(None if t==self.viz.model.t else t)
-			for col in self.viz.model.patches:
-				for p in col:
-					p.colorData[t] = pd[p.x][p.y]
+			lst = []
+			for p in self.viz.model.agents['patch']:
+				p.colorData[t] = self.getPatchParamValue(p, None if t==self.viz.model.t else t)
+				lst.append(p.colorData[t])
 
 			#Renormalize color scale
-			nmin, nmax = pd.min().min(), pd.max().max()
+			nmin, nmax = min(lst), max(lst)
 			self.normal = plt.cm.colors.Normalize(nmin if not hasattr(self,'normal') or nmin<self.normal.vmin else self.normal.vmin, nmax if not hasattr(self,'normal') or nmax>self.normal.vmax else self.normal.vmax)
-
 
 	def draw(self, t: int=None, forceUpdate: bool=False):
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
 		if self.layout not in ['patchgrid', 'scatter'] or self.projection=='polar': self.axes.axis('off')
 		self.axes.set_title(self.label, fontdict={'fontsize':10})
+		if self.layout != 'patchgrid' or self.viz.model.patches.geometry != 'geo':
+			self.axes.set_facecolor('white')
+			self.axes.set_aspect('auto')
 		self.pos = self.layClass(self.ndata[t])
 
 		if self.layout == 'patchgrid':
 			cmap = cm.get_cmap(self.params['patchColormap'])
-			pd = self.patchData(t).T #Transpose because numpy is indexed col, row
+			if self.viz.model.patches.geometry == 'geo': pd = array([self.getPatchParamValue(p,t) for p in self.viz.model.patches])
+			else:
+				pd = array([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).T #Transpose because numpy is indexed col, row
 			if self.projection=='polar':
+				self.axes.set_aspect('equal')
 				self.axes.set_ylim(0, self.viz.model.patches.dim[1])
-				norm = (pd - int(self.normal.vmin))/(self.normal.vmax-int(self.normal.vmin))
+				norm = (pd - int(self.normal.vmin))/(rng if (rng:=(self.normal.vmax-int(self.normal.vmin))) else 1)
 				space = linspace(0.0, 1.0, 100)
 				rgb = cmap(space)[newaxis, :, :3][0]
 
@@ -760,10 +766,24 @@ class AgentsPlot(ChartPlot):
 						color = self.params['mapBg'] if isnan(norm[r, ti]) else rgb[int(norm[r,ti]*(len(space)-1))]
 						self.axes.fill_between(theta, full_like(theta, r), full_like(theta, r+1), color=color)
 			else:
-				cmap.set_bad(self.params['mapBg'])
-				self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=cmap, aspect=self.params['patchAspect'])
-				# self.patchmap.set_norm(self.normal)
-				# self.components['patches'].set_data(pd)
+				if self.viz.model.patches.geometry == 'rect':
+					self.axes.spines['top'].set_visible(True)
+					self.axes.spines['right'].set_visible(True)
+					cmap.set_bad(self.params['mapBg'])
+					self.components['patches'] = self.axes.imshow(pd, norm=self.normal, cmap=cmap, aspect=self.params['patchAspect'])
+					# self.patchmap.set_norm(self.normal)
+					# self.components['patches'].set_data(pd)
+				elif self.viz.model.patches.geometry == 'geo':
+					self.axes.set_aspect('equal')
+					self.axes.set_xlim(*self.viz.model.patches.boundaries[0])
+					self.axes.set_ylim(*self.viz.model.patches.boundaries[1])
+					self.axes.set_facecolor(self.params['mapBg'])
+					norm = (pd - int(self.normal.vmin))/(rng if (rng:=(self.normal.vmax-int(self.normal.vmin))) else 1)
+					space = linspace(0.0, 1.0, 100)
+					rgb = cmap(space)[newaxis, :, :3][0]
+					for i,p in enumerate(self.viz.model.patches):
+						color = self.params['mapBg'] if isnan(norm[i]) else rgb[int(norm[i]*(len(space)-1))]
+						self.axes.add_patch(Polygon(array(p.polygon.exterior.xy).T, color=color))
 
 		#Draw nodes, edges, and labels separately so we can split out the directed and undirected edges
 		sizes = self.params['agentSize']*10 if type(self.params['agentSize']) in [int, float] else [n[1]['size']*10 for n in self.ndata[t].nodes(data=True)]
@@ -813,10 +833,6 @@ class AgentsPlot(ChartPlot):
 		elif 'patchProperty' not in self.params: return 0
 		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
 		else: return getattr(patch, self.params['patchProperty'])
-
-	def patchData(self, t: int=None):
-		if not self.viz.model.patches: return
-		return array([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches])
 
 	def config(self, param: str, val=None):
 		if isinstance(param, dict):

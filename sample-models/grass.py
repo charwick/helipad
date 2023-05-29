@@ -104,11 +104,19 @@ heli.data.addReporter('expectancy', lambda model: mean(model.deathAge))
 heli.data.addReporter('agentenergy', heli.data.agentReporter('stocks', 'agent', good='energy', percentiles=[0,100]))
 
 mapPlot = heli.spatial(dim=16, corners=True)
+mapPlot.scatter = ['age', 'good:energy']
 mapPlot.config({
 	'patchProperty': 'good:energy',
 	'patchColormap': 'Greens',
 	'agentSize': 'good:energy'
 })
+
+# # Only forward 0.368
+# import geopandas,os
+# __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
+# gdf = geopandas.read_file(os.path.join(__location__, 'NC_Counties.geojson'))
+# for i,county in gdf.iterrows():
+#     heli.patches.add(county['geometry'], county['CO_NAME'])
 
 pop = heli.visual.addPlot('pop', 'Population', 'timeseries', logscale=True, selected=False)
 sexratio = heli.visual.addPlot('sexratio', 'Sex Ratio', 'timeseries', logscale=True, selected=False)
@@ -128,7 +136,7 @@ def agentClick(agent, plot, t):
 
 @heli.hook
 def patchClick(patch, plot, t):
-	print('Patch at',patch.position)
+	print(patch)
 
 #===============
 # LAUNCH THE GUI

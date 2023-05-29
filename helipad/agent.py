@@ -31,7 +31,7 @@ class baseAgent:
 		self.stocks = Stocks(breed, model.goods)
 		self.edges = Edges(self)
 		self.utils = 0
-		self.position = None #Overridden in spatial init
+		if not hasattr(self, 'position'): self.position = None #Overridden in spatial init
 		self.currentDemand = {g:0 for g in model.goods.keys()}
 		self.rads = 0
 
@@ -329,7 +329,9 @@ class Patch(baseAgent):
 	def neighbors(self) -> list:
 		return [p for p in self.edges.outbound('space', True, obj='agent') if not p.dead]
 
-	def __repr__(self): return f'<Patch at {self.position[0]},{self.position[1]}>'
+	def __repr__(self):
+		if self.model.patches.geometry == 'geo' and self.name: return f'<Patch {self.name}>'
+		return f'<Patch at {self.position[0]},{self.position[1]}>'
 
 #Direction can take an Agent object (corresponding to the endpoint),
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),

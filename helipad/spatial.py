@@ -8,7 +8,7 @@ from random import uniform
 from math import sqrt, sin, cos, atan2, pi, copysign, floor
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
-from helipad.helpers import ï, Number
+from helipad.helpers import ï, Number, Item
 
 #===============
 # SETUP
@@ -23,7 +23,7 @@ def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: boo
 
 	#Initialize patch container and primitive
 	model.agents.addPrimitive('patch', Patch, hidden=True, priority=-10)
-	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar}
+	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar, 'geo': PatchesGeo}
 	if not isinstance(geometry, str): #We're gonna throw an error anyway if it's not a class or a string
 		pClasses[geometry.geometry] = geometry
 		geometry = geometry.geometry
@@ -229,6 +229,94 @@ class PatchesPolar(PatchesRect):
 	def boundaries(self): return ((0, self.dim[0]), (0, self.dim[1]))
 
 class PatchesGeo(list):
+	geometry: str = 'geo'
+	def __init__(self, dim=None, wrap=True, corners=True, **kwargs):
+		import shapely
+		self.shapely = shapely
+		self.shapes = []
+		self.corners = corners
+		if isinstance(wrap, bool): wrap = (wrap, wrap)
+		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
+		self.wrap = wrap
+		self.offmap = kwargs['offmap']
+
+		def vertices(patch): return patch.polygon.exterior.xy
+		def area(patch): return patch.polygon.area
+		def center(patch): return (patch.polygon.centroid.x, patch.polygon.centroid.y) if hasattr(patch, 'polygon') else None
+		def agentsOn(patch):
+			agents = []
+			for a in patch.model.agents.all:
+				if a.primitive == 'patch': continue
+				if patch.polygon.covers(self.shapely.Point(*a.position)): agents.append(a)
+			return agents
+		for prop in [vertices, area, center, agentsOn]: setattr(Patch, prop.__name__, property(prop))
+		Patch.position = property(center)
+		RectFuncs.install(patches=False)
+
+	def __getitem__(self, val):
+		if isinstance(val, str): return [p for p in self if p.name==val][0]
+		else: return super().__getitem__(val)
+
+	def __len__(self): return len(self.shapes)
+
+	@property
+	def names(self):
+		return [p.name for p in self if p.name is not None]
+
+	@property
+	def boundaries(self):
+		bounds = [s.shape.bounds for s in self.shapes]
+		minx, miny, maxx, maxy = bounds[0] if bounds else (0,0,0,0)
+		for b in bounds:
+			minx = min(minx, b[0])
+			maxx = max(maxx, b[2])
+			miny = min(miny, b[1])
+			maxy = max(maxy, b[3])
+		return ((minx, maxx), (miny, maxy))
+
+	@property
+	def dim(self):
+		bounds = self.boundaries
+		return (bounds[0][1]-bounds[0][0], bounds[1][1]-bounds[1][0])
+
+	def add(self, shape, name=None):
+		if isinstance(shape, list): shape = self.shapely.Polygon(shape)
+		elif isinstance(shape, self.shapely.MultiPolygon):
+			warnings.warn(ï('MultiPolygons are not supported as patches. Taking the first polygon…'), RuntimeWarning, 2)
+			shape = shape.geoms[0]
+		if name and name in self.names: raise KeyError(ï('Patch with name \'{0}\' already exists.').format(name))
+		item = Item(shape=shape, name=name, borders=[], corners=[]) #Have to store this as a wrapper item because Shapely objects are immutable
+
+		#Ensure no overlap and calculate neighbors
+		for i,p in enumerate(self.shapes):
+			intersection = shape.intersection(p.shape)
+			if not intersection.is_empty:
+				if isinstance(intersection, (self.shapely.LineString, self.shapely.MultiLineString)): item.borders.append(p)
+				elif isinstance(intersection, self.shapely.Point): item.corners.append(p)
+				else:
+					pn = f'\'{p.name}\'' if p.name else i
+					raise ValueError(ï('Polygon {0} overlaps existing patch {1}.').format(name, pn))
+
+		self.shapes.append(item)
+
+	def at(self, x, y):
+		pt = self.shapely.Point(x,y)
+		for p in self:
+			if p.polygon.covers(pt): return p
+
+	def neighbors(self, model):
+		for p in self.shapes:
+			for e in p.borders: p.patch.edges.add(e.patch, 'space')
+			if self.corners:
+				for e in p.corners: p.patch.edges.add(e.patch, 'space', weight=self.corners)
+
+	def place(self, agent: Patch):
+		shape = self.shapes[super().__len__()]
+		agent.polygon, agent.name = shape.shape, shape.name
+		shape.patch = agent
+		self.append(agent)
+
+#===============
 # COORDINATE SYSTEMS
 # Attach coordinate-specific functions and properties to agent objects
 #===============
