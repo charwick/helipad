@@ -5,8 +5,8 @@ Classes to give agents utility functions, and a base `Utility` class to subclass
 from abc import ABC, abstractmethod
 from helipad.helpers import ï
 
-#Basic utility functions
 class Utility(ABC):
+	"""A base class defining the methods a utility class must implement. https://helipad.dev/functions/utility/"""
 
 	#Receives an array of goods.
 	#Can, but doesn't necessarily have to correspond to the registered goods
@@ -42,8 +42,8 @@ class Utility(ABC):
 	def mrs(self, good1, q1, good2, q2):
 		pass
 
-#Constant elasticity of substitution
 class CES(Utility):
+	"""A constant elasticity of substitution utility function. https://helipad.dev/functions/ces/"""
 
 	#Coefficients should add to 1, but this is not enforced
 	#Goods can be a list of goods, or a dict of goods and corresponding coefficients
@@ -126,8 +126,8 @@ class CES(Utility):
 
 		return demand
 
-#Goods can be a list of goods, or a dict of goods and corresponding exponents
 class CobbDouglas(CES):
+	"""A Cobb-Douglas utility function. `Goods` can be a list of goods, or a dict of goods and corresponding exponents. https://helipad.dev/functions/cobbdouglas/"""
 	def __init__(self, goods):
 		if isinstance(goods, list):
 			goods = {g:1/len(goods) for g in goods}
@@ -138,5 +138,6 @@ class CobbDouglas(CES):
 	def exponents(self): return self.coeffs
 
 class Leontief(CES):
+	"""A Leontief utility function, where utility is equal to the minimum quantity held of any relevant good. https://helipad.dev/functions/leontief/"""
 	def __init__(self, goods):
 		super().__init__(goods, 0)

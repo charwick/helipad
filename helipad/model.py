@@ -14,6 +14,7 @@ from helipad.data import Data
 from helipad.agent import *
 
 class Helipad:
+	"""The main model object. https://helipad.dev/functions/model/"""
 	runInit = True #for multiple inheritance. Has to be a static property
 
 	def __init__(self, locale: str='en'):
@@ -574,6 +575,7 @@ class MultiLevel(baseAgent, Helipad):
 #==================
 
 class Events(funcStore):
+	"""Interface to add and store events that can trigger during a model on a certain user-defined criterion. https://helipad.dev/functions/events/"""
 	def __init__(self):
 		super().__init__()
 		class Event:
@@ -611,6 +613,7 @@ class Events(funcStore):
 		return super().add(name, self.Event(name, function, **kwargs))
 
 class Goods(gandb):
+	"""Interface to add and store goods that agents can own. https://helipad.dev/functions/goods/"""
 	def add(self, name: str, color, endowment=None, money: bool=False, props=None):
 		if not props: props = {}
 		if money:
@@ -646,6 +649,7 @@ class Goods(gandb):
 		return {k:v for k,v in self.items() if not v.money}
 
 class Hooks(funcStore):
+	"""Interface to add and store hooks, allowing user-defined code to be inserted into the model. https://helipad.dev/functions/hooks/"""
 	multi: bool = True
 
 	def add(self, name: str, function, prioritize: bool=False):

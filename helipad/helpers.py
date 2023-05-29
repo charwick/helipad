@@ -32,13 +32,14 @@ def isNotebook() -> bool:
 def isBuffered() -> bool:
 	return isinstance(__stdout__.buffer, BufferedWriter)
 
-#Generic extensible item class to store structured data
 class Item:
+	"""A generic extensible item class to store structured data. Kwargs are stored as object properties."""
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items():
 			setattr(self, k, v)
 
 class funcStore(dict):
+	"""A generic dict-like container class. https://helipad.dev/functions/funcstore/"""
 	multi = False
 
 	def add(self, name, function):
@@ -66,6 +67,7 @@ class funcStore(dict):
 
 import colorsys, matplotlib.colors as mplcolor
 class Color:
+	"""Defines a color and provides functions to manipulate it. https://helipad.dev/functions/color/"""
 	def __init__(self, color):
 		#Can take a hex string, color name, or [r,g,b] list/tuple.
 		self.rgb = mplcolor.hex2color(color) if isinstance(color, str) else list(color)

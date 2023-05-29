@@ -136,8 +136,8 @@ def NotPatches(function):
 # PATCH GEOMETRIES
 #===============
 
-#A 2D list of lists that lets us use [x,y] indices
 class Patches2D(list):
+	"""A 2D list of lists that lets us use [x,y] indices. This is not a full geometry. https://helipad.dev/functions/patches2d/"""
 	def __init__(self, dim, **kwargs):
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
@@ -165,6 +165,7 @@ class Patches2D(list):
 
 #Each row and column of equal length
 class PatchesRect(Patches2D):
+	"""Defines a rectangular patch grid. https://helipad.dev/functions/patchesrect/"""
 	geometry: str = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
@@ -198,8 +199,8 @@ class PatchesRect(Patches2D):
 	def __len__(self): return self.dim[0] * self.dim[1]
 
 #x,y placement is the same; just need to redefine patch functions and neighbors
-#x is number around, y is number out
 class PatchesPolar(PatchesRect):
+	"""Defines a polar-coordinate patch grid with θ×r dimensions. `x` is number around, `y` is number out. https://helipad.dev/functions/patchespolar/"""
 	geometry: str = 'polar'
 	wrap = (True, False) #Wrap around, but not in-to-out.
 
@@ -228,6 +229,7 @@ class PatchesPolar(PatchesRect):
 	def boundaries(self): return ((0, self.dim[0]), (0, self.dim[1]))
 
 class PatchesGeo(list):
+	"""Defines a set of patches with arbitrary polygonal shapes. https://helipad.dev/functions/patchesgeo/"""
 	geometry: str = 'geo'
 	def __init__(self, dim=None, wrap=True, corners=True, **kwargs):
 		import shapely
@@ -317,10 +319,10 @@ class PatchesGeo(list):
 
 #===============
 # COORDINATE SYSTEMS
-# Attach coordinate-specific functions and properties to agent objects
 #===============
 
 class RectFuncs:
+	"""Installs distance, neighbor, and angle functions for rectangular coordinates into agent objects"""
 	def install(patches=True, agents=True, all=True):
 		if patches:
 			for p in ['up', 'right', 'down', 'left', 'agentsOn', 'center', 'area', 'vertices']:
@@ -387,6 +389,7 @@ class RectFuncs:
 		return sqrt(difx**2 + dify**2)
 
 class PolarFuncs:
+	"""Installs distance, neighbor, and angle functions for polar coordinates into agent objects"""
 	def install(patches=True, agents=True, all=True):
 		if patches:
 			for p in ['inward', 'outward', 'clockwise', 'counterclockwise', 'agentsOn', 'center', 'area', 'vertices']:

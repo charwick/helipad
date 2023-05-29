@@ -8,6 +8,7 @@ from helipad.helpers import Item, ï
 
 #Don't try to subclass Pandas.dataframe; substantially slower and doesn't scale
 class Data:
+	"""Interface for collecting, storing, and accessing data generated during model runs. https://helipad.dev/functions/data/"""
 	def __init__(self, model):
 		self.reporters = {}
 		self.model = model
@@ -140,6 +141,7 @@ class Data:
 		df.to_csv(file)
 
 class Reporter(Item):
+	"""An interface defining a single column of data to be collected during a model run. https://helipad.dev/functions/reporter/"""
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		self.data = []

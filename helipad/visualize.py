@@ -17,8 +17,8 @@ mlpstyle.use('fast')
 # These two use Matplotlib, but subclasses of BaseVisualization don't necessarily have to
 #======================
 
-#Used for creating an entirely new visualization window
 class BaseVisualization(ABC):
+	"""Base class defining the methods that must be implemented by any visualization. https://helipad.dev/functions/basevisualization/"""
 	isNull: bool = True
 
 	#Create the window. Mandatory to implement
@@ -38,6 +38,7 @@ class BaseVisualization(ABC):
 	def terminate(self, model): pass
 
 class MPLVisualization(BaseVisualization):
+	"""Base class for visualizations using Matplotlib. https://helipad.dev/functions/mplvisualization/"""
 	keys = {}
 
 	def __init__(self, model):
@@ -124,6 +125,7 @@ class MPLVisualization(BaseVisualization):
 		return not [plot for plot in self.plots.values() if plot.selected]
 
 class TimeSeries(MPLVisualization):
+	"""A Matplotlib-based visualizer for displaying time series data on plots so the whole history of any given variable over the model's runtime can be seen at once. https://helipad.dev/functions/timeseries/"""
 	def __init__(self, model):
 		super().__init__(model)
 		self.verticals = []
@@ -254,6 +256,7 @@ class TimeSeries(MPLVisualization):
 		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
 
 class Charts(MPLVisualization):
+	"""A Matplotlib-based visualizer for a variety of visualizations that display data that reflects a single point in time. https://helipad.dev/functions/charts/"""
 	def __init__(self, model):
 		super().__init__(model)
 		self.events = {}
@@ -351,9 +354,8 @@ class Charts(MPLVisualization):
 # Plug into either TimeSeries or Charts as one of the subplots
 #======================
 
-#Used for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify class.type.
-#Extra kwargs in Charts.addPlot() are passed to ChartPlot.__init__().
 class ChartPlot(Item):
+	"""Base class for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify `class.type`. Extra kwargs in `Charts.addPlot()` are passed to `ChartPlot.__init__()`. https://helipad.dev/functions/chartplot/"""
 	def __init__(self, **kwargs):
 		if 'projection' not in kwargs and not hasattr(self, 'projection'): self.projection = None
 		self.axes = None
@@ -395,6 +397,7 @@ class ChartPlot(Item):
 	def MPLEvent(self, event): pass
 
 class TimeSeriesPlot(ChartPlot):
+	"""Visualizes time series data on one or more variables. Can be used in either the `TimeSeries` or `Charts` visualizer. https://helipad.dev/functions/timeseriesplot/"""
 	type = 'timeseries'
 	def __init__(self, **kwargs):
 		self.series = []
@@ -526,6 +529,7 @@ class TimeSeriesPlot(ChartPlot):
 		return self.viz.resolution if hasattr(self.viz, 'resolution') else int(self.viz.model.param('refresh'))
 
 class BarChart(ChartPlot):
+	"""A plot type that displays live-updating bar charts. https://helipad.dev/functions/barchart/"""
 	type = 'bar'
 	def __init__(self, **kwargs):
 		for arg in ['horizontal', 'logscale']:
@@ -608,6 +612,7 @@ class BarChart(ChartPlot):
 		super().draw(t, forceUpdate)
 
 class AgentsPlot(ChartPlot):
+	"""A plot visualizer used for displaying individual agents in various layouts. Agents can be plotted in a network structure, a spatial layout (or both at once), or a scatterplot comparing agents on two data dimensions. https://helipad.dev/functions/agentsplot/"""
 	type = 'agents'
 	def __init__(self, **kwargs):
 		if 'prim' not in kwargs: kwargs['prim'] = None
@@ -842,6 +847,7 @@ class AgentsPlot(ChartPlot):
 #======================
 
 class Series(Item):
+	"""Stores data on series, which link a reporter to a plot. https://helipad.dev/functions/series/"""
 	@property
 	def visible(self) -> bool:
 		if not hasattr(self, 'line'): return self._visible
@@ -877,6 +883,7 @@ class Series(Item):
 #======================
 
 def keepEvery(lst: list, n: int):
+	"""Helper function to reduce the resolution of a list."""
 	i,l = (1, [])
 	for k in lst:
 		if i%n==0: l.append(k)

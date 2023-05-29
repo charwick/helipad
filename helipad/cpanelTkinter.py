@@ -10,6 +10,7 @@ from helipad.helpers import Color, ï
 from helipad.param import Param
 
 class Cpanel(tk.Tk):
+	"""The Tkinter-based control panel class for use in standalone models. https://helipad.dev/functions/cpanel/"""
 	def __init__(self, model):
 		self.model = model
 		super().__init__()
@@ -330,8 +331,8 @@ class Cpanel(tk.Tk):
 # MISCELLANEOUS INTERFACE ELEMENTS
 #
 
-# A slider with defined non-linear intervals
 class logSlider(tk.Frame):
+	"""A slider with discrete specified intervals. https://helipad.dev/functions/logslider/"""
 	def __init__(self, parent=None, title=None, command=None, bg='#FFFFFF', font=('Lucida Grande',12), values=(), **kwargs):
 		tk.Frame.__init__(self, parent, bg=bg)
 		self.label = tk.Label(self, font=font, text=title, bg=bg).pack(side='top') if title else None
@@ -441,9 +442,8 @@ class expandableFrame(tk.Frame):
 			self.titleLabel['text'] = self.text+' '+'▸'
 			self._open.set(0)
 
-# A checkbox-like widget whose toggle is the entire element
-# bg and fg take a two-element tuple for inactive and active states
 class textCheck(tk.Label):
+	"""A checkbox-like widget whose toggle is the entire element. `bg` and `fg` take a two-element color tuple for inactive and active states. https://helipad.dev/functions/textcheck/"""
 	def __init__(self, parent=None, text=None, bg=('#FFFFFF','#419BF9'), fg=('#333333','#FFFFFF'),
 		defaultValue=False, anchor='w', desc=None, callback=None
 	):
@@ -494,8 +494,8 @@ class textCheck(tk.Label):
 		self.enabled = not bool(disable)
 		self.config(bg=bg[self.value].hex, fg=fg[self.value].hex)
 
-# A checkbox that enables/disables a text box
 class checkEntry(tk.Frame):
+	"""A checkbox that enables/disables a text box. https://helipad.dev/functions/checkentry/"""
 	def __init__(self, parent=None, title=None, width=20, bg='#FFFFFF', padx=0, pady=0, default='', datatype='string', command=None, limits=(0, 10**100)):
 		tk.Frame.__init__(self, parent, bg=bg, padx=padx, pady=pady)
 		self.callback = command
@@ -560,8 +560,8 @@ class checkEntry(tk.Frame):
 	#Here for compatibility with other Tkinter widgets
 	def configure(self, state): self.disabled(state=='disabled')
 
-#An expandableFrame full of textChecks, with setters and getters.
 class checkGrid(expandableFrame):
+	"""An `expandableFrame` full of `textCheck`s, with setters and getters. https://helipad.dev/functions/checkentry/"""
 	def __init__(self, parent=None, text: str='', columns: int=3, fg='#333', bg='#FFF', padx: int=8, pady: int=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True, callback=None):
 		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
 		self.bg = bg
@@ -609,9 +609,8 @@ class checkGrid(expandableFrame):
 			for c in self.values(): c.disable()
 	def configure(self, state): self.disabled(state=='disabled')
 
-#Replaces PMW.balloon because it's unreliably maintained
-#Modified from https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter
 class Tooltip:
+	"""Replaces PMW.balloon because it's unreliably maintained. Modified from https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter"""
 	def __init__(self, widget, text, bg='#FFFFEA', pad=(5, 3, 5, 3), waittime=500, wraplength=250, tip_delta=(10, 5)):
 		for v in ['text', 'widget', 'bg', 'pad', 'waittime', 'wraplength', 'tip_delta']: setattr(self, v, locals()[v]) #Populate object with arguments
 		self.widget.bind("<Enter>", self.onEnter)

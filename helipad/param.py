@@ -8,6 +8,7 @@ from helipad.helpers import *
 from numpy import arange, random
 
 class Param(Item):
+	"""Base class defining a model parameter that can be set before or during runtime. https://helipad.dev/functions/param/"""
 	def __init__(self, **kwargs):
 		super().__init__(**kwargs)
 		if not hasattr(self, 'per'): self.per=None
@@ -90,6 +91,7 @@ class Param(Item):
 	def defaultVal(self): return None
 
 class MenuParam(Param):
+	"""A parameter type that takes discrete string values. https://helipad.dev/functions/param/"""
 	type = 'menu'
 
 	def setParent(self, val, item=None, updateGUI=True):
@@ -107,6 +109,7 @@ class MenuParam(Param):
 	def defaultVal(self): return next(iter(self.opts))
 
 class CheckParam(Param):
+	"""A parameter type that takes a boolean value. https://helipad.dev/functions/param/"""
 	defaultVal = False
 	type='check'
 
@@ -121,6 +124,7 @@ class CheckParam(Param):
 	def range(self): return [False, True]
 
 class SliderParam(Param):
+	"""A parameter type that takes numerical values. https://helipad.dev/functions/param/"""
 	type='slider'
 
 	def setSpecific(self, val, item=None, updateGUI: bool=True):
@@ -174,6 +178,7 @@ class SliderParam(Param):
 				if updateGUI and val in self.opts: el.children[0].value = self.opts.index(val)
 
 class CheckentryParam(Param):
+	"""A parameter type that takes `False` if unchecked, or a string value if checked. https://helipad.dev/functions/param/"""
 	defaultVal = ''
 	type='checkentry'
 
@@ -261,6 +266,7 @@ class CheckentryParam(Param):
 		else: super().disabled(disable)
 
 class CheckgridParam(Param):
+	"""A parameter type that takes a list of boolean values. https://helipad.dev/functions/param/"""
 	defaultVal = []
 	type='checkgrid'
 
@@ -336,6 +342,7 @@ class CheckgridParam(Param):
 		if selected: self.default.append(name)
 
 class ParamGroup:
+	"""Defines a collapsible group of parameters for display in the control panel. https://helipad.dev/functions/params/group/"""
 	def __init__(self, name: str, members, opened: bool):
 		self.title = name
 		self.members = members
@@ -365,8 +372,8 @@ class ParamGroup:
 # CONTAINER CLASSES
 #==================
 
-#Also delete any interface elements
 class fStoreWithInterface(funcStore):
+	"""Subclass of `FuncStore` that also deletes parameter interface elements on removal. https://helipad.dev/functions/funcstore/"""
 	def remove(self, name: str):
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 
@@ -383,6 +390,7 @@ class fStoreWithInterface(funcStore):
 			else: item.element.close()
 
 class Params(fStoreWithInterface):
+	"""Interface for storing, adding, and accessing model parameters. Stored in `model.params`. https://helipad.dev/functions/params/"""
 	multi = False
 
 	def __init__(self, model):
@@ -450,6 +458,7 @@ class Params(fStoreWithInterface):
 
 #This object is instantiated once and lives in model.shocks
 class Shocks(CheckgridParam, fStoreWithInterface):
+	"""Interface for adding, storing, and executing model shocks. Stored in `model.shocks`, but also subclasses `CheckgridParam` and the same object is also located in `model.params['shocks']`. https://helipad.dev/functions/shocks/"""
 	multi: bool = False
 
 	def __init__(self, model):
@@ -458,6 +467,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 		self.model = model
 
 		class Shock(Item):
+			"""Container defining a shock to a parameter that can execute during model runtime. https://helipad.dev/functions/shock/"""
 			@property
 			def selected(self2) -> bool: return self.get(self2.name)
 

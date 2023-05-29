@@ -13,6 +13,7 @@ from helipad.helpers import ï, funcStore, Color, Item, isNotebook
 #subclassed by a class corresponding to a primitive and registered with Helipad.addPrimitive().
 #See below, the Agent() class for a minimal example.
 class baseAgent:
+	"""A basic agent class that can be subclassed to create new primitives (see https://helipad.dev/functions/agents/addprimitive/). https://helipad.dev/functions/baseagent/"""
 	angleUnit: str = 'deg'
 	fixed: bool = False
 	overdraft: str = 'continue-silent'
@@ -311,10 +312,12 @@ class baseAgent:
 
 #The default agent class corresponding to the 'agent' primitive.
 class Agent(baseAgent):
+	"""The default agent class. https://helipad.dev/functions/agent/"""
 	pass
 
 #For spatial models
 class Patch(baseAgent):
+	"""An agent primitive that forms a spatial layout upon which other agents can be positioned. https://helipad.dev/functions/patch/"""
 	fixed: bool = True
 
 	#Don't remove from the list; just mark as dead
@@ -336,6 +339,7 @@ class Patch(baseAgent):
 #an int (0 for undirected, >0 for agent1 to agent2, and <0 for agent2 to agent1),
 #or a boolean (False for undirected, True for agent1 to agent2)
 class Edge:
+	"""A connection between two agents as part of a network. https://helipad.dev/functions/edge/"""
 	def __init__(self, agent1: baseAgent, agent2: baseAgent, kind: str='edge', direction=None, weight=1):
 		self.active = True
 		self.kind = kind
@@ -388,6 +392,7 @@ class Edge:
 		newagent.model.doHooks('edgeReassign', [self, oldagent, newagent])
 
 class Stocks:
+	"A dict-like interface for agent holdings of registered goods. https://helipad.dev/functions/baseagent/#stocks"
 	def __init__(self, breed: str, goodslist: list):
 		self.goods = {g:{} for g in goodslist}
 		for good, ginfo in goodslist.items():
@@ -421,8 +426,8 @@ class Stocks:
 # CONTAINER CLASSES
 #==================
 
-#Basic methods for a dict of dicts
 class MultiDict(dict):
+	"""A base class for a dict of dicts"""
 	def __len__(self):
 		return sum(len(a) for a in super().values())
 
@@ -433,6 +438,7 @@ class MultiDict(dict):
 		return agents
 
 class Agents(MultiDict):
+	"""Interface for storing and interacting with model agents, organized by primitive. Accessible at `model.agents`. https://helipad.dev/functions/agents/"""
 	def __init__(self, model):
 		self.model = model
 		self.order = 'linear'
@@ -570,6 +576,7 @@ class Agents(MultiDict):
 		self.removePrimitive(name)
 
 class Primitive(list):
+	"""List-like container for agents of a primitive, plus data defining that primitive. Stored within the `Agents` object. https://helipad.dev/functions/primitive/"""
 	def __init__(self, **kwargs):
 		for k,v in kwargs.items(): setattr(self, k, v)
 		super().__init__()
@@ -578,8 +585,8 @@ class Primitive(list):
 		if isinstance(val, str): return [a for a in self if a.breed==val]
 		else: return super().__getitem__(val)
 
-#For adding breeds and goods. Should not be called directly
 class gandb(funcStore):
+	"""Base class for breeds and goods containers. Should not be called directly"""
 	def __init__(self, model):
 		self.model = model
 
@@ -613,6 +620,7 @@ class gandb(funcStore):
 		return super().remove(name)
 
 class Breeds(gandb):
+	"""Interface for adding and storing data on breeds. Stored within the `Primitive` object. https://helipad.dev/functions/breeds/"""
 	def __init__(self, model, primitive: str):
 		self.primitive = primitive
 		super().__init__(model)
@@ -620,6 +628,7 @@ class Breeds(gandb):
 	def add(self, name: str, color): return super().add('breed', name, color)
 
 class Edges(MultiDict):
+	"""Interface for adding and storing connections between agents that define a network. Stored in `Agent.edges`. https://helipad.dev/functions/edges/"""
 	def __init__(self, agent: baseAgent):
 		self.agent = agent
 		super().__init__()
@@ -653,6 +662,7 @@ class Edges(MultiDict):
 		return [edge for edge in edges if self.agent in edge.vertices and partner in edge.vertices]
 
 class ModelEdges(MultiDict):
+	"""Interface for gathering aggregations of connections between agents. Stored in `model.agent.edges`."""
 	def __init__(self, agents: Agents):
 		self.agents = agents
 		super().__init__()

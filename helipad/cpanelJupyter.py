@@ -10,6 +10,7 @@ from helipad.param import Param
 from helipad.helpers import ï
 
 class Cpanel(VBox):
+	"""The control panel class for use in Jupyter notebooks. https://helipad.dev/functions/cpanel/"""
 	def __init__(self, model, redraw: bool=False):
 		super().__init__()
 		self.model = model
