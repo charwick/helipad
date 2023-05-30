@@ -5,6 +5,7 @@ Functions and classes to initialize a network of Patch agents and add orientatio
 import warnings
 from random import uniform
 from math import sqrt, sin, cos, atan2, pi, copysign, floor
+from abc import ABC, abstractmethod
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
 from helipad.helpers import ï, Number, Item
@@ -136,15 +137,68 @@ def NotPatches(function):
 # PATCH GEOMETRIES
 #===============
 
-class Patches2D(list):
-	"""A 2D list of lists that lets us use [x,y] indices. This is not a full geometry. https://helipad.dev/functions/patches2d/"""
-	def __init__(self, dim, **kwargs):
+class basePatches(list, ABC):
+	"""Abstract class defining the methods a coordinate system must implement."""
+
+	@abstractmethod
+	def revive(self, coords):
+		"""Reinstates a dead patch. https://helipad.dev/functions/basepatches/revive/"""
+
+	@abstractmethod
+	def at(self, x, y):
+		"""Return the patch at the specified coordinate. https://helipad.dev/functions/patchesrect/at/"""
+
+	@abstractmethod
+	def neighbors(self, model):
+		"""Establishes the spatial network among the patches after initialization. https://helipad.dev/functions/patchesrect/neighbors/"""
+
+	@abstractmethod
+	def place(self, agent: Patch):
+		"""Organize `Patch` objects within the `Patches` object. Takes a `Patch` object when created by `Agents.initialize()`, places it in the appropriate list, and assigns its position property. https://helipad.dev/functions/patchesrect/place/"""
+
+	@property
+	@abstractmethod
+	def boundaries(self):
+		"""Maximum and minimum coordinates that agents can take, given the grid dimensions: `((xmin, xmax), (ymin, ymax))` https://helipad.dev/functions/patchesrect/#boundaries"""
+
+#Each row and column of equal length
+class PatchesRect(basePatches):
+	"""Defines a rectangular patch grid. https://helipad.dev/functions/patchesrect/"""
+	geometry: str = 'rect'
+
+	#Give patches and agents methods for their neighbors in the four cardinal directions
+	def __init__(self, dim, wrap=True, **kwargs):
+		if isinstance(wrap, bool): wrap = (wrap, wrap)
+		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
+		self.wrap = wrap
 		if isinstance(dim, int): dim = (dim, dim)
 		if len(dim) != 2: raise TypeError(ï('Invalid dimension.'))
 		self.dim = dim
 		self.offmap = kwargs['offmap']
 		self.corners = kwargs['corners']
+		if not 'noinstall' in kwargs: RectFuncs.install()
 		super().__init__([])
+
+	def at(self, x, y): return self[round(x), round(y)]
+
+	def neighbors(self, model):
+		for patch in model.agents['patch']:
+			neighbors = [(patch.right, 1), (patch.down, 1)]
+			if self.corners: neighbors += [(patch.down.right, self.corners), (patch.left.down, self.corners)]
+			for n, weight in neighbors:
+				if n: patch.edges.add(n, 'space', weight=weight)
+
+	def place(self, agent: Patch):
+		if not super().__len__(): self += [[] for i in range(self.dim[0])]
+		x=0
+		while len(self[x]) >= self.dim[1]: x+=1		#Find a column that's not full yet
+		agent.position = (x, len(self[x]))			#Note the position
+		self[x].append(agent)						#Append the agent
+
+	@property
+	def boundaries(self): return ((-0.5, self.dim[0]-0.5), (-0.5, self.dim[1]-0.5))
+
+	def __len__(self): return self.dim[0] * self.dim[1]
 
 	def __getitem__(self, key):
 		if isinstance(key, int): return super().__getitem__(key)
@@ -163,41 +217,6 @@ class Patches2D(list):
 	def revive(self, coords):
 		super().__getitem__(coords[0])[coords[1]].dead = False
 
-#Each row and column of equal length
-class PatchesRect(Patches2D):
-	"""Defines a rectangular patch grid. https://helipad.dev/functions/patchesrect/"""
-	geometry: str = 'rect'
-
-	#Give patches and agents methods for their neighbors in the four cardinal directions
-	def __init__(self, dim, wrap=True, **kwargs):
-		if isinstance(wrap, bool): wrap = (wrap, wrap)
-		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
-		self.wrap = wrap
-		RectFuncs.install()
-		super().__init__(dim, wrap=wrap, **kwargs)
-
-	def at(self, x, y): return self[round(x), round(y)]
-
-	def neighbors(self, model):
-		for patch in model.agents['patch']:
-			neighbors = [(patch.right, 1), (patch.down, 1)]
-			if self.corners: neighbors += [(patch.down.right, self.corners), (patch.left.down, self.corners)]
-			for n, weight in neighbors:
-				if n: patch.edges.add(n, 'space', weight=weight)
-
-	#Take a sequential list of self.count patches and position them appropriately in the internal list
-	def place(self, agent: Patch):
-		if not super().__len__(): self += [[] for i in range(self.dim[0])]
-		x=0
-		while len(self[x]) >= self.dim[1]: x+=1		#Find a column that's not full yet
-		agent.position = (x, len(self[x]))			#Note the position
-		self[x].append(agent)						#Append the agent
-
-	@property #((xmin, xmax),(ymin, ymax))
-	def boundaries(self): return ((-0.5, self.dim[0]-0.5), (-0.5, self.dim[1]-0.5))
-
-	def __len__(self): return self.dim[0] * self.dim[1]
-
 #x,y placement is the same; just need to redefine patch functions and neighbors
 class PatchesPolar(PatchesRect):
 	"""Defines a polar-coordinate patch grid with θ×r dimensions. `x` is number around, `y` is number out. https://helipad.dev/functions/patchespolar/"""
@@ -206,7 +225,7 @@ class PatchesPolar(PatchesRect):
 
 	def __init__(self, dim, **kwargs):
 		PolarFuncs.install()
-		Patches2D.__init__(self, dim, **kwargs) #Skip PatchesRect.__init__
+		super().__init__(dim, noinstall=True, **kwargs)
 
 	def at(self, x, y): return self[floor(x), floor(y)]
 
@@ -228,7 +247,7 @@ class PatchesPolar(PatchesRect):
 	@property #((xmin, xmax),(ymin, ymax))
 	def boundaries(self): return ((0, self.dim[0]), (0, self.dim[1]))
 
-class PatchesGeo(list):
+class PatchesGeo(basePatches):
 	"""Defines a set of patches with arbitrary polygonal shapes. https://helipad.dev/functions/patchesgeo/"""
 	geometry: str = 'geo'
 	def __init__(self, dim=None, wrap=True, corners=True, **kwargs):
@@ -255,8 +274,9 @@ class PatchesGeo(list):
 		RectFuncs.install(patches=False)
 
 	def __getitem__(self, val):
-		if isinstance(val, str): return [p for p in self if p.name==val][0]
-		else: return super().__getitem__(val)
+		if isinstance(val, str): patch = [p for p in self if p.name==val][0]
+		else: patch = super().__getitem__(val)
+		return patch if not patch.dead else None
 
 	def __len__(self): return len(self.shapes)
 
@@ -269,10 +289,8 @@ class PatchesGeo(list):
 		bounds = [s.shape.bounds for s in self.shapes]
 		minx, miny, maxx, maxy = bounds[0] if bounds else (0,0,0,0)
 		for b in bounds:
-			minx = min(minx, b[0])
-			maxx = max(maxx, b[2])
-			miny = min(miny, b[1])
-			maxy = max(maxy, b[3])
+			minx, maxx = min(minx, b[0]), max(maxx, b[2])
+			miny, maxy = min(miny, b[1]), max(maxy, b[3])
 		return ((minx, maxx), (miny, maxy))
 
 	@property
@@ -303,7 +321,7 @@ class PatchesGeo(list):
 	def at(self, x, y):
 		pt = self.shapely.Point(x,y)
 		for p in self:
-			if p.polygon.covers(pt): return p
+			if p.polygon.covers(pt): return p if not p.dead else None
 
 	def neighbors(self, model):
 		for p in self.shapes:
@@ -317,12 +335,17 @@ class PatchesGeo(list):
 		shape.patch = agent
 		self.append(agent)
 
+	def revive(self, index):
+		if isinstance(index, str): [p for p in self if p.name==index][0].dead = False
+		else: super().__getitem__(index).dead = False
+
 #===============
 # COORDINATE SYSTEMS
 #===============
 
 class RectFuncs:
-	"""Installs distance, neighbor, and angle functions for rectangular coordinates into agent objects"""
+	"""Installs distance, neighbor, and angle functions for rectangular coordinates into agent objects. This is a static class and should not be instantiated."""
+	@staticmethod
 	def install(patches=True, agents=True, all=True):
 		if patches:
 			for p in ['up', 'right', 'down', 'left', 'agentsOn', 'center', 'area', 'vertices']:
@@ -389,7 +412,8 @@ class RectFuncs:
 		return sqrt(difx**2 + dify**2)
 
 class PolarFuncs:
-	"""Installs distance, neighbor, and angle functions for polar coordinates into agent objects"""
+	"""Installs distance, neighbor, and angle functions for polar coordinates into agent objects. This is a static class and should not be instantiated."""
+	@staticmethod
 	def install(patches=True, agents=True, all=True):
 		if patches:
 			for p in ['inward', 'outward', 'clockwise', 'counterclockwise', 'agentsOn', 'center', 'area', 'vertices']:

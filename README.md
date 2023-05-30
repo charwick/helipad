@@ -38,6 +38,7 @@ Helipad requires Python 3.8 or higher. The following libraries are also required
 * [Pandas](https://pandas.pydata.org/) for data collection
 * [NetworkX](http://networkx.github.io/) for network analysis and spatial visualization
 * _Optional:_ [Jupyter](https://jupyter.org/), [Ipywidgets](https://pypi.org/project/ipywidgets/), and [ipympl](https://github.com/matplotlib/ipympl) to run Helipad in Jupyter notebooks
+* _Optional:_ [Shapely](https://shapely.readthedocs.io/) for geospatial models.
 
 ## How to Cite
 
@@ -47,7 +48,7 @@ If you use Helipad in your own research, please cite as follows:
 
 ## Version History
 
-* 1.6: Agent scatterplot visualizer, new `Agents` and `Edges` containers
+* 1.6: Geospatial models, agent scatterplot visualizer, new `Agents` and `Edges` containers
 * [1.5](https://helipad.dev/2023/01/helipad-1-5/): Polar grid spatial models, various spatial improvements
 * [1.4](https://helipad.dev/2022/07/helipad-1-4/): More consistent container API, localization, miscellaneous interface improvements
 * [1.3](https://helipad.dev/2021/06/helipad-1-3/): Allow mixing time series and other plots, display networks on spatial maps, goods API improvements
