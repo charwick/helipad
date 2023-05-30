@@ -105,18 +105,19 @@ class Helipad:
 		else: return '<Helipad object>'
 
 	def addButton(self, text: str, func, desc=None):
+		"""Add a button to the control panel, in the shocks section, that runs `func` when pressed. This method is aliased by the `@model.button` function decorator, which is preferred. https://helipad.dev/functions/model/addbutton/"""
 		self.shocks.add(text, None, func, 'button', True, desc)
 
-	#Get or set a parameter, depending on whether there are two or three arguments
 	def param(self, param, val=None):
+		"""Get or set a model parameter, depending on whether there are two or three arguments. https://helipad.dev/functions/model/param/"""
 		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
 		param = self.params[param[0]] if isinstance(param, tuple) else self.params[param]
 
 		if val is not None: param.set(val, item)
 		else: return param.get(item)
 
-	#Returns the value of the last function in the list
 	def doHooks(self, place: str, args: list):
+		"""Execute registered hooks at various places in the model and return the value of the last function in the list. https://helipad.dev/functions/model/dohooks/"""
 		#Take a list of hooks; go until we get a response
 		if isinstance(place, list):
 			for f in place:
@@ -129,6 +130,7 @@ class Helipad:
 		return r
 
 	def useVisual(self, viz: BaseVisualization):
+		"""Register a visualization class for live model visualization. Visualization classes can be imported from `helipad.visualize`, or custom visualization classes can be subclassed from `BaseVisualization`. The visualization can then be launched later using model.launchVisual(). https://helipad.dev/functions/model/usevisual/"""
 		if hasattr(self, 'breed'):
 			warnings.warn(ï('Visualizations can only be registered on the top-level model.'), None, 2)
 			return #Doesn't matter if it's not the top-level model
@@ -139,8 +141,8 @@ class Helipad:
 		self.visual = viz(self) if viz is not None else None
 		return self.visual
 
-	#Get ready to actually run the model
 	def setup(self):
+		"""Gather the control panel settings and initialize the model. This function runs when the "New Model" button is pressed, and should not be called by user code. https://helipad.dev/functions/model/setup/"""
 		if self.hasModel: self.terminate()
 		self.doHooks('modelPreSetup', [self])
 		self.t = 0
@@ -217,9 +219,12 @@ class Helipad:
 		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
 
-	def cutStep(self): self._cut = True
+	def cutStep(self):
+		"""When called from inside an `agentStep` or `match` hook, skip stepping the rest of the agents that stage and proceed to the next (or to the next period in single-stage models). https://helipad.dev/functions/model/cutstep/"""
+		self._cut = True
 
 	def step(self, stage: int=1):
+		"""Step the model, i.e. run through the `step()` functions of all the agents and increment the timer by one. This method is called automatically while the model is running, and should not generally be called in user code. https://helipad.dev/functions/model/step/"""
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
 
@@ -343,7 +348,7 @@ class Helipad:
 	#The *args allows it to be used as an Ipywidgets callback
 	#@profile #To test memory usage
 	def start(self, *args):
-
+		"""Start a model, running `model.setup()` if `model.hasModel` is `False`, and otherwise resuming the existing model. This function is called by `model.launchVisual()`, but does not call it. Use that function to start the model instead if output plots are desired. https://helipad.dev/functions/model/start/"""
 		#Start the progress bar
 		if self.cpanel:
 			self.cpanel.progress.start()
@@ -357,6 +362,7 @@ class Helipad:
 		else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
 
 	def stop(self, *args):
+		"""Pause the model, allowing it to be subsequently resumed. https://helipad.dev/functions/model/stop/"""
 		self.running = False
 		if self.cpanel:
 			self.cpanel.progress.stop()
@@ -364,6 +370,7 @@ class Helipad:
 		self.doHooks('modelStop', [self])
 
 	def terminate(self, evt=False):
+		"""Terminate the running model and write the data to disk, if applicable. https://helipad.dev/functions/model/terminate/"""
 		if not self.hasModel: return
 		self.running = False
 		self.hasModel = False
@@ -386,6 +393,7 @@ class Helipad:
 
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
 	def paramSweep(self, param, reporters=None):
+		"""Repeatedly run the model while systematically varying one or more parameter values. Possible values to be swept are specified when the parameter is registered. https://helipad.dev/functions/model/paramsweep/"""
 		if not self.param('stopafter'): raise RuntimeError(ï('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set.'))
 
 		#Standardize format and get the Param objects
@@ -423,20 +431,20 @@ class Helipad:
 		from helipad.spatial import spatialSetup
 		return spatialSetup(self, *args, **kwargs)
 
-	# Requires to be run in a buffered console. `self` will refer to the model object
-	# Readline doesn't look like it's doing anything here, but it enables certain console features
 	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 	# Has to be called *after* Cpanel.__init__() is called, or the cpanel object won't be available.
 	def debugConsole(self):
+		"""Launch a REPL console to interact with the model after launch. Requires to be run in a buffered console. `self` will refer to the model object."""
 		if sys.platform=='darwin' and isBuffered():
 			try:
-				import code, readline
+				import code, readline # Readline doesn't look like it's doing anything here, but it enables certain console features
 				env = globals().copy()
 				env['self'] = self
 				code.interact(local=env)
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
 
 	def launchCpanel(self, console: bool=True):
+		"""Launch the control panel, either in a Tkinter or a Jupyter environment, as appropriate. https://helipad.dev/functions/model/launchcpanel/"""
 		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
 
 		self.doHooks('CpanelPreLaunch', [self])
@@ -469,6 +477,7 @@ class Helipad:
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 
 	def launchVisual(self):
+		"""Launch the visualization window from the class registered in `model.useVisual()`, and start the model. https://helipad.dev/functions/model/launchvisual/"""
 		if self.visual is None or self.visual.isNull:
 			if not self.cpanel:
 				print(ï('No visualizations available. To run the model with no GUI, use model.start() instead.'))
@@ -498,6 +507,7 @@ class Helipad:
 
 	# Generates function decorators for hooks, reporters, etc.
 	def genDecorator(self, todo):
+		"""Return a function which can either serve as a decorator itself or return another decorator function, for use in various decorators (`@model.hook`, `@model.reporter`, and `@model.button`). https://helipad.dev/functions/model/gendecorator/"""
 		def dec(name=None, **kwargs):
 			if callable(name): func, name, isDec = (name, None, True)
 			else: isDec = False
@@ -518,16 +528,19 @@ class Helipad:
 
 	@property
 	def allagents(self):
+		"""A list of all agents. This property is deprecated; use `model.agents.all` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allagents', 'model.agents.all'), FutureWarning, 2)
 		return self.agents.all
 
 	@property
 	def primitives(self):
+		"""A list of primitive data. This property is deprecated; use `model.agents` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives', 'model.agents'), FutureWarning, 2)
 		return self.agents
 
 	@property
 	def order(self):
+		"""The order in which to step agents. This property is deprecated; use `model.agents.order` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.order', 'model.agents.order'), FutureWarning, 2)
 		return self.agents.order
 	@order.setter
@@ -536,23 +549,28 @@ class Helipad:
 		self.agents.order = val
 
 	def addBreed(self, name, color, prim=None):
+		"""Add a breed to a given primitive. This method is deprecated; use `model.agents.addBreed()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.addBreed', 'model.agents.addBreed'), FutureWarning, 2)
 		return self.agents.addBreed(name, color, prim)
 
 	def createNetwork(self, density, kind='edge', prim=None):
+		"""Create a network of a given density among agents. This method is deprecated; use `model.agents.createNetwork()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.createNetwork', 'model.agents.createNetwork'), FutureWarning, 2)
 		return self.agents.createNetwork(density, kind, prim)
 
 	def network(self, kind='edge', prim=None, excludePatches=False):
+		"""Return the network structure of a set of agents. This method is deprecated; use `model.agents.network()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.network', 'model.agents.network'), FutureWarning, 2)
 		return self.agents.network(kind, prim, excludePatches)
 
 	@property
 	def allEdges(self):
+		"""A `dict` of all network edges between agents, organized by kind. This property is deprecated; use `model.agents.edges` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.allEdges', 'model.agents.edges'), FutureWarning, 2)
 		return self.agents.edges._dict
 
 	def agent(self, var, primitive=None):
+		"""Retrieve an agent by ID or breed. This method is deprecated; use `model.agents[primitive][breed]` or `model.agents[id]` instead."""
 		if isinstance(var, str):
 			warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.agent(breed)', 'model.agents[primitive][breed]'), FutureWarning, 2)
 			if primitive is None: primitive = next(iter(self.agents))
@@ -562,10 +580,12 @@ class Helipad:
 			return self.agents[var]
 
 	def summary(self, var, prim=None, breed=None, good=False):
+		"""Print summary statistics on an agent property. This method is deprecated; use `model.agents.summary()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.summary()', 'model.agents.summary()'), FutureWarning, 2)
 		return self.agents.summary(var, prim, breed, good)
 
 class MultiLevel(baseAgent, Helipad):
+	"""A class allowing multi-level agent-based models to be constructed, where the agents at one level are themselves full models with sub-agents. Inherits from both `baseAgent` and `Helipad`. https://helipad.dev/functions/multilevel/"""
 	def __init__(self, breed, id, parentModel):
 		super().__init__(breed, id, parentModel)
 		self.setup()
@@ -579,6 +599,7 @@ class Events(funcStore):
 	def __init__(self):
 		super().__init__()
 		class Event:
+			"""An event triggers on a certain user-defined criterion. When triggered, an event stores the data output at that time and registers on the visualizer. This class should not be instantiated directly; use Events.add() or the @model.event decorator instead. https://helipad.dev/functions/event/"""
 			def __init__(self, name: str, trigger, repeat: bool=False, **kwargs):
 				self.name = name
 				self.trigger = trigger
@@ -589,6 +610,7 @@ class Events(funcStore):
 				self.reset()
 
 			def check(self, model: Helipad) -> bool:
+				"""Run the user-defined event function to determine whether the event is triggered, and record the model state if so. If `Event.repeat==False`, return `False` so long as `Event.trigger` returns `False`, `True` the first time `Event.trigger` returns `True`, and `False` thereafter. If `Event.repeat==True`, return `True` whenever `Event.trigger` returns `True`. https://helipad.dev/functions/event/check/"""
 				if self.triggered and not self.repeat: return False
 				if (isinstance(self.trigger, int) and model.t==self.trigger) or (callable(self.trigger) and self.trigger(model)):
 					data = {k: v[0] for k,v in model.data.getLast(1).items()}
@@ -601,6 +623,7 @@ class Events(funcStore):
 					return True
 
 			def reset(self):
+				"""Clear `Event.data` and set `Event.triggered` to `False`. https://helipad.dev/functions/event/reset/"""
 				if self.repeat:
 					self.data.clear()
 					self.triggered.clear()
@@ -610,11 +633,13 @@ class Events(funcStore):
 		self.Event = Event
 
 	def add(self, name: str, function, **kwargs):
+		"""Register an Event. When triggered, an event stores the data output at that time and registers on the visualizer. https://helipad.dev/functions/events/add/"""
 		return super().add(name, self.Event(name, function, **kwargs))
 
 class Goods(gandb):
-	"""Interface to add and store goods that agents can own. https://helipad.dev/functions/goods/"""
+	"""Interface to add and store goods that agents can own. Stored in `model.goods`. https://helipad.dev/functions/goods/"""
 	def add(self, name: str, color, endowment=None, money: bool=False, props=None):
+		"""Register a good that agents can carry or trade. Agents keep track of stocks of the good in `agent.stocks`. Quantities of a good can then be accessed with `agent.stocks[good]`, and properties of the good with a two-argument index, e.g. `agent.stocks[good, 'property']`. https://helipad.dev/functions/goods/add/"""
 		if not props: props = {}
 		if money:
 			if self.money is not None:
@@ -640,12 +665,14 @@ class Goods(gandb):
 
 	@property
 	def money(self):
+		"""The name of the good serving as a numeraire. This property is set by the `money` parameter of `Goods.add()`. https://helipad.dev/functions/goods/#money"""
 		for name,good in self.items():
 			if good.money: return name
 		return None
 
 	@property
 	def nonmonetary(self) -> dict:
+		"""The subset of goods minus the money good. https://helipad.dev/functions/goods/#nonmonetary"""
 		return {k:v for k,v in self.items() if not v.money}
 
 class Hooks(funcStore):
@@ -653,6 +680,7 @@ class Hooks(funcStore):
 	multi: bool = True
 
 	def add(self, name: str, function, prioritize: bool=False):
+		"""Inserts a function into designated places in the model’s logic. See the Hooks Reference (https://helipad.dev/glossary/hooks/) for a complete list of possible hooks and the function signatures necessary to use them. This method is aliased by the `@model.hook` function decorator, which is the preferred way to hook functions. https://helipad.dev/functions/hooks/add/"""
 		if not name in self: self[name] = []
 		if prioritize: self[name].insert(0, function)
 		else: self[name].append(function)

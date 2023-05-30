@@ -16,6 +16,8 @@ from helipad.helpers import ï, Number, Item
 #===============
 
 def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: bool=False, **kwargs):
+	"""Set up functions, properties, and methods for a spatial model. https://helipad.dev/functions/model/spatial/"""
+
 	# Backward compatibility
 	if 'diag' in kwargs:	#Remove in Helipad 1.7
 		corners = kwargs['diag']
@@ -126,8 +128,8 @@ def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: boo
 	mapPlot = model.visual.addPlot('map', 'Map', type='agents', layout='spatial', projection=geometry if geometry=='polar' else None)
 	return mapPlot
 
-#Functions for all primitives except patches, which are spatially fixed
 def NotPatches(function):
+	"""Wraps a function to execute for all primitives except patches, which are spatially fixed."""
 	def np2(self, *args, **kwargs):
 		if self.primitive != 'patch': return function(self, *args, **kwargs)
 		else: raise RuntimeError(ï('Patches cannot move.'))
@@ -138,7 +140,7 @@ def NotPatches(function):
 #===============
 
 class basePatches(list, ABC):
-	"""Abstract class defining the methods a coordinate system must implement."""
+	"""Abstract class defining the methods a coordinate system must implement. https://helipad.dev/functions/basepatches/"""
 
 	@abstractmethod
 	def revive(self, coords):
@@ -146,20 +148,20 @@ class basePatches(list, ABC):
 
 	@abstractmethod
 	def at(self, x, y):
-		"""Return the patch at the specified coordinate. https://helipad.dev/functions/patchesrect/at/"""
+		"""Return the patch at the specified coordinate. https://helipad.dev/functions/basepatches/at/"""
 
 	@abstractmethod
 	def neighbors(self, model):
-		"""Establishes the spatial network among the patches after initialization. https://helipad.dev/functions/patchesrect/neighbors/"""
+		"""Establishes the spatial network among the patches after initialization. https://helipad.dev/functions/basepatches/neighbors/"""
 
 	@abstractmethod
 	def place(self, agent: Patch):
-		"""Organize `Patch` objects within the `Patches` object. Takes a `Patch` object when created by `Agents.initialize()`, places it in the appropriate list, and assigns its position property. https://helipad.dev/functions/patchesrect/place/"""
+		"""Organize `Patch` objects within the `Patches` object. Takes a `Patch` object when created by `Agents.initialize()`, places it in the appropriate list, and assigns its position property. https://helipad.dev/functions/basepatches/place/"""
 
 	@property
 	@abstractmethod
 	def boundaries(self):
-		"""Maximum and minimum coordinates that agents can take, given the grid dimensions: `((xmin, xmax), (ymin, ymax))` https://helipad.dev/functions/patchesrect/#boundaries"""
+		"""Maximum and minimum coordinates that agents can take, given the grid dimensions: `((xmin, xmax), (ymin, ymax))` https://helipad.dev/functions/basepatches/#boundaries"""
 
 #Each row and column of equal length
 class PatchesRect(basePatches):
@@ -299,6 +301,7 @@ class PatchesGeo(basePatches):
 		return (bounds[0][1]-bounds[0][0], bounds[1][1]-bounds[1][0])
 
 	def add(self, shape, name=None):
+		"""Add a polygonal patch to the map. https://helipad.dev/functions/patchesgeo/add/"""
 		if isinstance(shape, list): shape = self.shapely.Polygon(shape)
 		elif isinstance(shape, self.shapely.MultiPolygon):
 			warnings.warn(ï('MultiPolygons are not supported as patches. Taking the first polygon…'), RuntimeWarning, 2)
@@ -389,6 +392,7 @@ class RectFuncs:
 	def moveDown(agent): agent.move(0, 1)
 	def moveLeft(agent): agent.move(-1, 0)
 	def forward(self, steps=1):
+		"""Move forward `steps` steps in the direction of `agent.orientation`."""
 		self.move(steps * cos(self.rads-pi/2), steps * sin(self.rads-pi/2))
 
 	def orientTo(agent, x, y=None):
@@ -454,6 +458,7 @@ class PolarFuncs:
 	def moveClockwise(agent): agent.move(1, 0)
 	def moveCounterclockwise(agent): agent.move(-1, 0)
 	def forward(agent, steps=1):
+		"""Move forward `steps` steps in the direction of `agent.orientation`."""
 		#2π-self.rads to make it go clockwise
 		th1 = 2*pi-(2*pi/agent.model.patches.dim[0] * agent.x)
 		newth = th1 + atan2(steps*sin(2*pi-agent.rads-th1), agent.y+steps*cos(2*pi-agent.rads-th1))

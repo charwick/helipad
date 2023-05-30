@@ -15,32 +15,28 @@ class Utility(ABC):
 		self.goods = goods
 		self.utility = 0
 
-	def consume(self, quantities):
+	def consume(self, quantities: dict):
+		"""Sets `self.utility` to the value returned from `self.calculate()`. `agent.stocks` can be passed directly to this function. https://helipad.dev/functions/utility/consume/"""
 		self.utility = self.calculate(quantities)
 		return self.utility
 
-	#Receives an array of quantities
-	#Returns a scalar utility
 	@abstractmethod
-	def calculate(self, quantities):
+	def calculate(self, quantities: dict):
+		"""Calculate the agent's utility on the basis of the array of quantities entered. https://helipad.dev/functions/utility/calculate/"""
 		if len(quantities) != len(self.goods): raise KeyError(ï('Quantities argument doesn\'t match initialized list of goods.'))
 
-	#Receives a budget and an array of prices
-	#Returns an array of utility-maximizing quantities
 	@abstractmethod
-	def demand(self, budget, prices):
-		pass
+	def demand(self, budget, prices: dict):
+		"""Calculate total demand for the various goods given some income. https://helipad.dev/functions/utility/demand/"""
 
-	#Receives an array of quantities
-	#Returns a dictionary of marginal utilities
 	@abstractmethod
-	def mu(self, quantities):
+	def mu(self, quantities: dict):
+		"""Calculates the marginal utilities of the goods in question on the basis of the entered quantities. https://helipad.dev/functions/utility/mu/"""
 		if len(quantities) != len(self.goods): raise KeyError(ï('Quantities argument doesn\'t match initialized list of goods.'))
 
-	#Receives two quantities, returns a marginal rate of substitution
 	@abstractmethod
-	def mrs(self, good1, q1, good2, q2):
-		pass
+	def mrs(self, good1: str, q1, good2: str, q2):
+		"""Calculate the marginal rate of substitution between `good1` and `good2` given quantities `q1` and `q2`, respectively. https://helipad.dev/functions/utility/mrs/"""
 
 class CES(Utility):
 	"""A constant elasticity of substitution utility function. https://helipad.dev/functions/ces/"""

@@ -21,21 +21,20 @@ class BaseVisualization(ABC):
 	"""Base class defining the methods that must be implemented by any visualization. https://helipad.dev/functions/basevisualization/"""
 	isNull: bool = True
 
-	#Create the window. Mandatory to implement
 	@abstractmethod
-	def launch(self, title: str): pass
+	def launch(self, title: str):
+		"""Launch the visualization window (if in Tkinter) or cell (if in Jupyter). https://helipad.dev/functions/basevisualization/launch/"""
 
-	#Refresh every so many periods. Mandatory to implement
-	#data is the *incremental* data
 	@abstractmethod
-	def update(self, data: dict): pass
+	def update(self, data: dict):
+		"""Update the visualization with new data and refresh the display. `data` is only data since the last visualization refresh. https://helipad.dev/functions/basevisualization/update/"""
 
-	#Do something when events happen. Mandatory to implement
 	@abstractmethod
-	def event(self, t: int, color, **kwargs): pass
+	def event(self, t: int, color, **kwargs):
+		"""Called when an event is triggered, in order to be reflected in the visualization. https://helipad.dev/functions/basevisualization/update/"""
 
-	#Called from model.terminate(). Optional to implement
-	def terminate(self, model): pass
+	def terminate(self, model):
+		"""Cleanup on model termination. Called automatically from `model.terminate()`. https://helipad.dev/functions/basevisualization/terminate/"""
 
 class MPLVisualization(BaseVisualization):
 	"""Base class for visualizations using Matplotlib. https://helipad.dev/functions/mplvisualization/"""
@@ -63,7 +62,7 @@ class MPLVisualization(BaseVisualization):
 
 	def __repr__(self): return f'<{self.__class__.__name__} with {len(self.plots)} plots>'
 
-	#Subclasses should call super().launch **after** the figure is created.
+	# Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
 	def launch(self, title: str, dim=None, pos=None):
 		if not isNotebook():
@@ -102,6 +101,7 @@ class MPLVisualization(BaseVisualization):
 			self.pos = (pos[1], pos[2])
 
 	def sendEvent(self, event):
+		"""Execute functions registered with `MPLVisualization.addKeypress()` and route other events to the appropriate `ChartPlot` object depending on the current mouse position. https://helipad.dev/functions/mplvisualization/sendevent/"""
 		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
 		if axes is not None:
 			for p in self.activePlots.values():
@@ -113,15 +113,18 @@ class MPLVisualization(BaseVisualization):
 			for f in self.keys[event.key]: f(self.model, event)
 
 	def addKeypress(self, key: str, fn):
+		"""Register a function to be run when `key` is pressed in a Matplotlib visualizer. `fn` will run if `key` is pressed at any time when the plot window is in focus. To narrow the focus to a particular plot, define `catchKeypress()` in a subclass of `ChartPlot`. https://helipad.dev/functions/mplvisualization/addkeypress/"""
 		if not key in self.keys: self.keys[key] = []
 		self.keys[key].append(fn)
 
 	@property
 	def activePlots(self) -> dict:
+		"""The subset of the plots containing the `Plot`s that are currently active. https://helipad.dev/functions/mplvisualization/#activePlots"""
 		return {k:plot for k,plot in self.plots.items() if plot.selected}
 
 	@property
 	def isNull(self) -> bool:
+		"""`True` when the model should run as-if with no visualization, for example if all plots are unselected. `False` indicates the window can be launched. https://helipad.dev/functions/mplvisualization/#isNull"""
 		return not [plot for plot in self.plots.values() if plot.selected]
 
 class TimeSeries(MPLVisualization):
@@ -195,7 +198,7 @@ class TimeSeries(MPLVisualization):
 			model.params['csv'].enable()
 			if not isinstance(model.param('stopafter'), str): model.params['stopafter'].enable()
 
-	def update(self, data):
+	def update(self, data: dict):
 		newlen = len(next(data[x] for x in data))
 		if self.resolution > 1: data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
@@ -213,8 +216,8 @@ class TimeSeries(MPLVisualization):
 		if self.fig.stale: self.fig.canvas.draw_idle()
 		self.fig.canvas.flush_events() #Listen for user input
 
-	#Position is the number you want it to be, *not* the array position
 	def addPlot(self, name: str, label: str, position=None, selected: bool=True, logscale: bool=False, stack: bool=False):
+		"""Register a plot area in the `TimeSeries` plot area to which data series can be added. `position` Position is the number you want it to be, *not* the array position. https://helipad.dev/functions/timeseries/addplot/"""
 		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
 
 		self.selector.addItem(name, label, position, selected)
@@ -231,7 +234,8 @@ class TimeSeries(MPLVisualization):
 		plot.selected = selected #Do this after CheckgridParam.addItem
 		return plot
 
-	def removePlot(self, name: str, reassign=None):
+	def removePlot(self, name, reassign=None):
+		"""Remove a plot or plots and optionally reassign their series to a different plot. https://helipad.dev/functions/timeseries/removeplot/"""
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p, reassign)
@@ -310,13 +314,14 @@ class Charts(MPLVisualization):
 		if self.fig.stale: self.fig.canvas.draw_idle()
 		self.fig.canvas.flush_events() #Listen for user input
 
-	#Update the graph to a particular model time
 	def scrub(self, t: int):
+		"""Update the visualizer with the values from model time `t`."""
 		self.scrubval = t
 		for c in self.activePlots.values(): c.draw(t)
 		self.fig.patch.set_facecolor(self.events[t] if t in self.events else 'white')
 
 	def addPlot(self, name: str, label: str, type=None, position=None, selected=True, **kwargs):
+		"""Adds a plot area to the Chart visualizer. Defaults to a bar chart, but can be set to any subclass of ChartPlot. Kwargs are passed to the `ChartPlot` object. https://helipad.dev/functions/charts/addplot/"""
 		self.selector.addItem(name, label, position, selected)
 		if type == 'network': #Deprecated in Helipad 1.6; remove in 1.8
 			warnings.warn(ï('The `network` plot type is deprecated. Use `agents` instead.'), FutureWarning, 2)
@@ -329,10 +334,12 @@ class Charts(MPLVisualization):
 		return self.plots[name]
 
 	def addPlotType(self, clss):
+		"""Registers a new plot type for the Charts visualizer. Registered plot types can then be added to the visualization area with `Charts.addPlot()`. https://helipad.dev/functions/charts/addplottype/"""
 		if not issubclass(clss, ChartPlot): raise TypeError(ï('New plot types must subclass ChartPlot.'))
 		self.plotTypes[clss.type] = clss
 
-	def removePlot(self, name: str):
+	def removePlot(self, name):
+		"""Remove a plot or plots and optionally reassign their series to a different plot. https://helipad.dev/functions/timeseries/removeplot/"""
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
 			for p in name: self.removePlot(p)
@@ -364,37 +371,40 @@ class ChartPlot(Item):
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
 
 	@property
-	def selected(self): return self.viz.model.params['plots'].get(self.name)
+	def selected(self):
+		"""Whether the plot is currently queued for display. Do not modify this property directly; use ChartPlot.active() to ensure consistency with the GUI state. https://helipad.dev/functions/chartplot/#selected"""
+		return self.viz.model.params['plots'].get(self.name)
 
 	@selected.setter
 	def selected(self, val: bool): self.active(val)
 
 	def active(self, val: bool, updateGUI: bool=True):
+		"""Turn on or off the selected state of a plot in the control panel. https://helipad.dev/functions/chartplot/active/"""
 		self.viz.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isNotebook() and hasattr(self, 'check'):
 			self.check.set(val)
 
-	#Receives an AxesSubplot object used for setting up the plot area. super().launch(axes) should be called from the subclass.
 	@abstractmethod
 	def launch(self, axes):
+		"""Set up the plot's `axes` object when `Charts` launches the visualization window. Subclasses should call `super().launch(axes)` at the beginning of the method. https://helipad.dev/functions/chartplot/launch/"""
 		self.axes = axes
 		axes.set_title(self.label, fontdict={'fontsize':10})
 
-	#Receives a 1-dimensional dict with only the most recent value of each column
-	#The subclass is responsible for storing the relevant data internally
 	@abstractmethod
-	def update(self, data: dict, t: int): pass
+	def update(self, data: dict, t: int):
+		"""Receive current model data and store it for future scrubbing. Values of `data` should only contain the most recent value of each column. This method is only for updating plot data; drawing code happens in `draw()`. https://helipad.dev/functions/chartplot/update/"""
 
-	#Receives the time to scrub to
 	@abstractmethod
 	def draw(self, t: int, forceUpdate: bool=False):
+		"""Refresh the `axes` object to display new or historical data. This method is called after `ChartPlot.update()` when the visualizer receives new data, and when scrubbing the time bar. https://helipad.dev/functions/chartplot/draw/"""
 		if forceUpdate: self.viz.fig.canvas.draw_idle()
 
 	def remove(self):
+		"""Removes the plot from the visualizer."""
 		self.viz.removePlot(self.name)
 
-	#Override in order to catch plot-specific keypresses, clicks, or picks
-	def MPLEvent(self, event): pass
+	def MPLEvent(self, event):
+		"""Catch `pick_event`, `key_press_event`, and `button_press_event` events that occur inside a particular plot. https://helipad.dev/functions/chartplot/mplevent/"""
 
 class TimeSeriesPlot(ChartPlot):
 	"""Visualizes time series data on one or more variables. Can be used in either the `TimeSeries` or `Charts` visualizer. https://helipad.dev/functions/timeseriesplot/"""
@@ -406,10 +416,8 @@ class TimeSeriesPlot(ChartPlot):
 			if p not in kwargs: kwargs[p] = False
 		super().__init__(**kwargs)
 
-	#First arg is a reporter name registered in DataCollector, or a lambda function
-	#Second arg is the series name. Use '' to not show in the legend.
-	#Third arg is the plot's hex color, or a Color object
 	def addSeries(self, reporter, label: str, color, style: str='-', visible: bool=True):
+		"""Register a reporter to be plotted during the model's runtime. https://helipad.dev/functions/timeseriesplot/addseries/"""
 		if not isinstance(color, Color): color = Color(color)
 
 		#Check against columns and not reporters so subseries work
@@ -526,6 +534,7 @@ class TimeSeriesPlot(ChartPlot):
 
 	@property
 	def resolution(self) -> int:
+		"""The time elapsing between any two data points drawn to screen (not the time elapsing between two updates, which is a user-controlled parameter)."""
 		return self.viz.resolution if hasattr(self.viz, 'resolution') else int(self.viz.model.param('refresh'))
 
 class BarChart(ChartPlot):
@@ -538,6 +547,7 @@ class BarChart(ChartPlot):
 		self.bars = []
 
 	def addBar(self, reporter, label: str, color='blue', position=None):
+		"""Register a data reporter as a bar on the current plot. To display error bars, use the `std` or `percentiles` arguments when creating the agent reporter. https://helipad.dev/functions/barchart/addbar/"""
 		if not isinstance(color, Color): color = Color(color)
 		bar = Item(reporter=reporter, label=label, color=color)
 
@@ -691,7 +701,6 @@ class AgentsPlot(ChartPlot):
 
 		super().launch(axes)
 
-	#Receives event from MPLVisualization.sendEvent()
 	def MPLEvent(self, event):
 		if event.name=='key_press_event' and event.key=='l': self.rotateLayout()
 
@@ -806,6 +815,7 @@ class AgentsPlot(ChartPlot):
 		super().draw(t, forceUpdate)
 
 	def rotateLayout(self):
+		"""Rotate the layout among the several NetworkX layout classes, plus spatial and scatterplot layouts. This method is called when pressing 'l' with the mouse over the plot. https://helipad.dev/functions/agentsplot/rotatelayout/"""
 		self.axes.set_yscale('linear') #Override default logscale keypress
 		if self.params['lockLayout']: return
 
@@ -827,8 +837,8 @@ class AgentsPlot(ChartPlot):
 		try: self.draw(self.viz.scrubval)
 		except: self.rotateLayout()
 
-	#Helper function
 	def getPatchParamValue(self, patch, t: int=None):
+		"""Gather historical patch data for use in color generation. https://helipad.dev/functions/agentsplot/getpatchparamvalue/"""
 		if t is not None: return patch.colorData[t]
 		if patch.dead: return float('nan')
 		elif 'patchProperty' not in self.params: return 0
@@ -836,6 +846,7 @@ class AgentsPlot(ChartPlot):
 		else: return getattr(patch, self.params['patchProperty'])
 
 	def config(self, param: str, val=None):
+		"""Sets options for the spatial plot. One argument will return the value; two arguments sets the parameter. See https://helipad.dev/functions/agentsplot/config/ for valid option names."""
 		if isinstance(param, dict):
 			for k,v in param.items(): self.config(k,v)
 		elif val is None: return self.params[param]
@@ -850,6 +861,7 @@ class Series(Item):
 	"""Stores data on series, which link a reporter to a plot. https://helipad.dev/functions/series/"""
 	@property
 	def visible(self) -> bool:
+		"""Whether the series is to be drawn when the plot window launches, or - if it has launched - whether the series is currently visible. https://helipad.dev/functions/series/#visible"""
 		if not hasattr(self, 'line'): return self._visible
 		elif hasattr(self, 'poly'): return True #If it's a stackplot
 		else: return self.line.get_visible()
@@ -876,6 +888,7 @@ class Series(Item):
 		self.line.figure.canvas.draw_idle()
 
 	def toggle(self):
+		"""Toggles the visibility of the series. https://helipad.dev/functions/series/toggle/"""
 		self.visible = not self.visible
 
 #======================
@@ -883,7 +896,7 @@ class Series(Item):
 #======================
 
 def keepEvery(lst: list, n: int):
-	"""Helper function to reduce the resolution of a list."""
+	"""Reduce the resolution of a list."""
 	i,l = (1, [])
 	for k in lst:
 		if i%n==0: l.append(k)

@@ -288,6 +288,7 @@ class Cpanel(VBox):
 				self.stopbutton.layout.visibility = 'hidden'
 
 	def displayAlert(self, text: str, inCpanel: bool=True):
+		"""Display an alert element in the Jupyter notebook."""
 		element = HTML(value=text)
 		element.add_class('helipad_info') #Latter applies some built-in styles to the contents
 		if inCpanel: self.children += element,
@@ -295,6 +296,7 @@ class Cpanel(VBox):
 		return element
 
 	def invalidate(self, message: str=ï('Model parameters changed, please re-launch the control panel with launchCpanel().')):
+		"""Prevent the user from interacting with a control panel. A control panel is invalidated when another is launched."""
 		self.valid = False
 		self.add_class('invalid')
 		warning = Label(value=message)

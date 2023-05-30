@@ -8,7 +8,7 @@ from helipad.helpers import Item, ï
 
 #Don't try to subclass Pandas.dataframe; substantially slower and doesn't scale
 class Data:
-	"""Interface for collecting, storing, and accessing data generated during model runs. https://helipad.dev/functions/data/"""
+	"""Interface for collecting, storing, and accessing data generated during model runs. The object is subscriptable: `data[key]` will return the column of the data labelled `key`. Stored in `model.data`. https://helipad.dev/functions/data/"""
 	def __init__(self, model):
 		self.reporters = {}
 		self.model = model
@@ -20,33 +20,33 @@ class Data:
 	def __contains__(self, index): return index in self.columns
 	def __repr__(self): return f'<{self.__class__.__name__}: {len(self.reporters)} reporters>'
 
-	#First arg is the name of the reporter
-	#Second arg can be either a function that takes one argument – the model –
-	#or a string, either 'model' or the name of a primitive.
-	#Subsequent args get passed to the reporter functions below
 	def addReporter(self, key: str, func, **kwargs):
+		"""Register a column in the data to be collected each period. `func` can either be a function that takes the model object as its only argument and returns a value, or a string - either `model` or the name of a primitive. Kwargs are passed to the reporter class. https://helipad.dev/functions/data/addreporter/"""
 		func, children = func if isinstance(func, tuple) else (func, {})
 
 		if not callable(func): raise TypeError(ï('Second argument of addReporter must be callable.'))
 		self.reporters[key] = Reporter(name=key, func=func, children=children, **kwargs)
 		return self.reporters[key]
 
-	#Removes a reporter, its columns from the data, and the series corresponding to it.
 	def removeReporter(self, key: str):
+		"""Remove a column and its subsidiaries (e.g. percentiles) from the data collection, stop its reporter, and remove any associated series. https://helipad.dev/functions/data/removereporter/"""
 		if self.model.hasModel:
 			raise RuntimeError(ï('removeReporter cannot be called while a model is active.'))
 		self.model.doHooks('removeReporter', [self, key])
 		del self.reporters[key]
 
 	def collect(self, model):
+		"""Iterate over all the registered reporters and collect model data each period. This function is called from `model.step()` and should not be called from user code. https://helipad.dev/functions/data/collect/"""
 		model.doHooks('dataCollect', [self, model.t])
 		for v in self.reporters.values(): v.collect(model)
 
 	def reset(self):
+		"""Clear all model data. Generally used to clean up between model runs. https://helipad.dev/functions/data/reset/"""
 		for v in self.reporters.values(): v.clear()
 
 	@property
 	def all(self) -> dict:
+		"""A dict of all model data, with keys corresponding to registered reporters. https://helipad.dev/functions/data/#all"""
 		data = {}
 		for k,r in self.reporters.items():
 			data[k] = r.data
@@ -55,6 +55,7 @@ class Data:
 
 	@property
 	def columns(self) -> dict:
+		"""A `dict` of data columns and the associated Reporter objects. This property does not correspond to `Data.reporters.keys()`, because multiple columns may be associated with the same reporter (e.g. with percentile bars, smoothing, or ± standard deviations). https://helipad.dev/functions/data/#columns"""
 		cols = {}
 		for k,r in self.reporters.items():
 			cols[k] = r
@@ -62,7 +63,9 @@ class Data:
 		return cols
 
 	@property
-	def dataframe(self): return pandas.DataFrame(self.all)
+	def dataframe(self):
+		"""A `Pandas` dataframe with the model run data. https://helipad.dev/functions/data/#dataframe"""
+		return pandas.DataFrame(self.all)
 
 	#
 	# REPORTERS
@@ -70,12 +73,14 @@ class Data:
 	#
 
 	def modelReporter(self, key):
+		"""Generate a reporter function that takes the `model` object and returns the named attribute of the model. https://helipad.dev/functions/data/modelreporter/"""
 		def reporter(model): return getattr(model, key)
 		return reporter
 
 	# NOTE: Batching data collection (looping over agents and then variables, instead of – as now – looping over
 	# variables and then agents) did not result in any speed gains; in fact a marginal (0.65%) speed reduction
 	def agentReporter(self, key: str, prim=None, breed=None, good=None, stat: str='mean', **kwargs):
+		"""Generate a reporter function that takes the `model` object and returns a summary statistic (`'mean'`, `'sum'`, `'gmean'` (for geometric mean), `'std'` (for standard deviation), or `'percentile-nn'`, where `nn` is a number from 0-100.) over all the values of an agent property. https://helipad.dev/functions/data/agentreporter/"""
 		if prim is None: prim = next(iter(self.model.agents))
 		# if breed and isinstance(breed, bool): return [self.agentReporter(key+'-'+br, prim, br, good, stat, **kwargs) for br in self.model.agents[prim].breeds]
 		if 'percentiles' in kwargs:
@@ -120,6 +125,7 @@ class Data:
 	#Slices the last n records for the key registered as a reporter
 	#Returns a value if n=1, otherwise a list
 	def getLast(self, key: str, n: int=1):
+		"""Return the latest recorded value or values from the model's data. https://helipad.dev/functions/data/getlast/"""
 		if isinstance(key, str):
 			if len(self[key])==0: return 0
 			data = self[key][-n:]
@@ -129,6 +135,7 @@ class Data:
 		else: raise TypeError(ï('First argument of Data.getLast() must be either a key name or an int.'))
 
 	def saveCSV(self, filename: str='data'):
+		"""Outputs the model's data to a CSV file in the same directory as the running program. https://helipad.dev/functions/data/savecsv/"""
 		file = filename + '.csv'
 		i=0
 		while os.path.isfile(file): #Avoid filename collisions
@@ -150,6 +157,7 @@ class Reporter(Item):
 		else: self.children[self.name+'-unsmooth'] = (None, [])
 
 	def collect(self, model):
+		"""Run the reporter function and its children, and append the results to the data. https://helipad.dev/functions/reporter/collect/"""
 		for s in self.children.values():
 			if callable(s[0]): s[1].append(s[0](model))
 
@@ -161,5 +169,6 @@ class Reporter(Item):
 			self.data.append(self.smooth*self.data[-1] + (1-self.smooth)*us[-1] if model.t>1 else us[-1])
 
 	def clear(self):
+		"""Empty the reporter's collected data. https://helipad.dev/functions/reporter/clear/"""
 		self.data.clear()
 		for c in self.children.values(): c[1].clear()

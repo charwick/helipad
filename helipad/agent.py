@@ -44,6 +44,7 @@ class baseAgent:
 	def __repr__(self): return f'<{self.__class__.__name__} {self.id}>'
 
 	def step(self, stage: int):
+		"""Runs for each agent in each period and increments the agent's age by 1. Should not be called directly, but should be hooked using `agentStep` or `baseAgentStep`. https://helipad.dev/functions/baseagent/step/"""
 		self.model.doHooks(['baseAgentStep', self.primitive+'Step'], [self, self.model, stage])
 		if hasattr(super(), 'runInit'): super().step(stage) #For multi-level models
 		if stage == self.model.stages: self.age += 1
@@ -52,9 +53,8 @@ class baseAgent:
 	# ECONOMIC METHODS
 	#==================
 
-	#Give amt1 of good 1, get amt2 of good 2
-	#Negative values of amt1 and amt2 allowed, which reverses the direction
 	def trade(self, partner, good1: str, amt1, good2: str, amt2):
+		"""Exchange `amt1` of `good1` with `partner` for `amt2` of `good2`, and record the demand for each. Requires at least two goods to have been registered, but does not require a monetary good. Negative amounts are allowed, which reverses the direction. https://helipad.dev/functions/baseagent/trade/"""
 		go = True
 		self.model.doHooks('preTrade', [self, partner, good1, amt1, good2, amt2])
 
@@ -109,9 +109,8 @@ class baseAgent:
 
 		self.model.doHooks('postTrade', [self, partner, good1, amt1, good2, amt2])
 
-	#Price is per-unit
-	#Returns the quantity actually sold, Which is the same as quantity input unless there's a shortage
 	def buy(self, partner, good: str, q, p):
+		"""Purchase `q` of `good` from `partner` at a per-unit price of `p` in terms of the monetary good. Returns the quantity actually sold, which is the same as `q` unless there's a shortage. https://helipad.dev/functions/baseagent/buy/"""
 		if self.model.goods.money is None: raise RuntimeError(ï('{} requires a monetary good to be specified.').format('Agent.buy()'))
 		qp = self.model.doHooks('buy', [self, partner, good, q, p])
 		if qp is not None: q, p = qp
@@ -120,8 +119,8 @@ class baseAgent:
 		self.trade(partner, self.model.goods.money, p*q, good, q)
 		return self.stocks[good] - before
 
-	#Unilateral
 	def pay(self, recipient, amount):
+		"""Unilaterally transfer `amount` of the monetary good to `recipient`, or from `recipient` to the agent if `amount<0`. Returns the amount actually paid, which will be equal to `amount` unless the agent's budget constraint is hit. https://helipad.dev/functions/baseagent/pay/"""
 		if self.model.goods.money is None: raise RuntimeError(ï('{} requires a monetary good to be specified.').format('Agent.pay()'))
 		go = True
 
@@ -161,6 +160,7 @@ class baseAgent:
 
 	@property
 	def balance(self):
+		"""If a monetary good is registered, the agent's holdings of the monetary good. Equivalent to `agent.stocks[model.goods.money]`. https://helipad.dev/functions/baseagent/#balance"""
 		if self.model.goods.money is None: raise RuntimeError(ï('Balance checking requires a monetary good to be specified.'))
 		bal = self.stocks[self.model.goods.money]
 		bal_ = self.model.doHooks('checkBalance', [self, bal, self.model])
@@ -173,6 +173,13 @@ class baseAgent:
 	#==================
 
 	def reproduce(self, inherit: list=[], mutate: dict={}, partners: list=[]):
+		"""Spawn a new agent, inheriting specified properties from the parent agent(s).
+		
+		Values in `inherit` can either be a property name (in which case the new agent inherits the mean of the parents' values), or a tuple, the first element of which is a property name, and the second is a string representing how to merge them. Possible values are `'mean'` (default for numeric values), `'first'` (default for non-numeric values), `'last'`, `'gmean'`, `'random'`, and `'sum'`. The second value can also take a function, which receives a list of values from the parents and returns a value for the child.
+		
+		Keys of `mutate` correspond to property names, which will mutate either a property value retrieved from `inherit` or the initial value otherwise. Dict values can be either (1) a function (which takes a value and returns a value), (2) a std dev by which to mutate the value in a normal distribution with mean of the initial value, or (3) a tuple, the first item of which is a stdev and the second is either `'log'` or `'linear'` (i.e. to sample from a lognormal distribution).
+
+		https://helipad.dev/functions/baseagent/reproduce/"""
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot reproduce.'))
 
 		maxid = 0
@@ -181,12 +188,6 @@ class baseAgent:
 				maxid = a.id
 		newagent = type(self)(self.breed, maxid+1, self.model)
 
-		#Values in the inherit list can either be a variable name (in which case the new agent inherits
-		#the mean of all of the values for the parents), or a tuple, the first element of which is a
-		#variable name, and the second is a string representing how to merge them. Possible values are
-		#'mean' (default for numeric values), 'first' (default for non-numeric values), 'last', 'gmean',
-		#'random', and 'sum'. The second value can also take a function, which receives a list of
-		#values from the parents and returns a value for the child.
 		parents = [self] + partners
 		for a in inherit:
 			stat = None
@@ -212,9 +213,6 @@ class baseAgent:
 			setattr(newagent, a, n)
 
 		#Mutate variables
-		#Values in the mutate dict can be either a function (which takes a value and returns a value),
-		#  a number (a std dev by which to mutate the value), or a tuple, the first element of which
-		#  is a std dev and the second of which is either 'log' or 'linear'
 		for k,v in mutate.items():
 			if callable(v): newval = v(getattr(newagent, k))
 			else:
@@ -234,6 +232,7 @@ class baseAgent:
 		return newagent
 
 	def die(self, updateGUI: bool=True):
+		"""Remove the agent from the model's list of active agents and cut the agent's edges. https://helipad.dev/functions/baseagent/die/"""
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot die.'))
 		self.model.agents[self.primitive].remove(self)
 		for edge in self.edges.all: edge.cut()
@@ -242,6 +241,7 @@ class baseAgent:
 
 	@property
 	def parent(self):
+		"""The agent (if haploid) or a list of agents (if polyploid) from which the current agent was spawned. See `agent.reproduce()`. https://helipad.dev/functions/baseagent/#parent"""
 		p = self.inbound('lineage', obj='agent')
 		if len(p)==0: return None
 		elif len(p)==1: return p[0]
@@ -249,6 +249,7 @@ class baseAgent:
 
 	@property
 	def children(self):
+		"""A list of agents spawned from the current agent. See `agent.reproduce()`. https://helipad.dev/functions/baseagent/#children"""
 		return [edge.partner(self) for edge in self.outbound('lineage')]
 
 	#==================
@@ -257,23 +258,28 @@ class baseAgent:
 	#==================
 
 	def newEdge(self, partner, kind='edge', direction=None, weight=1):
+		"""Create a network connection with `partner`. This method is deprecated; use `Agent.edges.add()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.newEdge()', 'Agent.edges.add()'), FutureWarning, 2)
 		return self.edges.add(partner, kind, direction, weight)
 
 	def outbound(self, kind='edge', undirected=False, obj='edge'):
+		"""Return a list of outbound edges. This method is deprecated; use `Agent.edges.outbound()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.outbound()', 'Agent.edges.outbound()'), FutureWarning, 2)
 		return self.edges.outbound(kind, undirected, obj)
 
 	def inbound(self, kind='edge', undirected=False, obj='edge'):
+		"""Return a list of inbound edges. This method is deprecated; use `Agent.edges.inbound()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.inbound()', 'Agent.edges.inbound()'), FutureWarning, 2)
 		return self.edges.inbound(kind, undirected, obj)
 
 	def edgesWith(self, partner, kind='edge'):
+		"""Return a list of connections with `partner`. This method is deprecated; use `Agent.edges.With()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.edgesWith()', 'Agent.edges.With()'), FutureWarning, 2)
 		return self.edges.With(partner, kind)
 
 	@property
 	def alledges(self):
+		"""A list of all the agent's network connections, organized by network kind. This method is deprecated; use `Agent.edges` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('Agent.allEdges', 'Agent.edges.all'), FutureWarning, 2)
 		return self.edges.all
 
@@ -285,6 +291,7 @@ class baseAgent:
 	#Agent.rads always reports radians and is not documented.
 	@property
 	def orientation(self):
+		"""The orientation of the agent on the spatial grid. This property returns and can be set in either degrees or radians, depending on the value of `baseAgent.angleUnit`. https://helipad.dev/functions/baseagent/#orientation"""
 		if self.primitive == 'patch': return None
 		return degrees(self.rads) if 'deg' in self.angleUnit else self.rads
 
@@ -296,14 +303,17 @@ class baseAgent:
 		while val < 0: val += 2*pi
 		self.rads = val
 
-	def rotate(self, angle): self.orientation += angle
+	def rotate(self, angle):
+		"""Rotate the agent's orientation clockwise by `angle`, which will be understood as either degrees or radians depending on the value of `baseAgent.angleUnit`. https://helipad.dev/functions/baseagent/rotate/"""
+		self.orientation += angle
 
 	@property
 	def patch(self):
+		"""The patch under the agent's current position. https://helipad.dev/functions/baseagent/#patch"""
 		if self.position is not None: return self.model.patches.at(*self.position)
 
-	#In a multi-level model, allow the agent to move to a different deme/firm/etc
 	def transfer(self, dest):
+		"""In a multi-level model, move the agent to a different instance of `MultiLevel` or the top-level model."""
 		origin = self.model
 		dest.agents[self.primitive].append(self)
 		self.model = dest
@@ -313,15 +323,15 @@ class baseAgent:
 #The default agent class corresponding to the 'agent' primitive.
 class Agent(baseAgent):
 	"""The default agent class. https://helipad.dev/functions/agent/"""
-	pass
 
 #For spatial models
 class Patch(baseAgent):
-	"""An agent primitive that forms a spatial layout upon which other agents can be positioned. https://helipad.dev/functions/patch/"""
+	"""A spatially and numerically fixed agent primitive that forms the layout on which other agents move in a spatial model. https://helipad.dev/functions/patch/"""
 	fixed: bool = True
 
 	#Don't remove from the list; just mark as dead
 	def die(self):
+		"""Remove the patch from the board, and if `model.spatial()` had been initialized with `offmap=False`, prevent agents from moving to coordinates previously covered by the patch. Patches can be revived with `Patches2D.revive()`. https://helipad.dev/functions/patch/die/"""
 		self.dead = True
 		if not self.model.patches.offmap:
 			for a in self.agentsOn: a.die()
@@ -329,6 +339,7 @@ class Patch(baseAgent):
 
 	@property
 	def neighbors(self) -> list:
+		"""A list of adjacent patches. Corner-adjacent patches will be included depending on the value of the `corners` parameter of `model.spatial()`. https://helipad.dev/functions/patch/#neighbors"""
 		return [p for p in self.edges.outbound('space', True, obj='agent') if not p.dead]
 
 	def __repr__(self):
@@ -375,17 +386,20 @@ class Edge:
 		return f'<{self.__class__.__name__}: {pair[0].__class__.__name__} {pair[0].id} {arrow} {pair[1].__class__.__name__} {pair[1].id}>'
 
 	def cut(self):
+		"""Break the connection between the two agents represented by the edge and remove the `Edge` object from the `edges` property of both agents. https://helipad.dev/functions/edge/cut/"""
 		for agent in self.vertices:
 			if self in agent.edges[self.kind]: agent.edges[self.kind].remove(self) #Remove from agents
 		self.active = False
 		self.vertices[0].model.doHooks('edgeCut', [self])
 
 	def partner(self, agent: baseAgent):
+		"""When passed an agent, returns the other agent. https://helipad.dev/functions/edge/partner/"""
 		if agent==self.vertices[0]: return self.vertices[1]
 		elif agent==self.vertices[1]: return self.vertices[0]
 		else: raise ValueError(ï('Agent {} is not connected to this edge.').format(agent.id))
 
 	def reassign(self, oldagent: baseAgent, newagent: baseAgent):
+		"""Moves a vertex from `oldagent` to `newagent`. https://helipad.dev/functions/edge/reassign/"""
 		self.vertices = (self.partner(oldagent), newagent)
 		oldagent.edges[self.kind].remove(self)
 		newagent.edges[self.kind].append(self)
@@ -433,6 +447,7 @@ class MultiDict(dict):
 
 	@property
 	def all(self) -> list:
+		"""A list of all items contained."""
 		agents = []
 		for l in self.values(): agents += l
 		return agents
@@ -458,6 +473,7 @@ class Agents(MultiDict):
 		else: return super().__contains__(val)
 
 	def addPrimitive(self, name: str, class_, plural=None, dflt=50, low=1, high=100, step=1, hidden: bool=False, priority: int=100, order=None):
+		"""Register an agent primitive. https://helipad.dev/functions/agents/addprimitive/"""
 		if name=='all': raise ValueError(ï('{} is a reserved name. Please choose another.').format(name))
 		if not plural: plural = name+'s'
 		class_.primitive = name
@@ -479,10 +495,12 @@ class Agents(MultiDict):
 		self.model.params.add('num_'+name, 'Number of '+plural.title(), 'hidden' if hidden else 'slider', dflt=dflt, opts={'low': low, 'high': high, 'step': step} if not hidden else None, setter=self.initialize, getter=popget)
 
 	def removePrimitive(self, name: str):
+		"""Removes a previously added primitive. https://helipad.dev/functions/agents/removeprimitive/"""
 		del self[name]
 		del self.model.params['num_'+name]
 
 	def addBreed(self, name: str, color, prim=None):
+		"""Registers an agent breed. https://helipad.dev/functions/agents/addbreed/"""
 		if prim is None:
 			if len(super().keys()) == 1: prim = next(iter(self.keys()))
 			else: raise KeyError(ï('Breed must specify which primitive it belongs to.'))
@@ -490,6 +508,7 @@ class Agents(MultiDict):
 
 	#Creates an unweighted and undirected network of a certain density
 	def createNetwork(self, density: float, kind: str='edge', prim=None):
+		"""Create a random undirected and unweighted network of a certain `density`∈[0,1] among agents of primitive `prim`. https://helipad.dev/functions/agents/createnetwork/"""
 		if density < 0 or density > 1: raise ValueError(ï('Network density must take a value between 0 and 1.'))
 		from itertools import combinations
 		agents = self.all if prim is None else self[prim]
@@ -499,6 +518,7 @@ class Agents(MultiDict):
 		return self.network(kind, prim)
 
 	def network(self, kind: str='edge', prim=None, excludePatches: bool=False):
+		"""Export the model's graph structure to a `NetworkX` object. Agent breed, primitive, and (if a spatial model) position are stored as metadata. https://helipad.dev/functions/agents/network/"""
 		import networkx as nx
 
 		#Have to use DiGraph in order to draw any arrows
@@ -514,9 +534,9 @@ class Agents(MultiDict):
 			)
 		return G
 
-	#CALLBACK FOR DEFAULT PARAMETERS
 	#Model param redundant, strictly speaking, but it's necessary to make the signature match the setter callback
 	def initialize(self, val, prim: str, model=None, force: bool=False):
+		"""Create and/or destroy agents to get a population number. This function is used as a setter function for agent population parameters, and also at the beginning of a model to create the initial agent set. https://helipad.dev/functions/agents/initialize/"""
 		if not self.model.hasModel and not force: return val
 
 		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
@@ -548,6 +568,7 @@ class Agents(MultiDict):
 
 	#Returns summary statistics on an agent variable at a single point in time
 	def summary(self, var: str, prim=None, breed=None, good: bool=False):
+		"""Print summary statistics (n, mean, standard deviation, variance, maximum, minimum, and sum) for an agent property. https://helipad.dev/functions/agents/summary/"""
 		if prim is None:
 			prim = 'agent' if 'agent' in self else next(iter(self))
 		agents = self[prim] if breed is None else self[prim][breed]
@@ -567,11 +588,13 @@ class Agents(MultiDict):
 
 	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	def add(self, *args, **kwargs):
+		"""Add a primitive. This method is deprecated; use `model.agents.addPrimitive()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives.add', 'model.agents.addPrimitive'), FutureWarning, 2)
 		self.addPrimitive(*args, **kwargs)
 
 	#Deprecated in Helipad 1.6, remove in Helipad 1.8
 	def remove(self, name):
+		"""Remove a primitive. This method is deprecated; use `model.agents.removePrimitive()` instead."""
 		warnings.warn(ï('{0} is deprecated and has been replaced with {1}.').format('model.primitives.remove', 'model.agents.removePrimitive'), FutureWarning, 2)
 		self.removePrimitive(name)
 
@@ -591,6 +614,7 @@ class gandb(funcStore):
 		self.model = model
 
 	def add(self, obj: str, name: str, color, **kwargs):
+		"""Add an item."""
 		if name in self:
 			warnings.warn(ï('{0} \'{1}\' already defined. Overriding…').format(obj, name), None, 2)
 
@@ -606,6 +630,7 @@ class gandb(funcStore):
 		return self[name]
 
 	def remove(self, name: str):
+		"""Remove an item."""
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 		if not name in self: return False
 
@@ -625,7 +650,9 @@ class Breeds(gandb):
 		self.primitive = primitive
 		super().__init__(model)
 
-	def add(self, name: str, color): return super().add('breed', name, color)
+	def add(self, name: str, color):
+		"""Register an agent breed. https://helipad.dev/functions/breeds/add/"""
+		return super().add('breed', name, color)
 
 class Edges(MultiDict):
 	"""Interface for adding and storing connections between agents that define a network. Stored in `Agent.edges`. https://helipad.dev/functions/edges/"""
@@ -634,9 +661,11 @@ class Edges(MultiDict):
 		super().__init__()
 
 	def add(self, partner: baseAgent, kind: str='edge', direction=None, weight=1):
+		"""Create a network connection between the current agent and `partner`. https://helipad.dev/functions/edges/add/"""
 		return Edge(self.agent, partner, kind, direction, weight)
 
 	def outbound(self, kind='edge', undirected: bool=False, obj: str='edge'):
+		"""Return a list of edges for which the agent is a startpoint. Undirected edges can be excluded or included with `undirected`. https://helipad.dev/functions/edges/outbound/"""
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.all
 		else:
@@ -646,6 +675,7 @@ class Edges(MultiDict):
 		return ob if obj=='edge' else [e.partner(self.agent) for e in ob]
 
 	def inbound(self, kind='edge', undirected: bool=False, obj: str='edge'):
+		"""Return a list of edges for which the agent is an endpoint. Undirected edges can be excluded or included with `undirected`. https://helipad.dev/functions/edges/inbound/"""
 		if obj not in ['agent', 'edge']: raise ValueError(ï('Object must be specified either \'agent\' or \'edge\'.'))
 		if kind is None: edges = self.all
 		else:
@@ -655,6 +685,7 @@ class Edges(MultiDict):
 		return ib if obj=='edge' else [e.partner(self.agent) for e in ib]
 
 	def With(self, partner: baseAgent, kind='edge'):
+		"""Returns a list of direct connections with `partner`. Does not indicate indirect connections. https://helipad.dev/functions/edges/with/"""
 		if kind is not None:
 			if kind not in self: return []
 			edges = self[kind]
@@ -689,6 +720,7 @@ class ModelEdges(MultiDict):
 
 	@property
 	def all(self) -> list:
+		"""A list of all network edges in the model."""
 		es = []
 		for a in self.agents.all: es += a.edges.all
 		return es

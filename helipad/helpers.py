@@ -7,21 +7,22 @@ from numbers import Number
 from sys import __stdout__
 from io import BufferedWriter
 
-#Internationalization since using _ is a disaster
-#Can't install to global scope because it conflicts with readline;
+#Using _ is a disaster. Can't install to global scope because it conflicts with readline;
 #Can't name it _ here because `import *` skips it (???)
-def ï(text) -> str: return helipad_gettext(text)
+def ï(text) -> str:
+	"""Internationalization. Named so as to avoid a conflict with `_` in the REPL console."""
+	return helipad_gettext(text)
 
-#Checks for any Ipython environment, including Spyder, for event loop purposes.
 def isIpy() -> bool:
+	"""Check for any Ipython environment, including Spyder, for event loop purposes."""
 	try:
 		__IPYTHON__
 		return True
 	except NameError: return False
 
-#Check whether Helipad is running in an interactive notebook. However, get_ipython() comes
-#back undefined inside callbacks. So cache the value once, the first time it runs.
 def isNotebook() -> bool:
+	"""Check whether Helipad is running in an interactive notebook."""
+	#get_ipython() comes back undefined inside callbacks. So cache the value once, the first time it runs.
 	if not '__helipad_ipy' in globals():
 		try:
 			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
@@ -30,6 +31,7 @@ def isNotebook() -> bool:
 	return __helipad_ipy
 
 def isBuffered() -> bool:
+	"""Check whether the current Python script is running in a buffered or unbuffered console."""
 	return isinstance(__stdout__.buffer, BufferedWriter)
 
 class Item:
@@ -92,14 +94,17 @@ class Color:
 	def v(self): return self.hsv[2]
 
 	def lighten(self, factor=3):
+		"""Creates a new color, lighter than the existing color by `factor`."""
 		hls = colorsys.rgb_to_hls(*self.rgb)
 		return Color(colorsys.hls_to_rgb(hls[0], (1-1/factor) + hls[1]/factor, hls[2]))
 
 	def darken(self):
+		"""Create a new color, slightly darker than the original."""
 		hls = colorsys.rgb_to_hls(*self.rgb)
 		return Color(colorsys.hls_to_rgb(hls[0], hls[1]-0.075 if hls[1]>0.075 else 0, hls[2]))
 
 	def blend(self, color2):
+		"""Create a new color halfway between the existing color and another. https://helipad.dev/functions/color/blend/"""
 		return Color(((self.r+color2.r)/2, (self.g+color2.g)/2, (self.b+color2.b)/2))
 
 def makeDivisible(n, div, c='min'):

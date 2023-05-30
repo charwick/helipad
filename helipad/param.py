@@ -18,11 +18,11 @@ class Param(Item):
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
 
-	#Set values from defaults
 	#Global generic:				int → int
 	#Per-breed universal generic:	int → dict{int}
 	#Per-breed specific generic:	dict{int} → dict{int}
 	def reset(self):
+		"""Reset the parameter to its default value. https://helipad.dev/functions/param/reset/"""
 		if self.per is None: self.setSpecific(self.default)
 		else:
 			if isinstance(self.default, dict):
@@ -31,8 +31,8 @@ class Param(Item):
 			else:
 				for i in self.pKeys: self.setSpecific(self.default, i)
 
-	#Common code for the set methods
 	def setParent(self, val, item=None, updateGUI: bool=True):
+		"""Common code for subclasses' `set()` methods."""
 		if self.per is not None and item is None: raise KeyError(ï('A {} whose parameter value to set must be specified.').format(self.per))
 
 		#Jupyter requires an explicit update for all parameter types.
@@ -42,28 +42,32 @@ class Param(Item):
 
 	#Don't override this one
 	def set(self, val, item=None, updateGUI: bool=True):
+		"""Set the value of the parameter to `val`. Do not call directly; use `model.param()` instead. https://helipad.dev/functions/param/set/"""
 		if getattr(self, 'setter', False):
 			val = self.setter(val, item)
 			if val is not None: self.setSpecific(val, item)
 		else: self.setSpecific(val, item, updateGUI)
 
-	#A generic set method to be overridden
 	def setSpecific(self, val, item=None, updateGUI: bool=True):
+		"""A generic set method to be overridden by subclasses."""
 		self.setParent(val, item, updateGUI)
 		if self.per is None: self.value = val
 		else: self.value[item] = val
 
 	#Don't override this one
 	def get(self, item=None):
+		"""Retrieve the value of the parameter. Do not call directly; use `model.param()` instead. https://helipad.dev/functions/param/get/"""
 		if getattr(self, 'getter', False):
 			v = self.getter(item)
 			if v is not None: return v #Allow passing to the default getter
 		return self.getSpecific(item)
 
 	def getSpecific(self, item=None):
+		"""A generic get method to be overridden by subclasses."""
 		return self.value if self.per is None or item is None else self.value[item]
 
 	def disabled(self, disable: bool):
+		"""Enables or disables the parameter's GUI element. https://helipad.dev/functions/param/disabled/"""
 		if self.element is None: return
 		for e in ([self.element] if self.per is None else self.elements.values()):
 			if isNotebook():
@@ -71,14 +75,21 @@ class Param(Item):
 			else:
 				e.configure(state='disabled' if disable else 'normal')
 
-	def disable(self): self.disabled(True)
-	def enable(self): self.disabled(False)
+	def disable(self):
+		"""Disables the parameter's control panel GUI element so that it cannot be interacted with or changed by the user. https://helipad.dev/functions/param/disable/"""
+		self.disabled(True)
+	def enable(self):
+		"""Enables the parameter's control panel GUI element so that it can be interacted with by the user. https://helipad.dev/functions/param/enable/"""
+		self.disabled(False)
 
 	@property
-	def range(self): return None
+	def range(self):
+		"""A list of possible values that the parameter can take."""
+		return None
 
 	#If a breed or good gets added after the parameter instantiation, we want to be able to keep up
 	def addKey(self, key: str):
+		"""Update a per-item parameter with a new item and assign it the default value specified at the `Param` object's instantiation. https://helipad.dev/functions/param/addkey/"""
 		if self.per is None: warnings.warn(ï('Can\'t add keys to a global parameter…'), None, 2)
 		elif not isinstance(self.default, dict):
 			self.value[key] = self.default
@@ -86,9 +97,10 @@ class Param(Item):
 			self.value[key] = self.default[key]	#Forgive out-of-order specification
 		else: return True
 
-	#If there's no user-specified default value, this is what gets returned
 	@property
-	def defaultVal(self): return None
+	def defaultVal(self):
+		"""Fallback value in case `param.default` is not specified on init."""
+		return None
 
 class MenuParam(Param):
 	"""A parameter type that takes discrete string values. https://helipad.dev/functions/param/"""
@@ -319,6 +331,7 @@ class CheckgridParam(Param):
 		else: super().disabled(disable)
 
 	def addItem(self, name: str, label: str, position=None, selected: bool=False):
+		"""Add a new checkbox to the grid."""
 		if self.element is not None and not isNotebook(): raise RuntimeError(ï('Cannot add checkgrid items after control panel is drawn.'))
 
 		if position is None or position > len(self.vars): self.opts[name] = label
@@ -342,7 +355,7 @@ class CheckgridParam(Param):
 		if selected: self.default.append(name)
 
 class ParamGroup:
-	"""Defines a collapsible group of parameters for display in the control panel. https://helipad.dev/functions/params/group/"""
+	"""Define a collapsible group of parameters for display in the control panel. https://helipad.dev/functions/params/group/"""
 	def __init__(self, name: str, members, opened: bool):
 		self.title = name
 		self.members = members
@@ -354,12 +367,17 @@ class ParamGroup:
 			p.group = name
 
 	def get(self) -> dict:
+		"""A `dict` with values for all parameters in the group."""
 		return {name: p.get() for name, p in self.members.items()}
 
-	def toggle(self): self.open = not self.open
+	def toggle(self):
+		"""Open or close the frame around the grouped parameters."""
+		self.open = not self.open
 
 	@property
-	def open(self) -> bool: return self._open
+	def open(self) -> bool:
+		"""Whether the frame around the grouped parameters is currently open."""
+		return self._open
 
 	@open.setter
 	def open(self, val: bool):
@@ -399,6 +417,7 @@ class Params(fStoreWithInterface):
 		self.groups = []
 
 	def add(self, name: str, title: str, type: str, dflt, opts={}, runtime: bool=True, callback=None, per=None, desc=None, prim=None, getter=None, setter=None, **args):
+		"""Register a global parameter to be displayed in the control panel. `type` can take `'menu'`, `'check'`, `'slider'`, `'checkentry'`, `'checkgrid'`, or `'hidden'`, and `opts` will depend on the parameter type. https://helipad.dev/functions/params/add/"""
 		if name in self: warnings.warn(ï('Parameter \'{}\' already defined. Overriding…').format(name), None, 2)
 
 		if callable(getter):
@@ -433,13 +452,15 @@ class Params(fStoreWithInterface):
 		if self.model.cpanel and isNotebook(): self.model.cpanel.__init__(self, redraw=True) #Redraw if necessary
 		return self[name]
 
-	def group(self, name: str, params, opened: bool=True):
+	def group(self, name: str, params: list, opened: bool=True):
+		"""Group parameters into a collapsible section in the control panel. https://helipad.dev/functions/params/group/"""
 		pg = ParamGroup(name, {p: self[p] for p in params}, opened)
 		self.groups.append(pg)
 		return pg
 
 	#Save the configuration parameters
 	def clear(self):
+		"""Clear all user-added parameters and removes them from the control panel if drawn. https://helipad.dev/functions/params/clear/"""
 		for p in self.values():
 			if getattr(p, 'config', False): continue
 			self._destroy(p)
@@ -448,15 +469,20 @@ class Params(fStoreWithInterface):
 		self.update(configs)
 
 	@property
-	def globals(self): return {k:v for k,v in self.items() if v.per is None}
+	def globals(self):
+		"""The subset of global parameters, i.e. those added with `per=None`. https://helipad.dev/functions/params/#globals"""
+		return {k:v for k,v in self.items() if v.per is None}
 
 	@property
-	def perBreed(self): return {k:v for k,v in self.items() if v.per=='breed'}
+	def perBreed(self):
+		"""The subset of per-breed parameters, i.e. those added with `per='breed'`. https://helipad.dev/functions/params/#perbreed"""
+		return {k:v for k,v in self.items() if v.per=='breed'}
 
 	@property
-	def perGood(self): return {k:v for k,v in self.items() if v.per=='good'}
+	def perGood(self):
+		"""The subset of per-good parameters, i.e. those added with `per='good'`. https://helipad.dev/functions/params/#pergood"""
+		return {k:v for k,v in self.items() if v.per=='good'}
 
-#This object is instantiated once and lives in model.shocks
 class Shocks(CheckgridParam, fStoreWithInterface):
 	"""Interface for adding, storing, and executing model shocks. Stored in `model.shocks`, but also subclasses `CheckgridParam` and the same object is also located in `model.params['shocks']`. https://helipad.dev/functions/shocks/"""
 	multi: bool = False
@@ -502,13 +528,8 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {len(self)} shocks>'
 
-	#param is the name of the variable to shock.
-	#valFunc is a function that takes the current value and returns the new value.
-	#timerFunc is a function that takes the current tick value and returns true or false
-	#    or the string 'button' in which case it draws a button in the control panel that shocks on press
-	#The variable is shocked when timerFunc returns true
-	#Can pass in param=None to run an open-ended valFunc that takes the model as an object instead
 	def add(self, name: str, param, valFunc, timerFunc, active: bool=True, desc=None):
+		"""Register a shock to parameter `param`. `valFunc` takes the current value and returns a new value. `timerFunc` is a function that takes the current model time and returns `bool` (or the string `'button'`, in which case the value is shocked when a control panel button is pressed); `valFunc` will execute whenever `timerFunc` returns `True`. `param` can also be set to `None`, in which case `valFunc` receives the model object. https://helipad.dev/functions/shocks/add/"""
 		if param is not None:
 			item = param[2] if isinstance(param, tuple) and len(param)>2 else None	#The good or breed whose parameter to shock
 			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]
@@ -528,39 +549,45 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 		if timerFunc != 'button': self.addItem(name, name, selected=active)
 
 	def clear(self):
+		"""Clear all registered shocks and removes the element from the control panel."""
 		if self.element is not None: self._destroy(self)
 		super().clear()
 
 	def step(self):
+		"""Run through the `timerFunc`s of the registered shocks and execute the `valFunc` for any `timerFunc` that returns `True`. https://helipad.dev/functions/shocks/step/"""
 		for shock in self.values():
 			if shock.selected and callable(shock.timerFunc) and shock.timerFunc(self.model.t):
 				shock.do(self.model)
 
 	@property
-	def buttons(self): return {k:s for k,s in self.items() if s.timerFunc=='button'}
+	def buttons(self):
+		"""The subset of registered shocks where `shock.timerFunc=='button'` and therefore render as buttons in the control panel. https://helipad.dev/functions/shocks/#buttons"""
+		return {k:s for k,s in self.items() if s.timerFunc=='button'}
 
 	@property
-	def shocksExceptButtons(self): return {k:s for k,s in self.items() if callable(s.timerFunc)}
+	def shocksExceptButtons(self):
+		"""The subset of registered shocks where `shock.timerFunc` is a function and therefore render as checkboxes in the control panel. https://helipad.dev/functions/shocks/#shocksExceptButtons"""
+		return {k:s for k,s in self.items() if callable(s.timerFunc)}
 
 	# ===============
 	# TIMER FUNCTIONS
 	# The following *return* timer functions; they are not themselves timer functions.
 	# ===============
 
-	#With n% probability each period
 	def randn(self, n):
+		"""Generate a timer function that returns `True` with `n`% probability each period. https://helipad.dev/functions/shocks/randn/"""
 		if n<0 or n>100: raise ValueError(ï('randn() argument must be between 0 and 100.'))
 		def fn(t): return random.randint(0,100) < n
 		return fn
 
-	#Once at t=n. n can be an int or a list of periods
-	def atperiod(self, n: int):
+	def atperiod(self, n):
+		"""Generate a timer function that returns `True` at one or several specified periods. https://helipad.dev/functions/shocks/atperiod/"""
 		def fn(t):
 			if isinstance(n, list): return t in n
 			else: return t==n
 		return fn
 
-	#Regularly every n periods
 	def everyn(self, n: int, offset: int=0):
+		"""Generates a timer function that returns `True` every `n` periods. https://helipad.dev/functions/shocks/everyn/"""
 		def fn(t): return t%n-offset==0
 		return fn

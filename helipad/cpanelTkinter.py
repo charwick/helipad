@@ -307,6 +307,7 @@ class Cpanel(tk.Tk):
 
 	#Separate function so we can call it again when MPL tries to override
 	def setAppIcon(self):
+		"""Set the dock/taskbar icon to the Helipad icon."""
 		try:
 			__location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 			icon = os.path.join(__location__, 'Helipad.png')
@@ -314,15 +315,14 @@ class Cpanel(tk.Tk):
 			self.tk.call('wm','iconphoto', self._w, pi)
 		except: pass
 
-	#Cleanup on cpanel close so a running model will keep running
 	def cpanelClose(self):
+		"""Cleanup on cpanel close so a running model will keep running."""
 		for p in self.model.params.values(): p.element = None
 		self.model.cpanel = None
 		self.destroy()
 
-	#Step one period at a time and update the graph
-	#For use in debugging
 	def step(self) -> int:
+		"""Step one period at a time and update the visualization. For use in debugging."""
 		t = self.model.step()
 		self.model.graph.update(self.model.data.getLast(1))
 		return t
@@ -354,9 +354,8 @@ class logSlider(tk.Frame):
 		self.text.pack(side='top', fill='both', padx=5)
 
 	def get(self): return self.number
-
-	#Receives a value externally and sets the slider to an index
 	def set(self, val):
+		"""Receive a value and set the slider to the corresponding index."""
 		self.number = val
 		if val in self.values: self.slide.set(self.values.index(val))
 		self.text.configure(text=val)
@@ -376,8 +375,8 @@ class logSlider(tk.Frame):
 	#Here for compatibility with other Tkinter widgets
 	def configure(self, state): self.disabled(state=='disabled')
 
-#A frame that can be expanded and collapsed by clicking on the title
 class expandableFrame(tk.Frame):
+	"""A frame that can be expanded and collapsed by clicking on the title."""
 	def __init__(self, parent=None, text: str='', fg='#333', bg='#FFF', padx: int=8, pady=None, font=None, startOpen=True):
 		tk.Frame.__init__(self, parent, bg=bg)
 		self.columnconfigure(1, weight=1)
@@ -528,20 +527,20 @@ class checkEntry(tk.Frame):
 		self.checkbox.grid(row=0, column=0)
 
 	def disableTextfield(self):
+		"""Update the enabled state of the text field to correspond to the value of the checkbox. https://helipad.dev/functions/checkentry/disabletextfield/"""
 		self.textbox.config(state='disabled' if not self.checkVar.get() else 'normal')
 		if callable(self.callback): self.callback(self.get())
 
-	#Return False or the value of the textbox
 	def get(self):
+		"""Retrieve the value of the combined input. Returns `False` if the checkbox is unchecked, and the value of the textbox otherwise. https://helipad.dev/functions/checkentry/get/"""
 		if not self.checkVar.get(): return False
 		v = self.entryValue.get()
 		if self.datatype=='int':
 			return 0 if v=='' else int(v)
 		else: return v
 
-	#Can pass a bool to turn on and off the checkbox, or a string or an int (depending on the datatype)
-	#to change the value of the textbox.
 	def set(self, val):
+		"""Set the input value. Can receive a `bool` to toggle the checkbox, or a `string` or an `int` (depending on the datatype) to change the value of the textbox. https://helipad.dev/functions/checkentry/set/"""
 		if isinstance(val, bool):
 			self.checkVar.set(val)
 		elif isinstance(val, (str, int)):
@@ -550,9 +549,14 @@ class checkEntry(tk.Frame):
 			self.entryValue.set(val)
 		self.disableTextfield()
 
-	def enable(self): self.disabled(False)
-	def disable(self): self.disabled(True)
+	def enable(self):
+		"""Enable the `checkEntry` element so it can be interacted with by the user. https://helipad.dev/functions/checkentry/enable/"""
+		self.disabled(False)
+	def disable(self):
+		"""Disable the `checkEntry` element so it cannot be interacted with by the user.https://helipad.dev/functions/checkentry/disable/"""
+		self.disabled(True)
 	def disabled(self, disable):
+		"""Enables or disables the `checkEntry` element. https://helipad.dev/functions/checkentry/disabled/"""
 		self.checkbox.config(state='disabled' if disable else 'normal')
 		self.textbox.config(state='disabled' if disable or not self.checkVar.get() else 'normal')
 		self.enabled = not disable
@@ -574,6 +578,7 @@ class checkGrid(expandableFrame):
 		self.buttons['right'].setup('✔︎', self.toggleAll)
 
 	def addCheck(self, var, text: str, defaultValue: bool=True, desc: bool=None):
+		"""Adds a `textCheck` element to the frame. https://helipad.dev/functions/checkgrid/addcheck/"""
 		if self.callback is not None:
 			def cbWrap(val): self.callback((var, val))
 		else: cbWrap = None
@@ -610,7 +615,7 @@ class checkGrid(expandableFrame):
 	def configure(self, state): self.disabled(state=='disabled')
 
 class Tooltip:
-	"""Replaces PMW.balloon because it's unreliably maintained. Modified from https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter"""
+	"""Replaces `PMW.balloon` because it's unreliably maintained. Modified from https://stackoverflow.com/questions/3221956/how-do-i-display-tooltips-in-tkinter"""
 	def __init__(self, widget, text, bg='#FFFFEA', pad=(5, 3, 5, 3), waittime=500, wraplength=250, tip_delta=(10, 5)):
 		for v in ['text', 'widget', 'bg', 'pad', 'waittime', 'wraplength', 'tip_delta']: setattr(self, v, locals()[v]) #Populate object with arguments
 		self.widget.bind("<Enter>", self.onEnter)
