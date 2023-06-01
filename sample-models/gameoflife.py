@@ -36,7 +36,7 @@ def modelStep(model, stage):
 @heli.hook
 def patchClick(patch, plot, t):
 	patch.active = not patch.active
-	plot.update(None, t)
+	plot.record(None, t)
 	plot.draw(t, forceUpdate=True)
 
 @heli.button
@@ -45,7 +45,7 @@ def Randomize(model):
 	for p in model.agents['patch']:
 		p.active = bool(getrandbits(1))
 	if model.visual:
-		model.visual.plots['map'].update(None, model.t)
-		model.visual.plots['map'].draw(model.t, forceUpdate=True)
+		model.visual['map'].update(None, model.t)
+		model.visual['map'].draw(model.t, forceUpdate=True)
 
 heli.launchCpanel()

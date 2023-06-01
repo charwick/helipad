@@ -125,7 +125,7 @@ def agentClick(agents, plot, t):
 		agent.die()
 		for e in range(enum): newedge(heli)
 		print('Killing agent',agent.id,'and creating agent',new.id)
-	plot.update(None, t)
+	plot.record(None, t)
 	plot.draw(t, forceUpdate=True)
 
 #===============

@@ -67,10 +67,10 @@ viz = heli.useVisual(TimeSeries)
 myplot = viz.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 
 #Series draw reporter data on a plot. Here we draw two series on the same plot.
-#The Plot object can also be accessed later with heli.plots['myplot'], so the following two methods are identical.
+#The Plot object can also be accessed later with heli['myplot'], so the following two methods are identical.
 
 # myplot.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
-# heli.plots['myplot'].addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
+# heli['myplot'].addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
 
 #===============
 # LAUNCH THE GUI

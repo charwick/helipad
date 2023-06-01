@@ -26,28 +26,27 @@ class BaseVisualization(ABC):
 		"""Launch the visualization window (if in Tkinter) or cell (if in Jupyter). https://helipad.dev/functions/basevisualization/launch/"""
 
 	@abstractmethod
-	def update(self, data: dict):
-		"""Update the visualization with new data and refresh the display. `data` is only data since the last visualization refresh. https://helipad.dev/functions/basevisualization/update/"""
+	def refresh(self, data: dict):
+		"""Update the visualization with new data and refresh the display. `data` is only data since the last visualization refresh. https://helipad.dev/functions/basevisualization/refresh/"""
 
 	@abstractmethod
 	def event(self, t: int, color, **kwargs):
-		"""Called when an event is triggered, in order to be reflected in the visualization. https://helipad.dev/functions/basevisualization/update/"""
+		"""Called when an event is triggered, in order to be reflected in the visualization. https://helipad.dev/functions/basevisualization/event/"""
 
 	def terminate(self, model):
 		"""Cleanup on model termination. Called automatically from `model.terminate()`. https://helipad.dev/functions/basevisualization/terminate/"""
 
-class MPLVisualization(BaseVisualization):
+class MPLVisualization(BaseVisualization, dict):
 	"""Base class for visualizations using Matplotlib. https://helipad.dev/functions/mplvisualization/"""
-	keys = {}
 
 	def __init__(self, model):
 		self.model = model #Unhappy with this
-		self.plots = {}
 		self.selector = model.params.add('plots', ï('Plots'), 'checkgrid', [], opts={}, runtime=False, config=True)
 		self.dim = None
 		self.pos = (400, 0)
 		self.fig = None
 		self.lastUpdate = None
+		self.keyListeners = {}
 
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
@@ -60,7 +59,7 @@ class MPLVisualization(BaseVisualization):
 			get_ipython().magic('matplotlib widget')
 		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
 
-	def __repr__(self): return f'<{self.__class__.__name__} with {len(self.plots)} plots>'
+	def __repr__(self): return f'<{self.__class__.__name__} with {len(self)} plots>'
 
 	# Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
@@ -68,11 +67,24 @@ class MPLVisualization(BaseVisualization):
 		if not isNotebook():
 			self.fig.canvas.manager.set_window_title(title)
 			if self.model.cpanel: self.model.cpanel.setAppIcon()
+
+		#MPL can't take a method bound to an unhashable class (i.e. `dict`)
+		def sendEvent(event):
+			axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
+			if axes is not None:
+				for p in self.activePlots.values():
+					if axes is p.axes:
+						p.MPLEvent(event)
+						break
+
+			if event.name=='key_press_event' and event.key in self.keyListeners:
+				for f in self.keyListeners[event.key]: f(self.model, event)
+
 		self.fig.tight_layout()
 		self.fig.canvas.mpl_connect('close_event', self.model.terminate)
-		self.fig.canvas.mpl_connect('key_press_event', self.sendEvent)
-		self.fig.canvas.mpl_connect('pick_event', self.sendEvent)
-		self.fig.canvas.mpl_connect('button_press_event', self.sendEvent)
+		self.fig.canvas.mpl_connect('key_press_event', sendEvent)
+		self.fig.canvas.mpl_connect('pick_event', sendEvent)
+		self.fig.canvas.mpl_connect('button_press_event', sendEvent)
 		self.lastUpdate = 0
 
 		#Resize and position graph window if applicable
@@ -100,32 +112,26 @@ class MPLVisualization(BaseVisualization):
 			pos = fm.window.wm_geometry().split('+')
 			self.pos = (pos[1], pos[2])
 
-	def sendEvent(self, event):
-		"""Execute functions registered with `MPLVisualization.addKeypress()` and route other events to the appropriate `ChartPlot` object depending on the current mouse position. https://helipad.dev/functions/mplvisualization/sendevent/"""
-		axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
-		if axes is not None:
-			for p in self.activePlots.values():
-				if axes is p.axes:
-					p.MPLEvent(event)
-					break
-
-		if event.name=='key_press_event' and event.key in self.keys:
-			for f in self.keys[event.key]: f(self.model, event)
-
 	def addKeypress(self, key: str, fn):
 		"""Register a function to be run when `key` is pressed in a Matplotlib visualizer. `fn` will run if `key` is pressed at any time when the plot window is in focus. To narrow the focus to a particular plot, define `catchKeypress()` in a subclass of `ChartPlot`. https://helipad.dev/functions/mplvisualization/addkeypress/"""
-		if not key in self.keys: self.keys[key] = []
-		self.keys[key].append(fn)
+		if not key in self.keyListeners: self.keyListeners[key] = []
+		self.keyListeners[key].append(fn)
 
 	@property
 	def activePlots(self) -> dict:
 		"""The subset of the plots containing the `Plot`s that are currently active. https://helipad.dev/functions/mplvisualization/#activePlots"""
-		return {k:plot for k,plot in self.plots.items() if plot.selected}
+		return {k:plot for k,plot in self.items() if plot.selected}
 
 	@property
 	def isNull(self) -> bool:
 		"""`True` when the model should run as-if with no visualization, for example if all plots are unselected. `False` indicates the window can be launched. https://helipad.dev/functions/mplvisualization/#isNull"""
-		return not [plot for plot in self.plots.values() if plot.selected]
+		return not [plot for plot in self.values() if plot.selected]
+
+	@property
+	def plots(self):
+		"""A `dict` of plots. This property is deprecated; the visualization object can be indexed directly."""
+		warnings.warn(ï('model.visual.plots is deprecated. Plots can be accessed by indexing the visualization object directly.'), FutureWarning, 2)
+		return self
 
 class TimeSeries(MPLVisualization):
 	"""A Matplotlib-based visualizer for displaying time series data on plots so the whole history of any given variable over the model's runtime can be seen at once. https://helipad.dev/functions/timeseries/"""
@@ -151,23 +157,22 @@ class TimeSeries(MPLVisualization):
 		#Delete the corresponding series when a reporter is removed
 		@model.hook('removeReporter')
 		def deleteSeries(data, key):
-			for p in self.plots.values():
+			for p in self.values():
 				for s in p.series:
 					if s.reporter==key:
 						# Remove subseries
 						for ss in s.subseries:
-							for sss in self.model.plots[s.plot].series:
+							for sss in self[s.plot].series:
 								if sss.reporter == ss:
-									self.plots[s.plot].series.remove(sss)
+									self[s.plot].series.remove(sss)
 									continue
-						self.plots[s.plot].series.remove(s)
+						self[s.plot].series.remove(s)
 
 		#Move the plots parameter to the end when the cpanel launches
 		@model.hook('CpanelPreLaunch')
 		def movePlotParam(model):
 			model.params['plots'] = model.params.pop('plots')
 
-	#listOfPlots is the trimmed model.plots list
 	def launch(self, title: str):
 		if not self.activePlots: return #Windowless mode
 
@@ -198,7 +203,7 @@ class TimeSeries(MPLVisualization):
 			model.params['csv'].enable()
 			if not isinstance(model.param('stopafter'), str): model.params['stopafter'].enable()
 
-	def update(self, data: dict):
+	def refresh(self, data: dict):
 		newlen = len(next(data[x] for x in data))
 		if self.resolution > 1: data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
@@ -221,15 +226,16 @@ class TimeSeries(MPLVisualization):
 		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
 
 		self.selector.addItem(name, label, position, selected)
-		if position is None or position > len(self.plots): self.plots[name] = plot
+		if position is None or position > len(self): self[name] = plot
 		else:		#Reconstruct the dicts because there's no insert method…
 			newplots, i = ({}, 1)
-			for k,v in self.plots.items():
+			for k,v in self.items():
 				if position==i:
 					newplots[name] = plot
 				newplots[k] = v
 				i+=1
-			self.plots = newplots
+			self.clear()
+			self.update(newplots)
 
 		plot.selected = selected #Do this after CheckgridParam.addItem
 		return plot
@@ -241,12 +247,12 @@ class TimeSeries(MPLVisualization):
 			for p in name: self.removePlot(p, reassign)
 			return
 
-		if not name in self.plots:
+		if not name in self:
 			warnings.warn(ï('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
-		if reassign is not None: self.plots[reassign].series += self.plots[name].series
-		del self.plots[name]
+		if reassign is not None: self[reassign].series += self[name].series
+		del self[name]
 		del self.selector.opts[name]
 		del self.selector.vars[name]
 		if name in self.selector.default: self.selector.default.remove(name)
@@ -257,7 +263,7 @@ class TimeSeries(MPLVisualization):
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 
 		# Problem: Need x to be in plot coordinates but y to be absolute w.r.t the figure
-		# next(iter(self.plots.values())).axes.text(t, 0, label, horizontalalignment='center')
+		# next(iter(self.values())).axes.text(t, 0, label, horizontalalignment='center')
 
 class Charts(MPLVisualization):
 	"""A Matplotlib-based visualizer for a variety of visualizations that display data that reflects a single point in time. https://helipad.dev/functions/charts/"""
@@ -268,7 +274,6 @@ class Charts(MPLVisualization):
 
 		for p in [BarChart, AgentsPlot, TimeSeriesPlot]: self.addPlotType(p)
 		model.params['refresh'].runtime=False
-		self.refresh = model.params['refresh']
 		self.model = model # :(
 
 	def launch(self, title: str):
@@ -291,7 +296,7 @@ class Charts(MPLVisualization):
 		super().launch(title)
 
 		#Time slider
-		ref = self.refresh.get()
+		ref = self.model.params['refresh'].get()
 		self.fig.subplots_adjust(bottom=0.12) #Make room for the slider
 		sax = self.fig.add_axes([0.1,0.01,.75,0.03], facecolor='#EEF')
 		self.timeslider = Slider(sax, 't=', 0, ref, ref, valstep=ref, closedmin=False)
@@ -300,7 +305,7 @@ class Charts(MPLVisualization):
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
 
-	def update(self, data: dict):
+	def refresh(self, data: dict):
 		data = {k:v[-1] for k,v in data.items()}
 		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
@@ -328,10 +333,10 @@ class Charts(MPLVisualization):
 			type = 'agents'
 		self.type = type if type is not None else 'bar'
 		if self.type not in self.plotTypes: raise KeyError(ï('\'{}\' is not a registered plot visualizer.').format(self.type))
-		self.plots[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
+		self[name] = self.plotTypes[self.type](name=name, label=label, viz=self, selected=True, **kwargs)
 
-		self.plots[name].selected = selected #Do this after CheckgridParam.addItem
-		return self.plots[name]
+		self[name].selected = selected #Do this after CheckgridParam.addItem
+		return self[name]
 
 	def addPlotType(self, clss):
 		"""Registers a new plot type for the Charts visualizer. Registered plot types can then be added to the visualization area with `Charts.addPlot()`. https://helipad.dev/functions/charts/addplottype/"""
@@ -345,15 +350,15 @@ class Charts(MPLVisualization):
 			for p in name: self.removePlot(p)
 			return
 
-		if not name in self.plots:
+		if not name in self:
 			warnings.warn(ï('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
-		del self.plots[name]
+		del self[name]
 		return True
 
 	def event(self, t: int, color='#FDC', **kwargs):
-		ref = self.refresh.get()
+		ref = self.model.params['refresh'].get()
 		self.events[ceil(t/ref)*ref] = color
 
 #======================
@@ -407,7 +412,7 @@ class ChartPlot(Item):
 		"""Catch `pick_event`, `key_press_event`, and `button_press_event` events that occur inside a particular plot. https://helipad.dev/functions/chartplot/mplevent/"""
 
 class TimeSeriesPlot(ChartPlot):
-	"""Visualizes time series data on one or more variables. Can be used in either the `TimeSeries` or `Charts` visualizer. https://helipad.dev/functions/timeseriesplot/"""
+	"""Visualize time series data on one or more variables. Can be used in either the `TimeSeries` or `Charts` visualizer. https://helipad.dev/functions/timeseriesplot/"""
 	type = 'timeseries'
 	def __init__(self, **kwargs):
 		self.series = []

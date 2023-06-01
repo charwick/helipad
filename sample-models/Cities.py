@@ -208,7 +208,7 @@ viz.addPlot('wage', 'Wage', 3)
 viz.addPlot('wealth', 'Wealth', 4)
 viz.addPlot('rates', 'Rates', 5, logscale=True)
 heli.data.addReporter('theta', heli.data.modelReporter('deathrate'), smooth=0.99)
-viz.plots['rates'].addSeries('theta', 'Death Rate', '#CCCCCC')
+viz['rates'].addSeries('theta', 'Death Rate', '#CCCCCC')
 
 for breed, d in heli.agents['agent'].breeds.items():
 	heli.data.addReporter(breed+'Pop', heli.land[breed].pop)
@@ -218,13 +218,13 @@ for breed, d in heli.agents['agent'].breeds.items():
 	heli.data.addReporter(breed+'Wealth', heli.data.agentReporter('wealth', 'agent', breed=breed, percentiles=[25,75]))
 	heli.data.addReporter(breed+'moveRate', heli.data.modelReporter('moverate'+breed), smooth=0.99)
 	heli.data.addReporter(breed+'birthrate', heli.data.modelReporter('birthrate'+breed), smooth=0.99)
-	viz.plots['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
-	viz.plots['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
-	viz.plots['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
-	viz.plots['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', d.color2, visible=False)
-	viz.plots['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
-	viz.plots['rates'].addSeries(breed+'moveRate', breed.title()+' Moveaway Rate', d.color2)
-	viz.plots['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
+	viz['pop'].addSeries(breed+'Pop', breed.title()+' Population', d.color)
+	viz['hcap'].addSeries(breed+'H', breed.title()+' Human Capital', d.color)
+	viz['wage'].addSeries(breed+'Wage', breed.title()+' Wage', d.color)
+	viz['wage'].addSeries(breed+'ExpWage', breed.title()+' Expected Wage', d.color2, visible=False)
+	viz['wealth'].addSeries(breed+'Wealth', breed.title()+' Wealth', d.color)
+	viz['rates'].addSeries(breed+'moveRate', breed.title()+' Moveaway Rate', d.color2)
+	viz['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
 
 heli.launchCpanel()
 
@@ -232,7 +232,7 @@ heli.launchCpanel()
 # PARAM SWEEP & ANALYSIS
 #================
 
-# for p in viz.plots.values(): p.active(False) #Disable plots so Helipad doesn't try to update the visuals during param sweep
+# for p in viz.values(): p.active(False) #Disable plots so Helipad doesn't try to update the visuals during param sweep
 # #Remove superfluous columns
 # @heli.hook
 # def saveCSV(data, model):

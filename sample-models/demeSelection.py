@@ -99,10 +99,10 @@ def fitness(model): return sum(sum(a.stocks['payoff'] for a in d.agents['agent']
 viz.addPlot('pop', 'Population', selected=False)
 viz.addPlot('pheno', 'Phenotypes', stack=True)
 viz.addPlot('fitness', 'Fitness')
-viz.plots['pop'].addSeries('population', 'Total population', '#000000')
-viz.plots['pheno'].addSeries('altruists', 'Altruists', '#33CC33')
-viz.plots['pheno'].addSeries('selfish', 'Selfish', '#BB2222')
-viz.plots['fitness'].addSeries('fitness', 'Average Fitness', '#000099')
+viz['pop'].addSeries('population', 'Total population', '#000000')
+viz['pheno'].addSeries('altruists', 'Altruists', '#33CC33')
+viz['pheno'].addSeries('selfish', 'Selfish', '#BB2222')
+viz['fitness'].addSeries('fitness', 'Average Fitness', '#000099')
 
 #===============
 # LAUNCH THE GUI

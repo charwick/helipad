@@ -157,7 +157,7 @@ def setup():
 	viz.addPlot('wage', 'Wage', 11, selected=False)
 	viz.addPlot('shortage', 'Shortages', 6, selected=False)
 
-	viz.plots['capital'].addSeries(lambda t: 1/len(heli.agents['agent'].breeds), '', '#CCCCCC')
+	viz['capital'].addSeries(lambda t: 1/len(heli.agents['agent'].breeds), '', '#CCCCCC')
 
 	# heli.data.addReporter('rBal', heli.data.agentReporter('realBalances', 'agent', breed=True))
 	def shortageReporter(good):
@@ -174,20 +174,20 @@ def setup():
 		heli.data.addReporter('invTarget-'+AgentGoods[breed], heli.data.agentReporter('invTarget', 'store', good=AgentGoods[breed]))
 		heli.data.addReporter('portion-'+AgentGoods[breed], heli.data.agentReporter('portion', 'store', good=AgentGoods[breed]))
 
-		viz.plots['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
-		viz.plots['shortage'].addSeries('shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', d.color)
-		viz.plots['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
-		viz.plots['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
-		viz.plots['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
-		viz.plots['capital'].addSeries('portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
-		# viz.plots['wage'].addSeries('expWage', 'Expected Wage', '#999999')
+		viz['demand'].addSeries('eCons-'+breed, breed.title()+'s\' Expected Consumption', d.color2)
+		viz['shortage'].addSeries('shortage-'+AgentGoods[breed], AgentGoods[breed].title()+' Shortage', d.color)
+		viz['rbal'].addSeries('rbalDemand-'+breed, breed.title()+' Target Balances', d.color2)
+		viz['rbal'].addSeries('rBal-'+breed, breed.title()+ 'Real Balances', d.color)
+		viz['inventory'].addSeries('invTarget-'+AgentGoods[breed], AgentGoods[breed].title()+' Inventory Target', heli.goods[AgentGoods[breed]].color2)
+		viz['capital'].addSeries('portion-'+AgentGoods[breed], AgentGoods[breed].title()+' Capital', heli.goods[AgentGoods[breed]].color)
+		# viz['wage'].addSeries('expWage', 'Expected Wage', '#999999')
 
 	#Do this one separately so it draws on top
 	for good, g in heli.goods.nonmonetary.items():
 		heli.data.addReporter('inv-'+good, heli.data.agentReporter('stocks', 'store', good=good))
-		viz.plots['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
+		viz['inventory'].addSeries('inv-'+good, good.title()+' Inventory', g.color)
 		heli.data.addReporter('price-'+good, heli.data.agentReporter('price', 'store', good=good))
-		viz.plots['prices'].addSeries('price-'+good, good.title()+' Price', g.color)
+		viz['prices'].addSeries('price-'+good, good.title()+' Price', g.color)
 
 	#Price ratio plots
 	def ratioReporter(item1, item2):
@@ -195,22 +195,22 @@ def setup():
 			return model.data.agentReporter('price', 'store', good=item1)(model)/model.data.agentReporter('price', 'store', good=item2)(model)
 		return reporter
 	viz.addPlot('ratios', 'Price Ratios', position=3, logscale=True)
-	viz.plots['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
+	viz['ratios'].addSeries(lambda t: 1, '', '#CCCCCC')	#plots ratio of 1 for reference without recording a column of ones
 
 	for r in combinations(heli.goods.nonmonetary.keys(), 2):
 		heli.data.addReporter('ratio-'+r[0]+'-'+r[1], ratioReporter(r[0], r[1]))
 		c1, c2 = heli.goods[r[0]].color, heli.goods[r[1]].color
-		viz.plots['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
+		viz['ratios'].addSeries('ratio-'+r[0]+'-'+r[1], r[0].title()+'/'+r[1].title()+' Ratio', c1.blend(c2))
 
 	#Misc plots
 	heli.data.addReporter('ngdp', lambda model: model.cb.ngdp)
-	viz.plots['ngdp'].addSeries('ngdp', 'NGDP', '#000000')
+	viz['ngdp'].addSeries('ngdp', 'NGDP', '#000000')
 	heli.data.addReporter('storeCash', heli.data.agentReporter('balance', 'store'))
-	viz.plots['money'].addSeries('storeCash', 'Store Cash', '#777777')
+	viz['money'].addSeries('storeCash', 'Store Cash', '#777777')
 	heli.data.addReporter('StoreCashDemand', heli.data.agentReporter('cashDemand', 'store'))
-	viz.plots['money'].addSeries('StoreCashDemand', 'Store Cash Demand', '#CCCCCC')
+	viz['money'].addSeries('StoreCashDemand', 'Store Cash Demand', '#CCCCCC')
 	heli.data.addReporter('wage', heli.data.agentReporter('wage', 'store'))
-	viz.plots['wage'].addSeries('wage', 'Wage', '#000000')
+	viz['wage'].addSeries('wage', 'Wage', '#000000')
 
 #================
 # POST-ANALYSIS

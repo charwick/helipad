@@ -251,15 +251,15 @@ def modelPreSetup(model):
 		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
 		model.data.addReporter('M2', lambda model: model.cb.M2)
 
-		model.visual.plots['money'].addSeries('defaults', 'Defaults', '#CC0000')
-		model.visual.plots['money'].addSeries('M2', 'Money Supply', '#000000')
-		model.visual.plots['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
-		model.visual.plots['rr'].addSeries('targetRR', 'Target', '#777777')
-		model.visual.plots['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
-		model.visual.plots['i'].addSeries('i', 'Nominal interest', '#000000')
-		model.visual.plots['i'].addSeries('r', 'Real interest', '#0000CC')
-		model.visual.plots['i'].addSeries('inflation', 'Inflation', '#CC0000')
-		model.visual.plots['i'].addSeries('cashdemand', '% cash held', '#00CC00')
+		model.visual['money'].addSeries('defaults', 'Defaults', '#CC0000')
+		model.visual['money'].addSeries('M2', 'Money Supply', '#000000')
+		model.visual['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
+		model.visual['rr'].addSeries('targetRR', 'Target', '#777777')
+		model.visual['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
+		model.visual['i'].addSeries('i', 'Nominal interest', '#000000')
+		model.visual['i'].addSeries('r', 'Real interest', '#0000CC')
+		model.visual['i'].addSeries('inflation', 'Inflation', '#CC0000')
+		model.visual['i'].addSeries('cashdemand', '% cash held', '#00CC00')
 
 @heli.hook
 def modelPostSetup(model):

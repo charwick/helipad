@@ -75,7 +75,7 @@ heli.data.addReporter('ssprice', heli.data.agentReporter('lastPrice', 'agent', s
 pricePlot = viz.addPlot('price', 'Price', logscale=True, selected=True)
 pricePlot.addSeries('ssprice', 'Soma/Shmoo Price', '#119900')
 
-for p in ['demand', 'utility']: viz.plots[p].active(True)
+for p in ['demand', 'utility']: viz[p].active(True)
 heli.param('refresh', 1)
 
 heli.launchCpanel()

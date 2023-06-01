@@ -175,8 +175,8 @@ class Helipad:
 
 		if self.goods.money is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
-			if self.visual is not None and isinstance(self.visual, TimeSeries) and 'money' in self.visual.plots:
-				self.visual.plots['money'].addSeries('M0', ï('Monetary Base'), self.goods[self.goods.money].color)
+			if self.visual is not None and isinstance(self.visual, TimeSeries) and 'money' in self.visual:
+				self.visual['money'].addSeries('M0', ï('Monetary Base'), self.goods[self.goods.money].color)
 
 		#Unconditional variables to report
 		# self.data.addReporter('utility', self.data.agentReporter('utils', defPrim))
@@ -186,13 +186,13 @@ class Helipad:
 		for breed, b in self.agents[defPrim].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
 			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
-				self.visual.plots['utility'].addSeries('utility-'+breed, breed.title()+' '+ï('Utility'), b.color)
+				self.visual['utility'].addSeries('utility-'+breed, breed.title()+' '+ï('Utility'), b.color)
 
 		if len(self.goods) >= 2:
 			for good, g in self.goods.nonmonetary.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
 				if self.visual is not None:
-					if 'demand' in self.visual.plots: self.visual.plots['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
+					if 'demand' in self.visual: self.visual['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
 
 		#Initialize agents
 		for prim, ags in self.agents.items():
@@ -316,12 +316,12 @@ class Helipad:
 				if self.timer: t2 = time.time()
 				if self.cpanel and st and isinstance(st, int): self.cpanel.progress.update(t/st)
 
-				#Update graph
+				#Update visualizations
 				if self.visual is not None and not self.visual.isNull:
 					await asyncio.sleep(0.001) #Listen for keyboard input
 					data = self.data.getLast(t - self.visual.lastUpdate)
 
-					self.visual.update(data)
+					self.visual.refresh(data)
 					self.visual.lastUpdate = t
 
 					self.doHooks('visualRefresh', [self, self.visual])
@@ -649,7 +649,7 @@ class Goods(gandb):
 			#Add the M0 plot once we have a money good, only if we haven't done it before
 			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 				try:
-					if not 'money' in self.model.visual.plots: self.model.visual.addPlot('money', ï('Money'), selected=False)
+					if not 'money' in self.model.visual: self.model.visual.addPlot('money', ï('Money'), selected=False)
 				except: pass #Can't add plot if re-drawing the cpanel
 
 		props['quantity'] = endowment
@@ -658,7 +658,7 @@ class Goods(gandb):
 		#Add demand plot once we have at least 2 goods
 		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 			try:
-				if not 'demand' in self.model.visual.plots: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
+				if not 'demand' in self.model.visual: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
 			except: pass
 
 		return item

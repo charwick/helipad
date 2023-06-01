@@ -8,7 +8,7 @@ from sys import __stdout__
 from io import BufferedWriter
 
 #Using _ is a disaster. Can't install to global scope because it conflicts with readline;
-#Can't name it _ here because `import *` skips it (???)
+#Can't name it _ here because `import *` skips it
 def ï(text) -> str:
 	"""Internationalization. Named so as to avoid a conflict with `_` in the REPL console."""
 	return helipad_gettext(text)
@@ -23,6 +23,7 @@ def isIpy() -> bool:
 def isNotebook() -> bool:
 	"""Check whether Helipad is running in an interactive notebook."""
 	#get_ipython() comes back undefined inside callbacks. So cache the value once, the first time it runs.
+	#Can try @functools.cache when Python 3.9 is required
 	if not '__helipad_ipy' in globals():
 		try:
 			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
