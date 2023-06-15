@@ -24,6 +24,7 @@ dependencies = ["matplotlib", "pandas", "networkx"]
 
 [project.optional-dependencies]
 notebook = ["jupyterlab", "ipywidgets>=8.0", "ipympl"]
+geo = ["shapely"]
 
 [project.urls]
 "Homepage" = "https://helipad.dev"

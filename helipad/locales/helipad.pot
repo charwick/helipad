@@ -2,369 +2,392 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: 1.4\n"
+"Project-Id-Version: 1.6\n"
 "POT-Creation-Date: 2022-07-16 01:01-0400\n"
-"PO-Revision-Date: 2022-07-16 01:01-0400\n"
+"PO-Revision-Date: 2023-06-15 16:07-0400\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Generated-By: Babel 2.10.3\n"
+"Generated-By: Babel 2.12.1\n"
 
-#: agent.py:60 agent.py:66 agent.py:72 agent.py:78
+#: agent.py:67 agent.py:73 agent.py:79 agent.py:85
 msgid "{0} {1} does not have sufficient {2} to give {3} {4}."
 msgstr ""
 
-#: agent.py:62 agent.py:68 agent.py:74 agent.py:80
+#: agent.py:69 agent.py:75 agent.py:81 agent.py:87
 msgid " Continuing with available {0} of {1}…"
 msgstr ""
 
-#: agent.py:88 agent.py:144
+#: agent.py:95 agent.py:151
 msgid " Cancelling trade…"
 msgstr ""
 
-#: agent.py:108 agent.py:118
+#: agent.py:114 agent.py:124
 msgid "{} requires a monetary good to be specified."
 msgstr ""
 
-#: agent.py:129 agent.py:135
+#: agent.py:136 agent.py:142
 msgid "{0} {1} does not have sufficient funds to pay {2} {3}."
 msgstr ""
 
-#: agent.py:133 agent.py:138
+#: agent.py:140 agent.py:145
 msgid " Continuing with available balance of {}…"
 msgstr ""
 
-#: agent.py:156
+#: agent.py:164
 msgid "Balance checking requires a monetary good to be specified."
 msgstr ""
 
-#: agent.py:168
+#: agent.py:183
 msgid "Fixed primitives cannot reproduce."
 msgstr ""
 
-#: agent.py:202 data.py:112
+#: agent.py:211 data.py:118
 msgid "Invalid statistic {}."
 msgstr ""
 
-#: agent.py:229
+#: agent.py:236
 msgid "Fixed primitives cannot die."
 msgstr ""
 
-#: agent.py:254 agent.py:263
-msgid "Object must be specified either 'agent' or 'edge'."
+#: agent.py:262 agent.py:267 agent.py:272 agent.py:277
+#: agent.py:283 agent.py:593 agent.py:599 model.py:532
+#: model.py:538 model.py:544 model.py:548 model.py:553
+#: model.py:558 model.py:563 model.py:569 model.py:575
+#: model.py:579 model.py:584
+msgid "{0} is deprecated and has been replaced with {1}."
 msgstr ""
 
-#: agent.py:354
+#: agent.py:300
+msgid "Patches cannot rotate."
+msgstr ""
+
+#: agent.py:370
 msgid "Direction must select one of the agents as an endpoint."
 msgstr ""
 
-#: agent.py:357
+#: agent.py:373
 msgid "Direction must be either int, bool, or agent."
 msgstr ""
 
-#: agent.py:377
+#: agent.py:399
 msgid "Agent {} is not connected to this edge."
 msgstr ""
 
-#: cpanelJupyter.py:134 cpanelTkinter.py:199
+#: agent.py:478
+msgid "{} is a reserved name. Please choose another."
+msgstr ""
+
+#: agent.py:507
+msgid "Breed must specify which primitive it belongs to."
+msgstr ""
+
+#: agent.py:513
+msgid "Network density must take a value between 0 and 1."
+msgstr ""
+
+#: agent.py:554
+msgid "Breed '{0}' is not registered for the '{1}' primitive."
+msgstr ""
+
+#: agent.py:620
+msgid "{0} '{1}' already defined. Overriding…"
+msgstr ""
+
+#: agent.py:670 agent.py:680
+msgid "Object must be specified either 'agent' or 'edge'."
+msgstr ""
+
+#: cpanelJupyter.py:154 cpanelTkinter.py:200
 msgid "filename"
 msgstr ""
 
-#: cpanelJupyter.py:203 cpanelTkinter.py:279
-msgid "Shocks"
-msgstr ""
-
-#: cpanelJupyter.py:209
+#: cpanelJupyter.py:229
 msgid ""
 "After setting parameter values, run <code>launchVisual()</code> or "
 "<code>start()</code> to start the model."
 msgstr ""
 
-#: cpanelJupyter.py:236 cpanelJupyter.py:254 cpanelTkinter.py:84
+#: cpanelJupyter.py:256 cpanelJupyter.py:274
+#: cpanelTkinter.py:85
 msgid "Pause"
 msgstr ""
 
-#: cpanelJupyter.py:241 cpanelTkinter.py:88
+#: cpanelJupyter.py:261 cpanelTkinter.py:89
 msgid "Run"
 msgstr ""
 
-#: cpanelJupyter.py:258
+#: cpanelJupyter.py:278
 msgid "Stop"
 msgstr ""
 
-#: cpanelJupyter.py:277
+#: cpanelJupyter.py:298
 msgid ""
 "Model parameters changed, please re-launch the control panel with "
 "launchCpanel()."
 msgstr ""
 
-#: cpanelTkinter.py:20
+#: cpanelTkinter.py:21
 msgid "{}Control Panel"
 msgstr ""
 
-#: cpanelTkinter.py:92
+#: cpanelTkinter.py:93
 msgid "New Model"
 msgstr ""
 
-#: cpanelTkinter.py:517
-msgid "Invalid Checkentry type. Must be either \"string\" or \"int\""
+#: cpanelTkinter.py:522
+msgid "Invalid Checkentry datatype. Must be either \"string\" or \"int\""
 msgstr ""
 
-#: data.py:26
+#: data.py:27
 msgid "Second argument of addReporter must be callable."
 msgstr ""
 
-#: data.py:33
+#: data.py:34
 msgid "removeReporter cannot be called while a model is active."
 msgstr ""
 
-#: data.py:128
+#: data.py:135
 msgid "First argument of Data.getLast() must be either a key name or an int."
 msgstr ""
 
-#: model.py:66
+#: model.py:72
 msgid "Stop on period"
 msgstr ""
 
-#: model.py:67
+#: model.py:73
 msgid "CSV?"
 msgstr ""
 
-#: model.py:68
+#: model.py:74
 msgid "Refresh Every __ Periods"
 msgstr ""
 
-#: model.py:94
+#: model.py:100
 msgid ""
 "A Helipad update is available! Use `pip install -U helipad` to upgrade to"
 " version {}."
 msgstr ""
 
-#: model.py:111
-msgid "Breed must specify which primitive it belongs to."
-msgstr ""
-
-#: model.py:129
+#: model.py:135
 msgid "Visualizations can only be registered on the top-level model."
 msgstr ""
 
-#: model.py:133
+#: model.py:139
 msgid "Visualization class must inherit from BaseVisualization."
 msgstr ""
 
-#: model.py:173
+#: model.py:179
 msgid "Monetary Base"
 msgstr ""
 
-#: model.py:183
+#: model.py:189
 msgid "Utility"
 msgstr ""
 
-#: model.py:189 model.py:773 visualize.py:121
+#: model.py:195 model.py:661 visualize.py:145
 msgid "Demand"
 msgstr ""
 
-#: model.py:212
+#: model.py:217
 msgid "nest_asyncio is required to run Helipad from Spyder."
 msgstr ""
 
-#: model.py:276
+#: model.py:282
 msgid "matchSelect did not return the correct number of agents."
 msgstr ""
 
-#: model.py:330
+#: model.py:336
 msgid "Period {0}: {1} periods/second ({2}% model, {3}% visuals)"
 msgstr ""
 
-#: model.py:383
+#: model.py:397
 msgid ""
 "Can't do a parameter sweep without the value of the 'stopafter' parameter"
 " set."
 msgstr ""
 
-#: model.py:418
-msgid "Network density must take a value between 0 and 1."
+#: model.py:444
+msgid ""
+"Error initializing the debug console. Make sure the `readline` and `code`"
+" modules are installed."
 msgstr ""
 
-#: model.py:482
-msgid "Breed '{0}' is not registered for the '{1}' primitive."
-msgstr ""
-
-#: model.py:515
-msgid "Error initializing the debug console. Make sure the `readline` and `code` modules are installed."
-msgstr ""
-
-#: model.py:549
+#: model.py:448
 msgid "Control panel can only be launched on the top-level model."
 msgstr ""
 
-#: model.py:573
+#: model.py:472
 msgid "Control panel was redrawn in another cell."
 msgstr ""
 
-#: model.py:583
+#: model.py:483
 msgid ""
 "No visualizations available. To run the model with no GUI, use "
 "model.start() instead."
 msgstr ""
 
-#: model.py:586
+#: model.py:486
 msgid ""
 "Running from the control panel with no visualization requires a stop "
 "condition, and either CSV export or a terminate hook."
 msgstr ""
 
-#: model.py:592
+#: model.py:492
 msgid "{}Data Plots"
 msgstr ""
 
-#: param.py:525
-msgid "{0} is deprecated and has been replaced with {1}."
-msgstr ""
-
-#: model.py:727
-msgid "{0} '{1}' already defined. Overriding…"
-msgstr ""
-
-#: model.py:758
+#: model.py:646
 msgid "Money good already specified as {}. Overriding…"
 msgstr ""
 
-#: model.py:764 visualize.py:122
+#: model.py:652 visualize.py:146
 msgid "Money"
 msgstr ""
 
-#: model.py:801
-msgid "{} is a reserved name. Please choose another."
-msgstr ""
-
-#: param.py:33 param.py:100 param.py:118 param.py:166
+#: param.py:36 param.py:110 param.py:129
+#: param.py:178
 msgid "A {} whose parameter value to set must be specified."
 msgstr ""
 
-#: param.py:79
+#: param.py:93
 msgid "Can't add keys to a global parameter…"
 msgstr ""
 
-#: param.py:272
+#: param.py:286
 msgid "Cannot instantiate per-item checkgrid parameter."
 msgstr ""
 
-#: param.py:318
+#: param.py:335
 msgid "Cannot add checkgrid items after control panel is drawn."
 msgstr ""
 
-#: param.py:347
+#: param.py:366
 msgid "Cannot add checkgrids or per-item parameters to groups."
 msgstr ""
 
-#: param.py:375
+#: param.py:399
 msgid "Cannot remove built-in parameters."
 msgstr ""
 
-#: param.py:396
+#: param.py:421
 msgid "Parameter '{}' already defined. Overriding…"
 msgstr ""
 
-#: param.py:418
+#: param.py:443
 msgid "Per-breed parameter must specify which primitive it belongs to."
 msgstr ""
 
-#: param.py:546
+#: param.py:492
+msgid "Shocks"
+msgstr ""
+
+#: param.py:579
 msgid "randn() argument must be between 0 and 100."
 msgstr ""
 
 #: spatial.py:25
-msgid ""
-"The `diag` argument is deprecated. Use the `corners` argument instead."
+msgid "The `diag` argument is deprecated. Use the `corners` argument instead."
 msgstr ""
 
-#: spatial.py:40
-msgid "The {0} parameter is deprecated. Use {1} instead."
-msgstr ""
-
-#: spatial.py:27
-msgid "Map Size"
-msgstr ""
-
-#: spatial.py:30 spatial.py:33
-msgid "Map Width"
-msgstr ""
-
-#: spatial.py:31 spatial.py:34
-msgid "Map Height"
-msgstr ""
-
-#: spatial.py:35
-msgid "Invalid dimension."
-msgstr ""
-
-#: spatial.py:142
-msgid "Invalid wrap parameter."
-msgstr ""
-
-#: spatial.py:38
-msgid "Square"
-msgstr ""
-
-#: spatial.py:39
-msgid "Wrap"
-msgstr ""
-
-#: spatial.py:41
+#: spatial.py:34
 msgid "Patch number cannot be set directly. Set the dim parameter instead."
 msgstr ""
 
-#: spatial.py:59
-msgid "Patches cannot move."
+#: spatial.py:41 spatial.py:44 spatial.py:48
+#: spatial.py:51
+msgid "The {0} parameter is deprecated. Use {1} instead."
 msgstr ""
 
-#: spatial.py:90
+#: spatial.py:54
+msgid "Map Width"
+msgstr ""
+
+#: spatial.py:55
+msgid "Map Height"
+msgstr ""
+
+#: spatial.py:56
+msgid "Wrap"
+msgstr ""
+
+#: spatial.py:65
+msgid "Agent is not on a patch."
+msgstr ""
+
+#: spatial.py:98
 msgid "There is no patch at ({0}, {1})."
 msgstr ""
 
-#: agent.py:296
-msgid "Patches cannot rotate."
-msgstr ""
-
-#: spatial.py:92
+#: spatial.py:107
 msgid "Dimension is out of range."
 msgstr ""
 
-#: utility.py:26 utility.py:38
+#: spatial.py:136
+msgid "Patches cannot move."
+msgstr ""
+
+#: spatial.py:175 spatial.py:262
+msgid "Invalid wrap parameter."
+msgstr ""
+
+#: spatial.py:178
+msgid "Invalid dimension."
+msgstr ""
+
+#: spatial.py:308
+msgid "MultiPolygons are not supported as patches. Taking the first polygon…"
+msgstr ""
+
+#: spatial.py:310
+msgid "Patch with name '{0}' already exists."
+msgstr ""
+
+#: spatial.py:321
+msgid "Polygon {0} overlaps existing patch {1}."
+msgstr ""
+
+#: utility.py:26 utility.py:35
 msgid "Quantities argument doesn't match initialized list of goods."
 msgstr ""
 
-#: visualize.py:45
+#: visualize.py:44
 msgid "Plots"
 msgstr ""
 
-#: visualize.py:219
+#: visualize.py:133
+msgid ""
+"model.visual.plots is deprecated. Plots can be accessed by indexing the "
+"visualization object directly."
+msgstr ""
+
+#: visualize.py:245 visualize.py:348
 msgid "Cannot remove plots after control panel is drawn."
 msgstr ""
 
-#: visualize.py:225 visualize.py:319
+#: visualize.py:251 visualize.py:354
 msgid "No plot '{}' to remove."
 msgstr ""
 
-#: visualize.py:304
-msgid "'{}' is not a registered plot visualizer."
-msgstr ""
-
-#: visualize.py:309
-msgid "New plot types must subclass ChartPlot."
-msgstr ""
-
-#: visualize.py:313
-msgid "Cannot remove plots after control panel is drawn."
-msgstr ""
-
-#: visualize.py:318
+#: visualize.py:332
 msgid "The `network` plot type is deprecated. Use `agents` instead."
 msgstr ""
 
-#: visualize.py:391
-msgid "Reporter '{}' does not exist. Be sure to register reporters before adding"
+#: visualize.py:335
+msgid "'{}' is not a registered plot visualizer."
+msgstr ""
+
+#: visualize.py:343
+msgid "New plot types must subclass ChartPlot."
+msgstr ""
+
+#: visualize.py:430
+msgid ""
+"Reporter '{}' does not exist. Be sure to register reporters before adding"
 " series."
+msgstr ""
+
+#: visualize.py:635
+msgid "The kind= argument is deprecated and has been replaced with network=."
 msgstr ""
 
