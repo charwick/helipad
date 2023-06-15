@@ -95,7 +95,7 @@ def modelPostStep(model):
 	random.choice(model.agents.edges['edge']).cut()
 	newedge(model)
 
-net = viz.addPlot('net', 'Network Structure', type='agents', scatter=['s1', 's2'], network=None)
+net = viz.addPlot('net', 'Network Structure', type='agents', scatter=['s1', 's2'])
 bar1 = viz.addPlot('prop', 'Bar Chart')
 bar2 = viz.addPlot('prop2', 'Horizontal Bar Chart', horizontal=True)
 net.config({
@@ -106,7 +106,7 @@ net.config({
 	'labelAlpha': 0.75,
 	'labelWeight': 'bold',
  	'labelSize': 8,
-	 'regLine': True
+	'regLine': True
 })
 
 gcolors = ['F00', 'F03', 'F06', 'F09', 'F0C', 'C0F', '90F', '60F', '30F', '00F']
@@ -125,7 +125,7 @@ def agentClick(agents, plot, t):
 		agent.die()
 		for e in range(enum): newedge(heli)
 		print('Killing agent',agent.id,'and creating agent',new.id)
-	plot.record(None, t)
+	plot.update(None, t)
 	plot.draw(t, forceUpdate=True)
 
 #===============

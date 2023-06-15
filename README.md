@@ -48,7 +48,7 @@ If you use Helipad in your own research, please cite as follows:
 
 ## Version History
 
-* 1.6: Geospatial models, agent scatterplot visualizer, new `Agents` and `Edges` containers
+* [1.6](https://helipad.dev/2023/06/helipad-1-6/): Geospatial models, agent scatterplot visualizer, new `Agents` and `Edges` containers
 * [1.5](https://helipad.dev/2023/01/helipad-1-5/): Polar grid spatial models, various spatial improvements
 * [1.4](https://helipad.dev/2022/07/helipad-1-4/): More consistent container API, localization, miscellaneous interface improvements
 * [1.3](https://helipad.dev/2021/06/helipad-1-3/): Allow mixing time series and other plots, display networks on spatial maps, goods API improvements

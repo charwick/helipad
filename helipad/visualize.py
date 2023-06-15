@@ -63,7 +63,7 @@ class MPLVisualization(BaseVisualization, dict):
 
 	# Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
-	def launch(self, title: str, dim=None, pos=None):
+	def launch(self, title: str):
 		if not isNotebook():
 			self.fig.canvas.manager.set_window_title(title)
 			if self.model.cpanel: self.model.cpanel.setAppIcon()
@@ -616,7 +616,7 @@ class BarChart(ChartPlot):
 
 	def draw(self, t: int=None, forceUpdate: bool=False):
 		if t is None: t=self.viz.scrubval
-		i = int(t/self.viz.refresh.get())-1
+		i = int(t/self.viz.model.param('refresh'))-1
 		for b in self.bars:
 			setbar = b.element.set_width if self.horizontal else b.element.set_height
 			setbar(b.data[i])
@@ -725,16 +725,16 @@ class AgentsPlot(ChartPlot):
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches.at(x,y), self, self.viz.scrubval])
 
 	def update(self, data: dict, t: int):
-		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=(self.prim!='patch'))
+		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=self.prim!='patch')
 
 		#Capture data for label, size, and scatterplot position
-		vars = {}
-		if self.params['agentLabel'] and self.params['agentLabel'] is not True: vars['label'] = self.params['agentLabel']
-		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]: vars['size'] = self.params['agentSize']
+		capture = {}
+		if self.params['agentLabel'] and self.params['agentLabel'] is not True: capture['label'] = self.params['agentLabel']
+		if self.params['agentSize'] and type(self.params['agentSize']) not in [int, float]: capture['size'] = self.params['agentSize']
 		if self.scatter:
-			for v in self.scatter: vars[v] = v
+			for v in self.scatter: capture[v] = v
 		agents = {a.id:a for a in (self.viz.model.agents[self.prim] if self.prim else self.viz.model.agents.all)}
-		for k,v in vars.items():
+		for k,v in capture.items():
 			if 'good:' in v:
 				for n in G.nodes: G.nodes[n][k] = agents[n].stocks[v.split(':')[1]]
 			else:

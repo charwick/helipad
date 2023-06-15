@@ -36,7 +36,7 @@ def modelStep(model, stage):
 @heli.hook
 def patchClick(patch, plot, t):
 	patch.active = not patch.active
-	plot.record(None, t)
+	plot.update(None, t)
 	plot.draw(t, forceUpdate=True)
 
 @heli.button

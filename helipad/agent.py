@@ -429,6 +429,7 @@ class Stocks:
 		elif isinstance(key, tuple) and isinstance(key[1], str): self.goods[key[0]][key[1]] = val
 		else: raise KeyError
 
+	def __repr__(self): return {k: g['quantity'] for k,g in self.goods.items()}.__repr__()
 	def __iter__(self): return iter({k: g['quantity'] for k,g in self.goods.items()})
 	def __next__(self): return next({k: g['quantity'] for k,g in self.goods.items()})
 	def __len__(self): return len(self.goods)

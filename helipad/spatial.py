@@ -6,9 +6,10 @@ import warnings
 from random import uniform
 from math import sqrt, sin, cos, atan2, pi, copysign, floor
 from abc import ABC, abstractmethod
+from numbers import Number
 from helipad.agent import Patch, baseAgent
 from helipad.visualize import Charts
-from helipad.helpers import ï, Number, Item
+from helipad.helpers import ï, Item
 
 #===============
 # SETUP
@@ -178,7 +179,7 @@ class PatchesRect(basePatches):
 		self.dim = dim
 		self.offmap = kwargs['offmap']
 		self.corners = kwargs['corners']
-		if not 'noinstall' in kwargs: RectFuncs.install()
+		if 'noinstall' not in kwargs: RectFuncs.install()
 		super().__init__([])
 
 	def at(self, x, y): return self[round(x), round(y)]
@@ -349,14 +350,14 @@ class PatchesGeo(basePatches):
 class RectFuncs:
 	"""Installs distance, neighbor, and angle functions for rectangular coordinates into agent objects. This is a static class and should not be instantiated."""
 	@staticmethod
-	def install(patches=True, agents=True, all=True):
+	def install(patches=True, agents=True, allagents=True):
 		if patches:
 			for p in ['up', 'right', 'down', 'left', 'agentsOn', 'center', 'area', 'vertices']:
 				setattr(Patch, p, property(getattr(RectFuncs,p)))
 		if agents:
 			for f in ['moveUp', 'moveRight', 'moveDown', 'moveLeft', 'forward', 'orientTo']:
 				setattr(baseAgent, f, NotPatches(getattr(RectFuncs,f)))
-		if all:
+		if allagents:
 			for h in ['_offset', 'distanceFrom']:
 				setattr(baseAgent, h, getattr(RectFuncs,h))
 
@@ -418,14 +419,14 @@ class RectFuncs:
 class PolarFuncs:
 	"""Installs distance, neighbor, and angle functions for polar coordinates into agent objects. This is a static class and should not be instantiated."""
 	@staticmethod
-	def install(patches=True, agents=True, all=True):
+	def install(patches=True, agents=True, allagents=True):
 		if patches:
 			for p in ['inward', 'outward', 'clockwise', 'counterclockwise', 'agentsOn', 'center', 'area', 'vertices']:
 				setattr(Patch, p, property(getattr(PolarFuncs,p)))
 		if agents:
 			for f in ['moveInward', 'moveOutward', 'moveClockwise', 'moveCounterclockwise', 'forward', 'orientTo']:
 				setattr(baseAgent, f, NotPatches(getattr(PolarFuncs,f)))
-		if all:
+		if allagents:
 			baseAgent.distanceFrom = PolarFuncs.distanceFrom
 
 	def inward(patch):

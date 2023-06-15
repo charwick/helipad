@@ -3,7 +3,6 @@ Helper classes and functions used internally in Helipad. This module should not 
 """
 
 import warnings
-from numbers import Number
 from sys import __stdout__
 from io import BufferedWriter
 
