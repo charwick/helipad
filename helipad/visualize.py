@@ -106,6 +106,7 @@ class MPLVisualization(BaseVisualization, dict):
 
 	#Save window dimensions and position
 	def terminate(self, model):
+		if self.isNull: return
 		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
 			self.dim = list(self.fig.get_size_inches()*self.fig.dpi)

@@ -401,7 +401,7 @@ class Helipad:
 		params = {}
 		for p in param:
 			if not isinstance(p, tuple): p = (p,)
-			pobj = self.parseParamId(p)
+			pobj = self.params[p[0]]
 			params['-'.join(p)] = (p, pobj)
 
 		#Generate the parameter space, a list of dicts
@@ -415,7 +415,7 @@ class Helipad:
 			for p in self.params.values():
 				if not getattr(p, 'config', False): p.reset()
 
-			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].obj is not None else None)
+			for k,v in run.items(): params[k][1].set(v, params[k][0][2] if params[k][1].per is not None else None)
 			self.setup()
 			self.start()
 

@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/helipad-{{ version }}.tar.gz
-  sha256: 8ca9db33f7227e5e27d479cdca789825e0710ca15c2460e4662a9f11d44103ee
+  sha256: b3baa09f1891a08dd4e47ebf414f62f7612a7b8c139eb0b9b2ce2c801b013f71
 
 build:
   noarch: python
