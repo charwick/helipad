@@ -528,7 +528,7 @@ class checkEntry(tk.Frame):
 
 	def disableTextfield(self):
 		"""Update the enabled state of the text field to correspond to the value of the checkbox. https://helipad.dev/functions/checkentry/disabletextfield/"""
-		self.textbox.config(state='disabled' if not self.checkVar.get() else 'normal')
+		self.textbox.config(state='normal' if self.checkVar.get() else 'disabled')
 		if callable(self.callback): self.callback(self.get())
 
 	def get(self):

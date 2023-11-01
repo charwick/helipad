@@ -333,7 +333,7 @@ class CentralBank(baseAgent):
 		self.model = model
 		self.stocks[self.model.goods.money] = M0 #Has to have assets in order to contract
 
-		self.ngdpTarget = False if not model.param('ngdpTarget') else 10000
+		self.ngdpTarget = 10000 if model.param('ngdpTarget') else False
 
 	def step(self):
 

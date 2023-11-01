@@ -75,8 +75,8 @@ def demeStep(deme, model, stage):
 @heli.hook
 def modelStep(model, stage):
 	if stage==3:
+		targetDpop = 20
 		for d in model.agents['deme']:
-			targetDpop = 20
 			while len(d.agents['agent']) > targetDpop: choice(d.agents['agent']).die()
 			while len(d.agents['agent']) < targetDpop: choice(d.agents['agent']).reproduce()
 

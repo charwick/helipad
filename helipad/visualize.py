@@ -115,7 +115,7 @@ class MPLVisualization(BaseVisualization, dict):
 
 	def addKeypress(self, key: str, fn):
 		"""Register a function to be run when `key` is pressed in a Matplotlib visualizer. `fn` will run if `key` is pressed at any time when the plot window is in focus. To narrow the focus to a particular plot, define `catchKeypress()` in a subclass of `ChartPlot`. https://helipad.dev/functions/mplvisualization/addkeypress/"""
-		if not key in self.keyListeners: self.keyListeners[key] = []
+		if key not in self.keyListeners: self.keyListeners[key] = []
 		self.keyListeners[key].append(fn)
 
 	@property
@@ -248,7 +248,7 @@ class TimeSeries(MPLVisualization):
 			for p in name: self.removePlot(p, reassign)
 			return
 
-		if not name in self:
+		if name not in self:
 			warnings.warn(ï('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
@@ -351,7 +351,7 @@ class Charts(MPLVisualization):
 			for p in name: self.removePlot(p)
 			return
 
-		if not name in self:
+		if name not in self:
 			warnings.warn(ï('No plot \'{}\' to remove.').format(name), None, 2)
 			return False
 
@@ -427,7 +427,7 @@ class TimeSeriesPlot(ChartPlot):
 		if not isinstance(color, Color): color = Color(color)
 
 		#Check against columns and not reporters so subseries work
-		if not callable(reporter) and not reporter in self.viz.model.data.columns:
+		if not callable(reporter) and reporter not in self.viz.model.data.columns:
 			raise KeyError(ï('Reporter \'{}\' does not exist. Be sure to register reporters before adding series.').format(reporter))
 
 		#Add subsidiary series (e.g. percentile bars)
@@ -548,7 +548,7 @@ class BarChart(ChartPlot):
 	type = 'bar'
 	def __init__(self, **kwargs):
 		for arg in ['horizontal', 'logscale']:
-			if not arg in kwargs: kwargs[arg] = False
+			if arg not in kwargs: kwargs[arg] = False
 		super().__init__(**kwargs)
 		self.bars = []
 

@@ -25,7 +25,7 @@ def capacity(self, gene=None, age=None):
 	
 	start = (10-self.model.param('pleio'))*age
 	l = sum(gene[start:start+10])
-	return 0 if l<0 else l
+	return max(0,l)
 Agent.capacity = capacity
 
 @heli.hook

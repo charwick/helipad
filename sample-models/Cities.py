@@ -193,7 +193,7 @@ viz = heli.useVisual(TimeSeries)
 @heli.reporter
 def hsum(model, loc='urban'):
 	upop = model.agents['agent'][loc]
-	return sum([a.H for a in upop]) if len(upop) > 0 else 1
+	return sum(a.H for a in upop) if len(upop) > 0 else 1
 
 def perCapGdp(model, loc):
 	def tmp(model):

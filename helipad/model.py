@@ -125,7 +125,7 @@ class Helipad:
 				if r is not None: return r
 			return None
 
-		if not place in self.hooks: return None
+		if place not in self.hooks: return None
 		for f in self.hooks[place]: r = f(*args)
 		return r
 
@@ -649,7 +649,7 @@ class Goods(gandb):
 			#Add the M0 plot once we have a money good, only if we haven't done it before
 			elif (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 				try:
-					if not 'money' in self.model.visual: self.model.visual.addPlot('money', ï('Money'), selected=False)
+					if 'money' not in self.model.visual: self.model.visual.addPlot('money', ï('Money'), selected=False)
 				except: pass #Can't add plot if re-drawing the cpanel
 
 		props['quantity'] = endowment
@@ -658,7 +658,7 @@ class Goods(gandb):
 		#Add demand plot once we have at least 2 goods
 		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
 			try:
-				if not 'demand' in self.model.visual: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
+				if 'demand' not in self.model.visual: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
 			except: pass
 
 		return item
@@ -681,6 +681,6 @@ class Hooks(funcStore):
 
 	def add(self, name: str, function, prioritize: bool=False):
 		"""Inserts a function into designated places in the model’s logic. See the Hooks Reference (https://helipad.dev/glossary/hooks/) for a complete list of possible hooks and the function signatures necessary to use them. This method is aliased by the `@model.hook` function decorator, which is the preferred way to hook functions. https://helipad.dev/functions/hooks/add/"""
-		if not name in self: self[name] = []
+		if name not in self: self[name] = []
 		if prioritize: self[name].insert(0, function)
 		else: self[name].append(function)

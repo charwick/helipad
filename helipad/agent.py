@@ -193,7 +193,7 @@ class baseAgent:
 			stat = None
 			if isinstance(a, tuple): a, stat = a
 			v = [getattr(p,a) for p in parents if hasattr(p,a)] #List of values, filtering those without
-			if len(v)==0: continue
+			if not v: continue
 
 			#Default statistic if unspecified. 'mean' for numbers, and 'first' for non-numbers.
 			if stat is None:
@@ -203,7 +203,7 @@ class baseAgent:
 			elif stat=='sum': n = sum(v)
 			elif stat=='gmean': n = np.exp(np.log(v).sum()/len(v))
 			elif stat=='first': n = v[0]
-			elif stat=='last': n = v[len(v)-1]
+			elif stat=='last': n = v[-1]
 			elif stat in ('rand', 'random'): n = choice(v)
 			elif stat=='max': n = max(v)
 			elif stat=='min': n = min(v)
@@ -376,8 +376,8 @@ class Edge:
 
 		#Add object to each agent, and to the model
 		for agent in self.vertices:
-			if not kind in agent.edges: agent.edges[kind] = []
-			if not self in agent.edges[kind]: agent.edges[kind].append(self) #Don't add self-links twice
+			if kind not in agent.edges: agent.edges[kind] = []
+			if self not in agent.edges[kind]: agent.edges[kind].append(self) #Don't add self-links twice
 
 		agent1.model.doHooks('edgeInit', [self, kind, agent1, agent2])
 
@@ -550,7 +550,7 @@ class Agents(MultiDict):
 			for aId in range(maxid+1, maxid+int(diff)+1):
 				breed = self.model.doHooks([prim+'DecideBreed', 'decideBreed'], [aId, self[prim].breeds.keys(), self.model])
 				if breed is None: breed = list(self[prim].breeds.keys())[aId%len(self[prim].breeds)]
-				if not breed in self[prim].breeds:
+				if breed not in self[prim].breeds:
 					raise ValueError(ï('Breed \'{0}\' is not registered for the \'{1}\' primitive.').format(breed, prim))
 				new = self[prim].class_(breed, aId, self.model)
 				array.append(new)
@@ -633,7 +633,7 @@ class gandb(funcStore):
 	def remove(self, name: str):
 		"""Remove an item."""
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
-		if not name in self: return False
+		if name not in self: return False
 
 		#Also delete per-item parameters
 		pdict = self.model.params.perBreed if isinstance(self, Breeds) else self.model.params.perGood
@@ -706,7 +706,7 @@ class ModelEdges(MultiDict):
 	def keys(self):
 		ks = []
 		for e in self.all:
-			if not e.kind in ks: ks.append(e.kind)
+			if e.kind not in ks: ks.append(e.kind)
 		yield from ks
 	__iter__ = keys
 	def __repr__(self): return self._dict.__repr__()
@@ -715,8 +715,8 @@ class ModelEdges(MultiDict):
 	def _dict(self):
 		es = {}
 		for e in self.all:
-			if not e.kind in es: es[e.kind] = []
-			if not e in es[e.kind]: es[e.kind].append(e)
+			if e.kind not in es: es[e.kind] = []
+			if e not in es[e.kind]: es[e.kind].append(e)
 		return es
 
 	@property
