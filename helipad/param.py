@@ -404,8 +404,10 @@ class fStoreWithInterface(funcStore):
 
 	def _destroy(self, item):
 		if item.element:
-			if not isNotebook(): item.element.forget()
-			else: item.element.close()
+			if isNotebook(): item.element.close()
+			else:
+				if item.per or item.type=='checkgrid': item.element.forget()
+				else: item.element.master.forget()
 
 class Params(fStoreWithInterface):
 	"""Interface for storing, adding, and accessing model parameters. Stored in `model.params`. https://helipad.dev/functions/params/"""
