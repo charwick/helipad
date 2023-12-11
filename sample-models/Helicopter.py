@@ -20,10 +20,10 @@ class Store(baseAgent):
 		super().__init__(breed, id, model)
 
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
-		sm=sum(1/sqrt(model.param(('prod','good',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd','breed',b,'agent')) for b in model.agents['agent'].breeds)))
-		self.price = {g:sm/(sqrt(model.param(('prod','good',g)))) for g in model.goods.nonmonetary}
+		sm=sum(1/sqrt(model.param(('prod',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd',b)) for b in model.agents['agent'].breeds)))
+		self.price = {g:sm/(sqrt(model.param(('prod',g)))) for g in model.goods.nonmonetary}
 
-		self.invTarget = {g:model.param(('prod','good',g))*model.param('num_agent')*2 for g in model.goods.nonmonetary}
+		self.invTarget = {g:model.param(('prod',g))*model.param('num_agent')*2 for g in model.goods.nonmonetary}
 		self.portion = {g:1/(len(model.goods.nonmonetary)) for g in model.goods.nonmonetary} #Capital allocation
 		self.wage = 0
 		self.cashDemand = 0
@@ -53,11 +53,11 @@ class Store(baseAgent):
 		for i in self.model.goods.nonmonetary:
 
 			#Just have a fixed inventory target, but update if params do
-			self.invTarget = {g:self.model.param(('prod','good',g))*self.model.param('num_agent')*2 for g in self.model.goods.nonmonetary}
+			self.invTarget = {g:self.model.param(('prod',g))*self.model.param('num_agent')*2 for g in self.model.goods.nonmonetary}
 
 			#Produce stuff
 			self.portion[i] = (self.model.param('kImmob') * self.portion[i] + self.price[i]/tPrice) / (self.model.param('kImmob') + 1)	#Calculate capital allocation
-			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', 'good', i))
+			self.stocks[i] = self.stocks[i] + self.portion[i] * labor * self.model.param(('prod', i))
 
 			#Set prices
 			#Change in the direction of hitting the inventory target
@@ -133,10 +133,10 @@ def setup():
 	#Takes as input the slider value, outputs b_g. See equation (A8) in the paper.
 	def rbaltodemand(breed):
 		def reporter(model):
-			rbd = model.param(('rbd', 'breed', breed, 'agent'))
+			rbd = model.param(('rbd', breed))
 			beta = rbd/(1+rbd)
 
-			return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod','good',AgentGoods[breed]))) / sum(1/sqrt(pr) for pr in model.param(('prod','good')).values())
+			return (beta/(1-beta)) * len(model.goods) * sqrt(model.param(('prod',AgentGoods[breed]))) / sum(1/sqrt(pr) for pr in model.param('prod').values())
 
 		return reporter
 
@@ -246,10 +246,10 @@ def setup():
 	def agentInit(agent, model):
 		agent.store = model.agents['store'][0]
 		agent.item = AgentGoods[agent.breed]
-		rbd = model.param(('rbd', 'breed', agent.breed, 'agent'))
+		rbd = model.param(('rbd', agent.breed))
 		beta = rbd/(rbd+1)
 		agent.utility = CES({'good': 1-beta, 'rbal': beta }, agent.model.param('sigma'))
-		agent.expCons = model.param(('prod', 'good', agent.item))
+		agent.expCons = model.param(('prod', agent.item))
 
 		#Set cash endowment to equilibrium value based on parameters. Not strictly necessary but avoids the burn-in period.
 		agent.stocks[model.goods.money] = agent.store.price[agent.item] * rbaltodemand(agent.breed)(heli)
@@ -294,7 +294,7 @@ def setup():
 	def shock(v):
 		c = random.normal(v, 4)
 		return c if c >= 1 else 1
-	heli.shocks.add('Dwarf real balances', ('rbd','breed','dwarf','agent'), shock, heli.shocks.randn(2), active=False)
+	heli.shocks.add('Dwarf real balances', ('rbd','dwarf'), shock, heli.shocks.randn(2), active=False)
 
 	#Shock the money supply
 	def mshock(model):

@@ -534,7 +534,12 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 		"""Register a shock to parameter `param`. `valFunc` takes the current value and returns a new value. `timerFunc` is a function that takes the current model time and returns `bool` (or the string `'button'`, in which case the value is shocked when a control panel button is pressed); `valFunc` will execute whenever `timerFunc` returns `True`. `param` can also be set to `None`, in which case `valFunc` receives the model object. https://helipad.dev/functions/shocks/add/"""
 		if param is None: item=None
 		else:
-			item = param[2] if isinstance(param, tuple) and len(param)>2 else None	#The good or breed whose parameter to shock
+			if isinstance(param, tuple):
+				#Deprecated in Helipad 1.7, remove in 1.9
+				if len(param) > 1 and param[1] in ['breed', 'good']:
+					warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second parameter can be removed.'), FutureWarning, 2)
+					item = param[2]
+				else: item = param[1] if len(param)>1 else None
 			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]
 
 		super().add(name, self.Shock(

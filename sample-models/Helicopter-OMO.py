@@ -290,7 +290,7 @@ def baseAgentInit(agent, model):
 @heli.hook
 def agentInit(agent, model):
 	if model.param('num_bank') > 0:
-		agent.liqPref = model.param(('liqPref', 'breed', agent.breed, 'agent'))
+		agent.liqPref = model.param(('liqPref', agent.breed))
 
 @heli.hook
 def agentStep(agent, model, stage):

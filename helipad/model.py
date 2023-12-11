@@ -109,8 +109,14 @@ class Helipad:
 		self.shocks.add(text, None, func, 'button', True, desc)
 
 	def param(self, param, val=None):
-		"""Get or set a model parameter, depending on whether there are two or three arguments. https://helipad.dev/functions/model/param/"""
-		item = param[2] if isinstance(param, tuple) and len(param)>2 else None
+		"""Get or set a model parameter, depending on whether there is one or two arguments. https://helipad.dev/functions/model/param/"""
+		if isinstance(param, tuple):
+			#Deprecated in Helipad 1.7, remove in 1.9
+			if len(param) > 1 and param[1] in ['breed', 'good']:
+				warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second parameter can be removed.'), FutureWarning, 2)
+				item = param[2]
+			else: item = param[1] if len(param)>1 else None
+		else: item = None
 		param = self.params[param[0]] if isinstance(param, tuple) else self.params[param]
 
 		if val is not None: param.set(val, item)
