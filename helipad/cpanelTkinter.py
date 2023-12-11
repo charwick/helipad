@@ -200,7 +200,7 @@ class Cpanel(tk.Tk):
 			fnum += 1
 	
 	def renderParam(self, param, item=None, frame=None):
-		"""Takes a Param object and returns a Tkinter widget"""
+		"""Constructs a Tkinter widget from a `Param` object. https://helipad.dev/functions/cpanel/renderparam/"""
 		if param.type=='hidden': return
 
 		#Parent frame for per-item parameters
@@ -210,7 +210,7 @@ class Cpanel(tk.Tk):
 			i=0
 			param.elements = {}
 			for name, b in param.pKeys.items():
-				if hasattr(b, 'money') and b.money: continue
+				if getattr(b, 'money', False): continue
 
 				#Do this separately because they should all be stacked
 				f = self.renderParam(param, item=name, frame=efSub)

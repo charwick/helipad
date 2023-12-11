@@ -31,6 +31,7 @@ class Cpanel(VBox):
 		self.children += HTML(value='<style type="text/css">'+css+'</style>'),
 
 		#Callback function generator for Jupyter elements
+		#Attaches to the `param` object, so the param argument is a `self`
 		def setVar(param, item=None):
 			def sv(val): #Ipywidgets bases on the function signature, so can't use more than one here…
 				if param.type=='checkgrid': param.set(item, val, updateGUI=False)
@@ -62,94 +63,13 @@ class Cpanel(VBox):
 			else: return sv
 		Param.setVar = setVar
 
-		def renderParam(param, func, title: str, val, circle=None):
-			i=None
-			if param.type=='slider':
-				if isinstance(param.opts, dict): i = interactive(func, val=(param.opts['low'],param.opts['high'], param.opts['step']))
-				else:
-					s = interactive(func, val=(0, len(param.opts)-1, 1))
-					s.children[0].readout = False
-					l = Label(value=str(param.opts[0]), layout=Layout(margin='0 0 0 15px'))
-					i = HBox([s.children[0],l])
-
-			elif param.type=='check':
-				i = interactive(func, val=val)
-			elif param.type=='menu':
-				i = interactive(func, val=[(k[1], k[0]) for k in param.opts.items()])
-			elif param.type=='checkentry':
-				defaults = (
-					(isinstance(val, param.entryType) or val) if not (param.name=='stopafter' and param.event) else True,				#Bool
-					(str(val) if isinstance(val, param.entryType) else '') if not (param.name=='stopafter' and param.event) else 'Event: '+val	#Str
-				)
-				i = interactive(func, b=defaults[0], s=defaults[1])
-				if param.per is None:
-					i = HBox(i.children)
-					i.children[0].layout = Layout(width='150px')
-				if val is False: i.children[1].disabled = True
-				i.children[1].description = ''
-
-				if param.name=='stopafter' and param.event:
-					i.children[0].disabled = True
-					i.children[1].disabled = True
-					i.add_class('helipad_checkentry_func')
-			elif param.type=='checkgrid':
-				param.elements = {}
-				for k,v in param.opts.items():
-					if not isinstance(v, (tuple, list)): v = (v, None)
-					elif len(v) < 2: v = (v[0], None)
-					param.elements[k] = interactive(param.setVar(k), val=param.vars[k])
-					param.elements[k].children[0].description = v[0]
-					param.elements[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
-
-				#Toggle-all button
-				#Would like to put it in .p-Collapse-header, but I don't think I can place an element in there
-				#So append it to the children and we'll absolutely position it to the right place
-				param.elements['toggleAll'] = Button(icon='check')
-				def toggleAll(b=None):
-					v = False if [c.children[0].value for c in param.element.children[0].children if not isinstance(c, Button) and c.children[0].value] else True
-					for c in param.element.children[0].children:
-						if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
-				param.elements['toggleAll'].on_click(toggleAll)
-				param.elements['toggleAll'].add_class('helipad_toggleAll')
-
-				param.containerElement = HBox(list(param.elements.values()))
-				i = Accordion(children=[param.containerElement], selected_index=0)
-				i.set_title(0, title)
-				i.add_class('helipad_checkgrid')
-
-			if i is not None and param.type!='checkgrid':
-				if param.per is not None:
-					n = (f'{param.prim}_' if param.per=='breed' else '')+title.lower()
-					i.children[0].add_class(f'helipad_{param.per}_{n}')
-					i.children[0].add_class('helipad_per_item')
-				i.children[0].description = title
-				i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
-				i.children[0].description_tooltip = param.desc if param.desc is not None else ''
-				if param.type=='slider' and isinstance(param.opts, list):
-					i.children[0].add_class('widget-logslider')
-					i.children[1].value = str(val)
-					if val in param.opts: val=param.opts.index(val)
-				if param.type!='checkentry': i.children[0].value = val
-
-			return i
-
-		def constructAccordion(param, itemList: dict):
-			param.elements = {}
-			for item, good in itemList.items():
-				param.elements[item] = renderParam(param, param.setVar(item), item.title(), param.get(item), circle=good.color)
-
-			accordion = Accordion(children=[HBox(list(param.elements.values()))], selected_index=0)
-			accordion.set_title(0, param.title)
-			accordion.add_class('helipad_param_peritem helipad_paramgroup')
-			return accordion
-
 		ctop = self.model.doHooks('CpanelTop', [self, None])
 		if ctop: self.children += ctop,
 
 		#Global config
 		for n,param in model.params.items():
 			if not getattr(param, 'config', False) or param.type=='checkgrid': continue
-			param.element = renderParam(param, param.setVar(), param.title, param.get())
+			param.element = self.renderParam(param)
 			if param.element is not None: self.children += (param.element,)
 			if param.name=='csv': param.set(ï('filename'))
 			if n=='stopafter' and not param.event and not param.get(): param.element.children[1].value = '10000'
@@ -160,12 +80,12 @@ class Cpanel(VBox):
 
 		#Per-good parameters
 		for param in model.params.perGood.values():
-			param.element = constructAccordion(param, model.goods.nonmonetary)
+			param.element = self.renderParam(param)
 			self.children += param.element,
 
 		#Per-breed parameters
 		for param in model.params.perBreed.values():
-			param.element = constructAccordion(param, param.pKeys)
+			param.element = self.renderParam(param)
 			self.children += param.element,
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, None])
@@ -178,13 +98,13 @@ class Cpanel(VBox):
 		#Global parameters
 		for k, param in model.params.globals.items():
 			if getattr(param, 'config', False) or k in groups or param.type=='checkgrid': continue
-			param.element = renderParam(param, param.setVar(), param.title, param.get())
+			param.element = self.renderParam(param)
 			if param.element is not None: self.children += param.element,
 
 		#Param groups
 		for group in model.params.groups:
 			for param in group.members.values():
-				param.element = renderParam(param, param.setVar(), param.title, param.get())
+				param.element = self.renderParam(param)
 			group.element = Accordion(children=[HBox([p.element for p in group.members.values()])], selected_index=0 if group.open else None)
 			group.element.set_title(0, group.title)
 			group.element.add_class('helipad_paramgroup')
@@ -193,7 +113,7 @@ class Cpanel(VBox):
 		#Checkgrids
 		for param in model.params.values():
 			if param.type!='checkgrid' or param.name=='shocks': continue
-			param.element = renderParam(param, None, param.title, None)
+			param.element = self.renderParam(param)
 			if param.element is not None: self.children += param.element,
 
 		cas = self.model.doHooks('CpanelAboveShocks', [self, None])
@@ -286,6 +206,94 @@ class Cpanel(VBox):
 			def cpanel_terminate(model, data):
 				self.postinstruct.layout = Layout(display='inline-block')
 				self.stopbutton.layout.visibility = 'hidden'
+	
+	def renderParam(self, param, item=None):
+		"""Constructs an Ipywidget from a `Param` object. https://helipad.dev/functions/cpanel/renderparam/"""
+		i=None
+
+		#Generate an accordion for per-item parameters
+		if param.per is not None and item is None:
+			param.elements = {}
+			for name, good in param.pKeys.items():
+				if getattr(good, 'money', False): continue
+				param.elements[name] = self.renderParam(param, item=name)
+
+			accordion = Accordion(children=[HBox(list(param.elements.values()))], selected_index=0)
+			accordion.set_title(0, param.title)
+			accordion.add_class('helipad_param_peritem helipad_paramgroup')
+			return accordion
+
+		elif param.type=='slider':
+			if isinstance(param.opts, dict): i = interactive(param.setVar(item), val=(param.opts['low'],param.opts['high'], param.opts['step']))
+			else:
+				s = interactive(param.setVar(item), val=(0, len(param.opts)-1, 1))
+				s.children[0].readout = False
+				l = Label(value=str(param.opts[0]), layout=Layout(margin='0 0 0 15px'))
+				i = HBox([s.children[0],l])
+
+		elif param.type=='check':
+			i = interactive(param.setVar(item), val=param.get(item))
+		elif param.type=='menu':
+			i = interactive(param.setVar(item), val=[(k[1], k[0]) for k in param.opts.items()])
+		elif param.type=='checkentry':
+			val = param.get(item)
+			defaults = (
+				(isinstance(val, param.entryType) or val) if not (param.name=='stopafter' and param.event) else True,				#Bool
+				(str(val) if isinstance(val, param.entryType) else '') if not (param.name=='stopafter' and param.event) else 'Event: '+val	#Str
+			)
+			i = interactive(param.setVar(item), b=defaults[0], s=defaults[1])
+			if param.per is None:
+				i = HBox(i.children)
+				i.children[0].layout = Layout(width='150px')
+			if val is False: i.children[1].disabled = True
+			i.children[1].description = ''
+
+			if param.name=='stopafter' and param.event:
+				i.children[0].disabled = True
+				i.children[1].disabled = True
+				i.add_class('helipad_checkentry_func')
+		elif param.type=='checkgrid':
+			param.elements = {}
+			for k,v in param.opts.items():
+				if not isinstance(v, (tuple, list)): v = (v, None)
+				elif len(v) < 2: v = (v[0], None)
+				param.elements[k] = interactive(param.setVar(k), val=param.vars[k])
+				param.elements[k].children[0].description = v[0]
+				param.elements[k].children[0].description_tooltip = v[1] if v[1] is not None else '' #Not working, not sure why
+
+			#Toggle-all button
+			#Would like to put it in .p-Collapse-header, but I don't think I can place an element in there
+			#So append it to the children and we'll absolutely position it to the right place
+			param.elements['toggleAll'] = Button(icon='check')
+			def toggleAll(b=None):
+				v = False if [c.children[0].value for c in param.element.children[0].children if not isinstance(c, Button) and c.children[0].value] else True
+				for c in param.element.children[0].children:
+					if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
+			param.elements['toggleAll'].on_click(toggleAll)
+			param.elements['toggleAll'].add_class('helipad_toggleAll')
+
+			param.containerElement = HBox(list(param.elements.values()))
+			i = Accordion(children=[param.containerElement], selected_index=0)
+			i.set_title(0, param.title if not item else item.title())
+			i.add_class('helipad_checkgrid')
+
+		if i is not None and param.type!='checkgrid':
+			title = param.title if not item else item.title()
+			if param.per is not None:
+				n = (f'{param.prim}_' if param.per=='breed' else '')+title.lower()
+				i.children[0].add_class(f'helipad_{param.per}_{n}')
+				i.children[0].add_class('helipad_per_item')
+			i.children[0].description = title
+			i.children[0].style = {'description_width': 'initial'} #Don't truncate the label
+			i.children[0].description_tooltip = param.desc if param.desc is not None else ''
+			val = param.get(item)
+			if param.type=='slider' and isinstance(param.opts, list):
+				i.children[0].add_class('widget-logslider')
+				i.children[1].value = str(val)
+				if val in param.opts: val=param.opts.index(val)
+			if param.type!='checkentry': i.children[0].value = val
+
+		return i
 
 	def displayAlert(self, text: str, inCpanel: bool=True):
 		"""Display an alert element in the Jupyter notebook."""
