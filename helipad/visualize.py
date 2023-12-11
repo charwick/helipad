@@ -128,6 +128,7 @@ class MPLVisualization(BaseVisualization, dict):
 		"""`True` when the model should run as-if with no visualization, for example if all plots are unselected. `False` indicates the window can be launched. https://helipad.dev/functions/mplvisualization/#isNull"""
 		return not [plot for plot in self.values() if plot.selected]
 
+	#Deprecated in Helipad 1.6, remove in 1.8
 	@property
 	def plots(self):
 		"""A `dict` of plots. This property is deprecated; the visualization object can be indexed directly."""

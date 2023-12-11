@@ -19,11 +19,6 @@ from helipad.helpers import ï, Item
 def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: bool=False, **kwargs):
 	"""Set up functions, properties, and methods for a spatial model. https://helipad.dev/functions/model/spatial/"""
 
-	# Backward compatibility
-	if 'diag' in kwargs:	#Remove in Helipad 1.7
-		corners = kwargs['diag']
-		warnings.warn(ï('The `diag` argument is deprecated. Use the `corners` argument instead.'), FutureWarning, 3)
-
 	#Initialize patch container and primitive
 	model.agents.addPrimitive('patch', Patch, hidden=True, priority=-10)
 	pClasses = {'rect': PatchesRect, 'polar': PatchesPolar, 'geo': PatchesGeo}
@@ -34,26 +29,6 @@ def spatialSetup(model, dim=10, corners=False, geometry: str='rect', offmap: boo
 	def npsetter(val, item): raise RuntimeError(ï('Patch number cannot be set directly. Set the dim parameter instead.'))
 	model.params['num_patch'].getter = lambda item: len(model.patches)
 	model.params['num_patch'].setter = npsetter
-
-	#Dimension parameters. Deprecated in Helipad 1.5; remove in Helipad 1.7
-	def dimgen(dim, action):
-		def dimget(name, model):
-			warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'{dim}'", "model.patches.dim"), FutureWarning, 5)
-			return model.patches.dim[0 if dim=='x' else 1]
-		def dimset(val, name, model):
-			warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format(f"'{dim}'", "model.patches.dim"), FutureWarning, 5)
-			model.patches.dim[0 if dim=='x' else 1] = val
-		return dimget if action=='get' else dimset
-	def wrapget(name, model):
-		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format("'wrap'", "model.patches.wrap"), FutureWarning, 5)
-		return model.patches.wrap == (True, True)
-	def wrapset(val, name, model):
-		warnings.warn(ï("The {0} parameter is deprecated. Use {1} instead.").format("'wrap'", "model.patches.wrap"), FutureWarning, 5)
-		model.patches.wrap = val if isinstance(val, (tuple, list)) else (val, val)
-	wrap = kwargs['wrap'] if 'wrap' in kwargs else True
-	model.params.add('x', ï('Map Width'), 'hidden', dflt=model.patches.dim[0], setter=dimgen('x','set'), getter=dimgen('x','get'))
-	model.params.add('y', ï('Map Height'), 'hidden', dflt=model.patches.dim[1], setter=dimgen('y','set'), getter=dimgen('y','get'))
-	model.params.add('wrap', ï('Wrap'), 'hidden', dflt=(wrap is True), setter=wrapset, getter=wrapget) #Only checked at the beginning of a model
 
 	#Hook a positioning function or randomly position our agents
 	@model.hook(prioritize=True)
