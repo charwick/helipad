@@ -11,6 +11,8 @@ from helipad.param import Param
 
 class Cpanel(tk.Tk):
 	"""The Tkinter-based control panel class for use in standalone models. https://helipad.dev/functions/cpanel/"""
+	font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
+
 	def __init__(self, model):
 		self.model = model
 		super().__init__()
@@ -97,117 +99,25 @@ class Cpanel(tk.Tk):
 		# CONSTRUCT CONTROL PANEL INTERFACE
 		#
 
-		def drawCircle(frame, color, bg):
-			circle = tk.Canvas(frame, width=17, height=12, bg=bg, highlightthickness=0)
-			circle.create_oval(0,0,12,12,fill=color, outline='')
-			return circle
-
-		def renderParam(frame, param, item=None, bg='#EEEEEE'):
-			if param.type in ['hidden', 'checkgrid']: return
-
-			#Parent frame for per-item parameters
-			if param.per is not None and item is None:
-				param.element = expandableFrame(frame, bg=bg, padx=5, pady=10, text=param.title, fg="#333", font=font)
-				efSub = param.element.subframe
-				i=0
-				param.elements = {}
-				for name, b in param.pKeys.items():
-					if hasattr(b, 'money') and b.money: continue
-
-					#Do this separately because they should all be stacked
-					f = renderParam(efSub, param, item=name, bg=bg)
-					if param.type == 'checkentry':
-						f.grid(row=i, column=0)
-						efSub.columnconfigure(0,weight=1)
-
-					#Everything else goes in the two-column format
-					else:
-						f.grid(row=ceil((i+1)/2)*2, column=i%2)
-						for c in range(2): efSub.columnconfigure(c, weight=1)
-
-					i+=1
-				return param.element
-
-			#Single parameters, including the individual per-item parameters
-			else:
-				title = param.title if item is None else item.title()
-				wrap = tk.Frame(frame, bg=bg, padx=10 if item is None and not getattr(param,'config',False) else 0, pady=8 if item is None and not getattr(param,'config',False) else 0)
-
-				#Get .value directly rather than .get because we need the Var() items
-				#Except for checkentry since it doesn't store its values in .value
-				if param.value is not None:
-					val = param.value if item is None else param.value[item]
-
-				#These put the circle beside the widget
-				if param.type in ['check', 'checkentry']:
-					if param.type=='check':
-						v = tk.BooleanVar(value=val)
-						el = tk.Checkbutton(wrap, text=title, var=v, onvalue=True, offvalue=False, command=param.setVar(item), bg=bg)
-						el.BooleanVar = v
-					elif param.type=='checkentry':
-						dflt = param.get(item)
-						el = checkEntry(wrap, title, bg=bg, width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, datatype='int' if param.entryType is int else 'string', command=param.setVar(item))
-						if param.name=='stopafter' and param.event:
-							el.disable()
-							el.entryValue.set('Event: '+param.get())
-							el.checkVar.set(True)
-							el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
-						else: el.set(dflt)
-
-					if item is not None:
-						el.grid(row=0, column=1)
-						drawCircle(wrap, param.pKeys[item].color.hex, bg).grid(row=0, column=0)
-					else: el.pack(anchor='center' if param.type=='check' else 'w')
-
-				#These need a separate label
-				else:
-					if param.type == 'menu':
-						v = tk.StringVar(value=param.opts[val])
-						el = tk.OptionMenu(wrap, v, *param.opts.values(), command=param.setVar(item))
-						el.StringVar = v #Save to set later
-						el.config(bg=bg)
-					elif param.type == 'slider':
-						if isinstance(param.opts, dict): el = tk.Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient='horizontal', length=150, highlightthickness=0, command=param.setVar(item), bg=bg)
-						else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient='horizontal', values=param.opts, length=150, command=param.setVar(item), bg=bg)
-						el.set(param.get(item))
-
-					if item is None and not getattr(param, 'config', False):
-						tk.Label(wrap, text=title, fg="#333", bg=bg).pack(side='left', padx=8, pady=3)
-						el.pack(side='right')
-					elif getattr(param, 'config', False): el.pack()
-					else:
-						lframe = tk.Frame(wrap, bg=bg, padx=0, pady=0)
-						tk.Label(lframe, text=title, fg="#333", bg=bg).grid(row=0, column=1, pady=(0,8))
-						drawCircle(lframe, param.pKeys[item].color.hex, bg).grid(row=0, column=0, pady=(0,8))
-						lframe.grid(row=1, column=0)
-						el.grid(row=0,column=0)
-
-				if param.desc is not None: Tooltip(wrap, param.desc)
-
-				if item is None: param.element = el
-				else: param.elements[item] = el
-				return wrap
+		self.tiers = { 'config': tk.Frame(self, padx=10, pady=10, bg=bgcolors[fnum%2]) }
 
 		ctop = self.model.doHooks('CpanelTop', [self, bgcolors[fnum%2]])
 		if ctop:
 			ctop.pack(fill='x', side='top')
 			fnum += 1
 
-		frame1 = tk.Frame(self, padx=10, pady=10, bg=bgcolors[fnum%2])
-		renderParam(frame1, self.model.params['stopafter'], bg=bgcolors[fnum%2]).grid(row=0,column=0, columnspan=3, sticky='w')
-		renderParam(frame1, self.model.params['csv'], bg=bgcolors[fnum%2]).grid(row=1,column=0, columnspan=3, sticky='w')
+		self.renderParam(self.model.params['stopafter']).grid(row=0,column=0, columnspan=3, sticky='w')
+		self.renderParam(self.model.params['csv']).grid(row=1,column=0, columnspan=3, sticky='w')
 		if not self.model.params['stopafter'].event and not self.model.param('stopafter'): self.model.params['stopafter'].element.entryValue.set(10000)
 		self.model.params['csv'].set(ï('filename'))
 		self.model.params['csv'].set(False)
 
-		font = ('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14)
-
-		renderParam(frame1, self.model.params['refresh'], bg=bgcolors[fnum%2]).grid(row=2, column=0, columnspan=2, pady=(10,0))
-		self.runButton = runButton(frame1, bgcolors[fnum%2])
+		self.renderParam(self.model.params['refresh']).grid(row=2, column=0, columnspan=2, pady=(10,0))
+		self.runButton = runButton(self.tiers['config'])
 		self.runButton.grid(row=2, column=2, pady=(15,0))
 
-		for c in range(2): frame1.columnconfigure(c, weight=1)
-		frame1.pack(fill='x', side='top')
+		for c in range(2): self.tiers['config'].columnconfigure(c, weight=1)
+		self.tiers['config'].pack(fill='x', side='top')
 		fnum += 1
 
 		#Can't change the background color of a progress bar on Mac, so we have to put a gray stripe on top :-/
@@ -222,53 +132,37 @@ class Cpanel(tk.Tk):
 			caip.pack(fill='x', side='top')
 			fnum += 1
 
-		#Per-good and per-breed parameters
-		for k, param in model.params.perGood.items():
-			e = renderParam(None, param, bg=bgcolors[fnum%2])
-			if e is not None: e.pack(fill='x')
-		if len(model.params.perGood): fnum += 1 #Only increment the stripe counter if we had any good params to draw
-		for k, param in model.params.perBreed.items():
-			e = renderParam(None, param, bg=bgcolors[fnum%2])
-			if e is not None: e.pack(fill='x')
-		if len(model.params.perBreed): fnum += 1
+		#Tiers for per-good and per-breed parameters
+		self.tiers['pergood'] = tk.Frame(self, bg=bgcolors[fnum%2])
+		self.tiers['pergood'].pack(fill='x', side='top')
+		if model.params.perGood: fnum += 1 #Only increment the stripe counter if we had any good params to draw
+		self.tiers['perbreed'] = tk.Frame(self, bg=bgcolors[fnum%2])
+		self.tiers['perbreed'].pack(fill='x', side='top')
+		if model.params.perBreed: fnum += 1
 
 		cap = self.model.doHooks('CpanelAboveParams', [self, bgcolors[fnum%2]])
 		if cap:
 			cap.pack(fill='x', side='top')
 			fnum += 1
 
-		#Pull out grouped parameters
-		groups = []
-		for group in self.model.params.groups: groups += list(group.members.keys())
+		#Set up tiers for global, grouped, and checkgrid parameters
+		self.tiers['global'] = tk.Frame(self, bg=bgcolors[fnum%2])
+		self.tiers['global'].pack(fill='x', side='top')
+		if model.params.globals: fnum += 1
 
-		#Global parameters
-		for k, param in self.model.params.globals.items():
-			if getattr(param, 'config', False) or k in groups: continue
-			e = renderParam(self, param, bg=bgcolors[fnum%2])
-			if e is not None: e.pack(fill='x')
-		fnum += 1
-
-		#Param groups
 		for group in self.model.params.groups:
-			group.element = expandableFrame(self, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=font, startOpen=group.open)
-			i=0
-			for p in group.members.values():
-				f = renderParam(group.element.subframe, p, bg=bgcolors[fnum%2])
-				f.pack(fill='x')
-				i += 1
+			group.element = expandableFrame(self, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=self.font, startOpen=group.open)
 			if group.element is not None: group.element.pack(fill='x')
 			fnum += 1
+		
+		self.tiers['checkgrids'] = tk.Frame(self, bg=bgcolors[fnum%2])
+		self.tiers['checkgrids'].pack(fill='x', side='top')
+		if [p for p in self.model.params.values() if p.type=='checkgrid' and p.name!='shocks']: fnum += 1
 
-		#Checkgrid parameters
-		for p in self.model.params.values():
-			if p.type!='checkgrid' or p.name=='shocks': continue
-			p.element = checkGrid(parent=self, text=p.title, columns=getattr(p, 'columns', 3), bg=bgcolors[fnum%2], callback=p.setVar())
-			for k,v in p.opts.items():
-				if not isinstance(v, (tuple, list)): v = (v, None)
-				elif len(v) < 2: v = (v[0], None)
-				p.element.addCheck(k, v[0], p.vars[k], v[1])
-			p.element.pack(fill='both')
-			fnum += 1
+		#Fill in tiers with parameters
+		for k, param in [(k,p) for k,p in self.model.params.items() if not getattr(p, 'config', False) or p.name=='plots']:
+			e = self.renderParam(param)
+			if e is not None: e.pack(fill='x')
 
 		cas = self.model.doHooks('CpanelAboveShocks', [self, bgcolors[fnum%2]])
 		if cas:
@@ -277,7 +171,7 @@ class Cpanel(tk.Tk):
 
 		#Shock checkboxes and buttons
 		if len(self.model.shocks):
-			self.model.shocks.element = expandableFrame(self, text=self.model.shocks.title, padx=5, pady=8, font=font, bg=bgcolors[fnum%2])
+			self.model.shocks.element = expandableFrame(self, text=self.model.shocks.title, padx=5, pady=8, font=self.font, bg=bgcolors[fnum%2])
 			self.model.shocks.element.checks = {}
 			self.model.params['shocks'].element = self.model.shocks.element
 			for shock in self.model.shocks.shocksExceptButtons.values():
@@ -304,6 +198,115 @@ class Cpanel(tk.Tk):
 		if cbot:
 			cbot.pack(fill='x', side='top')
 			fnum += 1
+	
+	def renderParam(self, param, item=None, frame=None):
+		"""Takes a Param object and returns a Tkinter widget"""
+		if param.type=='hidden': return
+
+		#Parent frame for per-item parameters
+		if param.per is not None and item is None:
+			param.element = expandableFrame(self.tiers['per'+param.per], bg=self.tiers['per'+param.per].cget('bg'), padx=5, pady=10, text=param.title, fg="#333", font=self.font)
+			efSub = param.element.subframe
+			i=0
+			param.elements = {}
+			for name, b in param.pKeys.items():
+				if hasattr(b, 'money') and b.money: continue
+
+				#Do this separately because they should all be stacked
+				f = self.renderParam(param, item=name, frame=efSub)
+				if param.type == 'checkentry':
+					f.grid(row=i, column=0)
+					efSub.columnconfigure(0,weight=1)
+
+				#Everything else goes in the two-column format
+				else:
+					f.grid(row=ceil((i+1)/2)*2, column=i%2)
+					for c in range(2): efSub.columnconfigure(c, weight=1)
+
+				i+=1
+			return param.element
+
+		elif param.type=='checkgrid':
+			param.element = checkGrid(self.tiers['checkgrids'], text=param.title, columns=getattr(param, 'columns', 3), bg=self.tiers['checkgrids'].cget('bg'), callback=param.setVar())
+			for k,v in param.opts.items():
+				if not isinstance(v, (tuple, list)): v = (v, None)
+				elif len(v) < 2: v = (v[0], None)
+				param.element.addCheck(k, v[0], param.vars[k], v[1])
+			return param.element
+
+		#Single parameters, including the individual per-item parameters
+		else:
+			def drawCircle(frame, color, bg):
+				circle = tk.Canvas(frame, width=17, height=12, bg=frame.cget('bg'), highlightthickness=0)
+				circle.create_oval(0,0,12,12,fill=color, outline='')
+				return circle
+
+			title = param.title if item is None else item.title()
+
+			#Find the right frame to attach it to
+			if getattr(param,'config',False): frame = self.tiers['config']
+			elif frame is None:
+				frame = self.tiers['global']
+				for group in self.model.params.groups:
+					if param.name in group.members:
+						frame = group.element.subframe
+						break
+			wrap = tk.Frame(frame, bg=frame.cget('bg'), padx=10 if item is None and not getattr(param,'config',False) else 0, pady=8 if item is None and not getattr(param,'config',False) else 0)
+
+			#Get .value directly rather than .get because we need the Var() items
+			#Except for checkentry since it doesn't store its values in .value
+			if param.value is not None:
+				val = param.value if item is None else param.value[item]
+
+			#These put the circle beside the widget
+			if param.type in ['check', 'checkentry']:
+				if param.type=='check':
+					v = tk.BooleanVar(value=val)
+					el = tk.Checkbutton(wrap, text=title, var=v, onvalue=True, offvalue=False, command=param.setVar(item), bg=wrap.cget('bg'))
+					el.BooleanVar = v
+				elif param.type=='checkentry':
+					dflt = param.get(item)
+					el = checkEntry(wrap, title, bg=wrap.cget('bg'), width=15, padx=0 if getattr(param,'config',False) else 10, pady=0 if getattr(param,'config',False) else 5, datatype='int' if param.entryType is int else 'string', command=param.setVar(item))
+					if param.name=='stopafter' and param.event:
+						el.disable()
+						el.entryValue.set('Event: '+param.get())
+						el.checkVar.set(True)
+						el.textbox.config(font=('Helvetica Neue', 12,'italic')) #Lucida doesn't have an italic?
+					else: el.set(dflt)
+
+				if item is not None:
+					el.grid(row=0, column=1)
+					drawCircle(wrap, param.pKeys[item].color.hex, wrap.cget('bg')).grid(row=0, column=0)
+				else: el.pack(anchor='center' if param.type=='check' else 'w')
+
+			#These need a separate label
+			else:
+				if param.type == 'menu':
+					v = tk.StringVar(value=param.opts[val])
+					el = tk.OptionMenu(wrap, v, *param.opts.values(), command=param.setVar(item))
+					el.StringVar = v #Save to set later
+					el.config(bg=wrap.cget('bg'))
+				elif param.type == 'slider':
+					if isinstance(param.opts, dict): el = tk.Scale(wrap, from_=param.opts['low'], to=param.opts['high'], resolution=param.opts['step'], orient='horizontal', length=150, highlightthickness=0, command=param.setVar(item), bg=wrap.cget('bg'))
+					else: el = logSlider(wrap, title=title if getattr(param, 'config', False) else None, orient='horizontal', values=param.opts, length=150, command=param.setVar(item), bg=wrap.cget('bg'))
+					el.set(param.get(item))
+
+				if item is None and not getattr(param, 'config', False):
+					tk.Label(wrap, text=title, fg="#333", bg=wrap.cget('bg')).pack(side='left', padx=8, pady=3)
+					el.pack(side='right')
+				elif getattr(param, 'config', False): el.pack()
+				else:
+					lframe = tk.Frame(wrap, bg=wrap.cget('bg'), padx=0, pady=0)
+					tk.Label(lframe, text=title, fg="#333", bg=lframe.cget('bg')).grid(row=0, column=1, pady=(0,8))
+					drawCircle(lframe, param.pKeys[item].color.hex, lframe.cget('bg')).grid(row=0, column=0, pady=(0,8))
+					lframe.grid(row=1, column=0)
+					el.grid(row=0,column=0)
+
+			if param.desc is not None: Tooltip(wrap, param.desc)
+
+			if item is None: param.element = el
+			else: param.elements[item] = el
+			return wrap
 
 	#Separate function so we can call it again when MPL tries to override
 	def setAppIcon(self):
@@ -566,8 +569,8 @@ class checkEntry(tk.Frame):
 
 class checkGrid(expandableFrame):
 	"""An `expandableFrame` full of `textCheck`s, with setters and getters. https://helipad.dev/functions/checkentry/"""
-	def __init__(self, parent=None, text: str='', columns: int=3, fg='#333', bg='#FFF', padx: int=8, pady: int=5, font=('Lucida Grande', 16) if sys.platform=='darwin' else ('Calibri', 14), startOpen=True, callback=None):
-		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=font, startOpen=startOpen)
+	def __init__(self, parent=None, text: str='', columns: int=3, fg='#333', bg='#FFF', padx: int=8, pady: int=5, startOpen=True, callback=None):
+		super().__init__(parent=parent, text=text, fg=fg, bg=bg, padx=padx, pady=pady, font=Cpanel.font, startOpen=startOpen)
 		self.bg = bg
 		self.columns = columns
 		self.checks = {}

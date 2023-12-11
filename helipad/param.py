@@ -406,7 +406,8 @@ class fStoreWithInterface(funcStore):
 		if item.element:
 			if isNotebook(): item.element.close()
 			else:
-				if item.per or item.type=='checkgrid': item.element.forget()
+				#For global non-checkgrid parameters, delete the parent frame. Otherwise item.element is the whole thing
+				if getattr(item, 'per', True) or item.type=='checkgrid': item.element.forget()
 				else: item.element.master.forget()
 
 class Params(fStoreWithInterface):
@@ -508,16 +509,15 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 					self2.element.BooleanVar.set(val)
 
 			def do(self, model):
-				if self.param is not None:
+				if self.param is None: self.valFunc(model)
+				else:
 					newval = self.valFunc(self.param.get(self.item))	#Pass in current value
 					self.param.set(newval, self.item)
 					if hasattr(self.param, 'callback') and callable(self.param.callback):
 						if self.param.per is not None and self.item is not None:
 							self.param.callback(model, self.param.name, self.item, newval)
 						else:
-							self.param.callback(model, self.param.name, newval)
-				else:
-					self.valFunc(model)
+							self.param.callback(model, self.param.name, newval)					
 
 			#Updates the parameter value when the GUI element is clicked
 			#Can't do the regular setVar without a unified Tkinter element (like CheckGrid) to route the values
@@ -532,10 +532,10 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 
 	def add(self, name: str, param, valFunc, timerFunc, active: bool=True, desc=None):
 		"""Register a shock to parameter `param`. `valFunc` takes the current value and returns a new value. `timerFunc` is a function that takes the current model time and returns `bool` (or the string `'button'`, in which case the value is shocked when a control panel button is pressed); `valFunc` will execute whenever `timerFunc` returns `True`. `param` can also be set to `None`, in which case `valFunc` receives the model object. https://helipad.dev/functions/shocks/add/"""
-		if param is not None:
+		if param is None: item=None
+		else:
 			item = param[2] if isinstance(param, tuple) and len(param)>2 else None	#The good or breed whose parameter to shock
 			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]
-		else: item=None
 
 		super().add(name, self.Shock(
 			name=name,
