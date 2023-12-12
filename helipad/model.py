@@ -7,7 +7,7 @@ import gettext
 from random import shuffle, choice
 #from memory_profiler import profile
 
-from helipad.visualize import BaseVisualization, Charts, TimeSeries
+from helipad.visualize import BaseVisualization, TimeSeries
 from helipad.helpers import *
 from helipad.param import Params, Shocks
 from helipad.data import Data
@@ -113,7 +113,7 @@ class Helipad:
 		if isinstance(param, tuple):
 			#Deprecated in Helipad 1.7, remove in 1.9
 			if len(param) > 1 and param[1] in ['breed', 'good']:
-				warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second parameter can be removed.'), FutureWarning, 2)
+				warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second item can be removed.'), FutureWarning, 2)
 				item = param[2]
 			else: item = param[1] if len(param)>1 else None
 		else: item = None

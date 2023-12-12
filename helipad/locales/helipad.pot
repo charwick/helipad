@@ -245,6 +245,10 @@ msgstr ""
 msgid "Money"
 msgstr ""
 
+#: model.py:116 param.py:540
+msgid "Three-item parameter tuple identifiers have been deprecated. The second item can be removed."
+msgstr ""
+
 #: param.py:36 param.py:110 param.py:129
 #: param.py:178
 msgid "A {} whose parameter value to set must be specified."
@@ -286,29 +290,8 @@ msgstr ""
 msgid "randn() argument must be between 0 and 100."
 msgstr ""
 
-#: spatial.py:25
-msgid "The `diag` argument is deprecated. Use the `corners` argument instead."
-msgstr ""
-
 #: spatial.py:34
 msgid "Patch number cannot be set directly. Set the dim parameter instead."
-msgstr ""
-
-#: spatial.py:41 spatial.py:44 spatial.py:48
-#: spatial.py:51
-msgid "The {0} parameter is deprecated. Use {1} instead."
-msgstr ""
-
-#: spatial.py:54
-msgid "Map Width"
-msgstr ""
-
-#: spatial.py:55
-msgid "Map Height"
-msgstr ""
-
-#: spatial.py:56
-msgid "Wrap"
 msgstr ""
 
 #: spatial.py:65

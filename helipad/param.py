@@ -537,7 +537,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 			if isinstance(param, tuple):
 				#Deprecated in Helipad 1.7, remove in 1.9
 				if len(param) > 1 and param[1] in ['breed', 'good']:
-					warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second parameter can be removed.'), FutureWarning, 2)
+					warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second item can be removed.'), FutureWarning, 2)
 					item = param[2]
 				else: item = param[1] if len(param)>1 else None
 			param = self.model.params[param[0]] if isinstance(param, tuple) else self.model.params[param]

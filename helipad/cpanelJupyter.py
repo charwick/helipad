@@ -266,7 +266,7 @@ class Cpanel(VBox):
 			#So append it to the children and we'll absolutely position it to the right place
 			param.elements['toggleAll'] = Button(icon='check')
 			def toggleAll(b=None):
-				v = False if [c.children[0].value for c in param.element.children[0].children if not isinstance(c, Button) and c.children[0].value] else True
+				v = not [c.children[0].value for c in param.element.children[0].children if not isinstance(c, Button) and c.children[0].value]
 				for c in param.element.children[0].children:
 					if not isinstance(c, Button) and not c.children[0].disabled: c.children[0].value = v
 			param.elements['toggleAll'].on_click(toggleAll)
@@ -310,7 +310,7 @@ class Cpanel(VBox):
 		warning = Label(value=message)
 		warning.add_class('helipad_modal')
 		self.children += warning,
-		for p in self.model.params.values(): del p.element
+		for p in self.model.params.values(): p.element = None
 		return warning
 
 #https://stackoverflow.com/questions/24005221/ipython-notebook-early-exit-from-cell
