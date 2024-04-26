@@ -344,6 +344,10 @@ msgid ""
 "visualization object directly."
 msgstr ""
 
+#: visualize.py:230
+msgid "Replacing plot '{}'"
+msgstr ""
+
 #: visualize.py:245 visualize.py:348
 msgid "Cannot remove plots after control panel is drawn."
 msgstr ""

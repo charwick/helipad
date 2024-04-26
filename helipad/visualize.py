@@ -226,6 +226,7 @@ class TimeSeries(MPLVisualization):
 	def addPlot(self, name: str, label: str, position=None, selected: bool=True, logscale: bool=False, stack: bool=False):
 		"""Register a plot area in the `TimeSeries` plot area to which data series can be added. `position` Position is the number you want it to be, *not* the array position. https://helipad.dev/functions/timeseries/addplot/"""
 		plot = TimeSeriesPlot(viz=self, name=name, label=label, logscale=logscale, stack=stack)
+		if name in self: warnings.warn(ï("Replacing plot '{}'").format(name), None, 2)
 
 		self.selector.addItem(name, label, position, selected)
 		if position is None or position > len(self): self[name] = plot
@@ -273,6 +274,7 @@ class Charts(MPLVisualization):
 		super().__init__(model)
 		self.events = {}
 		self.plotTypes = {}
+		self.timeslider = None
 
 		for p in [BarChart, AgentsPlot, TimeSeriesPlot]: self.addPlotType(p)
 		model.params['refresh'].runtime=False
@@ -329,6 +331,7 @@ class Charts(MPLVisualization):
 
 	def addPlot(self, name: str, label: str, type=None, position=None, selected=True, **kwargs):
 		"""Adds a plot area to the Chart visualizer. Defaults to a bar chart, but can be set to any subclass of ChartPlot. Kwargs are passed to the `ChartPlot` object. https://helipad.dev/functions/charts/addplot/"""
+		if name in self: warnings.warn(ï("Replacing plot '{}'").format(name), None, 2)
 		self.selector.addItem(name, label, position, selected)
 		if type == 'network': #Deprecated in Helipad 1.6; remove in 1.8
 			warnings.warn(ï('The `network` plot type is deprecated. Use `agents` instead.'), FutureWarning, 2)

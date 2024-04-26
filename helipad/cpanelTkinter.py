@@ -154,7 +154,7 @@ class Cpanel(tk.Tk):
 			group.element = expandableFrame(self, bg=bgcolors[fnum%2], padx=5, pady=10, text=group.title, fg="#333", font=self.font, startOpen=group.open)
 			if group.element is not None: group.element.pack(fill='x')
 			fnum += 1
-		
+
 		self.tiers['checkgrids'] = tk.Frame(self, bg=bgcolors[fnum%2])
 		self.tiers['checkgrids'].pack(fill='x', side='top')
 		if [p for p in self.model.params.values() if p.type=='checkgrid' and p.name!='shocks']: fnum += 1
@@ -198,7 +198,7 @@ class Cpanel(tk.Tk):
 		if cbot:
 			cbot.pack(fill='x', side='top')
 			fnum += 1
-	
+
 	def renderParam(self, param, item=None, frame=None):
 		"""Constructs a Tkinter widget from a `Param` object. https://helipad.dev/functions/cpanel/renderparam/"""
 		if param.type=='hidden': return
@@ -236,7 +236,7 @@ class Cpanel(tk.Tk):
 
 		#Single parameters, including the individual per-item parameters
 		else:
-			def drawCircle(frame, color, bg):
+			def drawCircle(frame, color):
 				circle = tk.Canvas(frame, width=17, height=12, bg=frame.cget('bg'), highlightthickness=0)
 				circle.create_oval(0,0,12,12,fill=color, outline='')
 				return circle
@@ -276,7 +276,7 @@ class Cpanel(tk.Tk):
 
 				if item is not None:
 					el.grid(row=0, column=1)
-					drawCircle(wrap, param.pKeys[item].color.hex, wrap.cget('bg')).grid(row=0, column=0)
+					drawCircle(wrap, param.pKeys[item].color.hex).grid(row=0, column=0)
 				else: el.pack(anchor='center' if param.type=='check' else 'w')
 
 			#These need a separate label
@@ -298,7 +298,7 @@ class Cpanel(tk.Tk):
 				else:
 					lframe = tk.Frame(wrap, bg=wrap.cget('bg'), padx=0, pady=0)
 					tk.Label(lframe, text=title, fg="#333", bg=lframe.cget('bg')).grid(row=0, column=1, pady=(0,8))
-					drawCircle(lframe, param.pKeys[item].color.hex, lframe.cget('bg')).grid(row=0, column=0, pady=(0,8))
+					drawCircle(lframe, param.pKeys[item].color.hex).grid(row=0, column=0, pady=(0,8))
 					lframe.grid(row=1, column=0)
 					el.grid(row=0,column=0)
 

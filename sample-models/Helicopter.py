@@ -5,8 +5,8 @@
 
 from itertools import combinations
 from math import sqrt
+from numpy import random
 from helipad import *
-from numpy import random, isnan
 
 M0 = 120000
 
@@ -16,8 +16,8 @@ M0 = 120000
 #===============
 
 class Store(baseAgent):
-	def __init__(self, breed, id, model):
-		super().__init__(breed, id, model)
+	def __init__(self, breed, aId, model):
+		super().__init__(breed, aId, model)
 
 		#Start with equilibrium prices. Not strictly necessary, but it eliminates the burn-in period. See eq. A7
 		sm=sum(1/sqrt(model.param(('prod',g))) for g in model.goods.nonmonetary) * M0/(model.param('num_agent')*(len(model.goods.nonmonetary)+sum(1+model.param(('rbd',b)) for b in model.agents['agent'].breeds)))
@@ -327,9 +327,9 @@ class CentralBank(baseAgent):
 	ngdp = 0
 	primitive = 'cb'
 
-	def __init__(self, id, model):
+	def __init__(self, aId, model):
 		super().__init__(None, id, model)
-		self.id = id
+		self.id = aId
 		self.model = model
 		self.stocks[self.model.goods.money] = M0 #Has to have assets in order to contract
 
@@ -354,9 +354,8 @@ class CentralBank(baseAgent):
 			for a in self.model.agents['agent']:
 				a.stocks[self.model.goods.money] += amt
 		else:
-			M0 = self.M0
 			for a in self.model.agents.all:
-				a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
+				a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/self.M0 * amount
 
 	@property
 	def M0(self):

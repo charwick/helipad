@@ -184,8 +184,7 @@ class baseAgent:
 
 		maxid = 0
 		for a in self.model.agents.all:
-			if a.id > maxid:
-				maxid = a.id
+			maxid = max(maxid, a.id)
 		newagent = type(self)(self.breed, maxid+1, self.model)
 
 		parents = [self] + partners

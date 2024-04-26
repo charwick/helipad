@@ -206,7 +206,7 @@ class Cpanel(VBox):
 			def cpanel_terminate(model, data):
 				self.postinstruct.layout = Layout(display='inline-block')
 				self.stopbutton.layout.visibility = 'hidden'
-	
+
 	def renderParam(self, param, item=None):
 		"""Constructs an Ipywidget from a `Param` object. https://helipad.dev/functions/cpanel/renderparam/"""
 		i=None

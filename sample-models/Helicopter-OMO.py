@@ -2,7 +2,7 @@
 # Includes a banking system to distribute OMOs. Requires the basic Helicopter.py in the same folder.
 # Download the paper at https://ssrn.com/abstract=2545488
 
-from numpy import isnan, mean, array #, std
+from numpy import mean, array #, std
 from Helicopter import * #Building on the basic Helicopter model
 heli = setup()
 

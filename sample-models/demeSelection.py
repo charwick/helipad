@@ -7,8 +7,8 @@
 
 from random import choice
 from math import exp
-from helipad import Helipad, MultiLevel
 import numpy.random as nprand
+from helipad import Helipad, MultiLevel
 
 heli = Helipad()
 heli.name = 'Deme Selection'

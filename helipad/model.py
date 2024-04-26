@@ -181,7 +181,7 @@ class Helipad:
 
 		if self.goods.money is not None:
 			self.data.addReporter('M0', self.data.agentReporter('stocks', 'all', good=self.goods.money, stat='sum'))
-			if self.visual is not None and isinstance(self.visual, TimeSeries) and 'money' in self.visual:
+			if isinstance(self.visual, TimeSeries) and 'money' in self.visual:
 				self.visual['money'].addSeries('M0', ï('Monetary Base'), self.goods[self.goods.money].color)
 
 		#Unconditional variables to report
@@ -191,14 +191,14 @@ class Helipad:
 		#Don't put lambda functions in here, or the variable pairs will be reported the same, for some reason.
 		for breed, b in self.agents[defPrim].breeds.items():
 			self.data.addReporter('utility-'+breed, self.data.agentReporter('utils', defPrim, breed=breed))
-			if self.visual is not None and self.visual.__class__.__name__=='TimeSeries':
+			if isinstance(self.visual, TimeSeries):
 				self.visual['utility'].addSeries('utility-'+breed, breed.title()+' '+ï('Utility'), b.color)
 
 		if len(self.goods) >= 2:
 			for good, g in self.goods.nonmonetary.items():
 				self.data.addReporter('demand-'+good, self.data.agentReporter('currentDemand', 'all', good=good, stat='sum'))
-				if self.visual is not None:
-					if 'demand' in self.visual: self.visual['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
+				if isinstance(self.visual, TimeSeries) and 'demand' in self.visual:
+					self.visual['demand'].addSeries('demand-'+good, good.title()+' '+ï('Demand'), g.color)
 
 		#Initialize agents
 		for prim, ags in self.agents.items():
@@ -446,8 +446,10 @@ class Helipad:
 				import code, readline # Readline doesn't look like it's doing anything here, but it enables certain console features
 				env = globals().copy()
 				env['self'] = self
-				code.interact(local=env)
+				self.console = code.InteractiveConsole(locals=env)
+				self.console.interact()
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
+			except SystemExit: pass
 
 	def launchCpanel(self, console: bool=True):
 		"""Launch the control panel, either in a Tkinter or a Jupyter environment, as appropriate. https://helipad.dev/functions/model/launchcpanel/"""
@@ -467,18 +469,18 @@ class Helipad:
 				self.params['num_'+k].value = makeDivisible(self.params['num_'+k].value, l, 'max')
 				self.params['num_'+k].default = makeDivisible(self.params['num_'+k].default, l, 'max')
 
-		if not isNotebook():
-			from helipad.cpanelTkinter import Cpanel
-			self.cpanel = Cpanel(self)
-			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
-			if console: self.debugConsole()
-			self.cpanel.mainloop()		#Launch the control panel
-		else:
+		if isNotebook():
 			from helipad.cpanelJupyter import Cpanel, SilentExit
 			if self.cpanel: self.cpanel.invalidate(ï('Control panel was redrawn in another cell.'))
 			self.cpanel = Cpanel(self)
 			self.doHooks('CpanelPostInit', [self.cpanel])
 			raise SilentExit() #Don't blow past the cpanel if doing "run all"
+		else:
+			from helipad.cpanelTkinter import Cpanel
+			self.cpanel = Cpanel(self)
+			self.doHooks('CpanelPostInit', [self.cpanel]) #Want the cpanel property to be available here, so don't put in cpanel.py
+			if console: self.debugConsole()
+			self.cpanel.mainloop()		#Launch the control panel
 
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 
@@ -592,8 +594,8 @@ class Helipad:
 
 class MultiLevel(baseAgent, Helipad):
 	"""A class allowing multi-level agent-based models to be constructed, where the agents at one level are themselves full models with sub-agents. Inherits from both `baseAgent` and `Helipad`. https://helipad.dev/functions/multilevel/"""
-	def __init__(self, breed, id, parentModel):
-		super().__init__(breed, id, parentModel)
+	def __init__(self, breed, aId, parentModel):
+		super().__init__(breed, aId, parentModel)
 		self.setup()
 
 #==================
@@ -661,11 +663,9 @@ class Goods(gandb):
 		props['quantity'] = endowment
 		item = super().add('good', name, color, money=money, props=props)
 
-		#Add demand plot once we have at least 2 goods
+		#Add demand plot once we have at least 2 goods, but only if the cpanel hasn't been drawn yet
 		if len(self) == 2 and (self.model.visual is None or self.model.visual.isNull) and hasattr(self.model.visual, 'plots'):
-			try:
-				if 'demand' not in self.model.visual: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
-			except: pass
+			if 'demand' not in self.model.visual: self.model.visual.addPlot('demand', ï('Demand'), selected=False)
 
 		return item
 

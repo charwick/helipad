@@ -2,8 +2,8 @@
 Classes for collecting and exporting data from model runs. This module should not be imported directly; interface with the `model.data` container object instead. See https://helipad.dev/functions/data/
 """
 
-import pandas, os.path
-import numpy as np
+import os.path
+import pandas, numpy as np
 from helipad.helpers import Item, ï
 
 #Don't try to subclass Pandas.dataframe; substantially slower and doesn't scale

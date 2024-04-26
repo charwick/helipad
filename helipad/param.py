@@ -3,9 +3,8 @@ Classes to abstract the interface between model parameters and GUI elements. Thi
 """
 
 from itertools import combinations
-import warnings
-from helipad.helpers import *
 from numpy import arange, random
+from helipad.helpers import warnings, ï, isNotebook, Item, funcStore
 
 class Param(Item):
 	"""Base class defining a model parameter that can be set before or during runtime. https://helipad.dev/functions/param/"""
@@ -517,7 +516,7 @@ class Shocks(CheckgridParam, fStoreWithInterface):
 						if self.param.per is not None and self.item is not None:
 							self.param.callback(model, self.param.name, self.item, newval)
 						else:
-							self.param.callback(model, self.param.name, newval)					
+							self.param.callback(model, self.param.name, newval)
 
 			#Updates the parameter value when the GUI element is clicked
 			#Can't do the regular setVar without a unified Tkinter element (like CheckGrid) to route the values
