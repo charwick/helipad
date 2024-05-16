@@ -111,7 +111,7 @@ class Helipad:
 	def param(self, param, val=None):
 		"""Get or set a model parameter, depending on whether there is one or two arguments. https://helipad.dev/functions/model/param/"""
 		if isinstance(param, tuple):
-			#Deprecated in Helipad 1.7, remove in 1.9
+			#Deprecated in Helipad 1.6.1, remove in 1.8
 			if len(param) > 1 and param[1] in ['breed', 'good']:
 				warnings.warn(ï('Three-item parameter tuple identifiers have been deprecated. The second item can be removed.'), FutureWarning, 2)
 				item = param[2]
