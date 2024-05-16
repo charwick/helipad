@@ -328,7 +328,7 @@ class CentralBank(baseAgent):
 	primitive = 'cb'
 
 	def __init__(self, aId, model):
-		super().__init__(None, id, model)
+		super().__init__(None, aId, model)
 		self.id = aId
 		self.model = model
 		self.stocks[self.model.goods.money] = M0 #Has to have assets in order to contract

@@ -1,8 +1,8 @@
 # A model of the long-run cyclical dynamics of urbanization and human capital.
 
-from math import sqrt, log, floor, exp
+from math import sqrt, floor
+from numpy import diff, random, log
 from helipad import Helipad
-from numpy import *
 heli = Helipad()
 
 #================
@@ -46,15 +46,15 @@ class Land():
 		self.input = 0
 		self.lastInput = 0
 		self.product = 0
-	
+
 	def produce(self):
 		self.product = popfactor*log(self.input) #if self.loc=='rural' else sqrt(self.input)	# = ln∑P (eq. 2)
 		self.lastInput = self.input
 		self.input = 0 #Reset productivity at the end of each period
 		return self.product
-	
+
 	def pop(self, model): return len(model.agents['agent'][self.loc])
-	
+
 	#The add argument calculates the productivity as if the agent were already there, if he's not
 	def agentProd(self, H, add=False):
 		if self.loc=='rural': return sqrt(150) * H
@@ -64,7 +64,7 @@ class Land():
 				# return (heli.data.getLast('urbanH')*p+H)/(p+1) * log(heli.data.getLast('hsum')+H) #wtf was I doing here?
 			else: return 1/sqrt(self.pop(heli)) * heli.data.getLast('hsum')
 			# else: return heli.data.getLast('urbanH')*log(heli.data.getLast('hsum'))
-	
+
 	def expWage(self, H):
 		prod = self.agentProd(H, True)
 		potentialprod = log(self.lastInput+prod) #if self.loc=='rural' else sqrt(self.lastInput+prod)
@@ -88,7 +88,7 @@ def modelPreSetup(model):
 		setattr(model, 'moverate'+b, 0)
 		setattr(model, 'birthrate'+b, 0)
 	model.deathrate = 0
-	
+
 	#Mark the different phases of the Malthusian model
 	model.events.clear()
 	if not model.param('city'):
@@ -99,7 +99,7 @@ def modelPreSetup(model):
 		def stab2(model):	return model.events['exp1'].triggered and model.t > model.events['exp1'].triggered+1000 and sum(diff(model.data.getLast('ruralH', 3000))) < 0
 		@heli.event
 		def end3(model): return model.events['stab2'].triggered and model.t >= model.events['stab2'].triggered + burnout
-	
+
 	#Start with the equilibrium population
 	else: model.param('num_agent', floor(2.55-1.69*model.param('fixed'))*popfactor)
 
@@ -129,7 +129,7 @@ def agentStep(agent, model, stage):
 		if model.param('city'):
 			otherloc = 'urban' if agent.breed == 'rural' else 'rural'
 			agent.expwage = model.land[otherloc].expWage(agent.H)
-		
+
 			#Decide whether or not to move
 			mvc = model.param('movecost')
 			if agent.expwage > agent.lastWage*1.2 and agent.wealth > mvc and model.t > 2:
@@ -138,10 +138,10 @@ def agentStep(agent, model, stage):
 				agent.wealth -= mvc
 				model.movers[agent.breed] += 1
 				agent.breed = otherloc
-				
+
 		agent.prod = model.land[agent.breed].agentProd(agent.H)
 		model.land[agent.breed].input += agent.prod #Work
-		
+
 		#Reproduce
 		randn = random.normal(1, 0.2)
 		if random.random() < model.param('deathrate'): agent.die()
@@ -153,7 +153,7 @@ def agentStep(agent, model, stage):
 			agent.wealth -= agent.wealth/2 + 1 #-= breedThresh #Fixed cost
 			model.births[agent.breed] += 1
 			if child.H < 2: child.die()
-	
+
 	#Get paid in modelStep, then pay rent
 	elif stage==2:
 		agent.wealth -= model.param('rent') * agent.H + model.param('fixed')
@@ -176,8 +176,8 @@ def modelPostStep(model):
 		model.deaths = 0
 
 @heli.hook
-def decideBreed(id, choices, model):
-	return 'rural';
+def decideBreed(aId, choices, model):
+	return 'rural'
 
 @heli.hook
 def agentDie(agent): heli.deaths += 1

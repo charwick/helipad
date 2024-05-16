@@ -6,7 +6,7 @@ import sys
 from abc import ABC, abstractmethod
 from math import sqrt, ceil, pi, isnan
 from numpy import ndarray, array, asanyarray, log10, linspace, newaxis, arange, full_like, linalg, ones, vstack
-import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle, matplotlib.cm as cm
+import matplotlib, matplotlib.pyplot as plt, matplotlib.style as mlpstyle
 from matplotlib.lines import Line2D
 from matplotlib.patches import Polygon
 from helipad.helpers import *
@@ -303,7 +303,7 @@ class Charts(MPLVisualization):
 		ref = self.model.params['refresh'].get()
 		self.fig.subplots_adjust(bottom=0.12) #Make room for the slider
 		sax = self.fig.add_axes([0.1,0.01,.75,0.03], facecolor='#EEF')
-		self.timeslider = Slider(sax, 't=', 0, ref, ref, valstep=ref, closedmin=False)
+		self.timeslider = Slider(sax, 't=', 0, ref, valinit=ref, valstep=ref, closedmin=False)
 		self.timeslider.on_changed(self.scrub)
 
 		self.fig.canvas.draw_idle()
@@ -768,7 +768,7 @@ class AgentsPlot(ChartPlot):
 		self.pos = self.layouts[self.layout](self.ndata[t])
 
 		if self.layout == 'spatial':
-			cmap = cm.get_cmap(self.params['patchColormap'])
+			cmap = matplotlib.colormaps[self.params['patchColormap']]
 			if self.viz.model.patches.geometry == 'geo': pd = array([self.getPatchParamValue(p,t) for p in self.viz.model.patches])
 			else:
 				pd = array([[self.getPatchParamValue(p,t) for p in col] for col in self.viz.model.patches]).T #Transpose because numpy is indexed col, row
