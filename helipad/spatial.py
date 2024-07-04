@@ -162,7 +162,9 @@ class PatchesRect(basePatches):
 	def neighbors(self, model):
 		for patch in model.agents['patch']:
 			neighbors = [(patch.right, 1), (patch.down, 1)]
-			if self.corners: neighbors += [(patch.down.right, self.corners), (patch.left.down, self.corners)]
+			if self.corners:
+				if patch.down and patch.down.right: neighbors.append((patch.down.right, self.corners))
+				if patch.left and patch.left.down: neighbors.append((patch.left.down, self.corners))
 			for n, weight in neighbors:
 				if n: patch.edges.add(n, 'space', weight=weight)
 

@@ -1,5 +1,5 @@
 {% set name = "helipad" %}
-{% set version = "1.6.1" %}
+{% set version = "1.6.2" %}
 
 package:
   name: {{ name|lower }}
@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/helipad-{{ version }}.tar.gz
-  sha256: b3baa09f1891a08dd4e47ebf414f62f7612a7b8c139eb0b9b2ce2c801b013f71
+  sha256: 5b5801daa7fbe8d435dc96504b65eed5670a21709845b113e17453877b366242
 
 build:
   noarch: python
