@@ -271,7 +271,11 @@ msgid "Cannot add checkgrids or per-item parameters to groups."
 msgstr ""
 
 #: param.py:399
-msgid "Cannot remove built-in parameters."
+msgid "Cannot hide or remove built-in parameters."
+msgstr ""
+
+#: param.py:418
+msgid "Cannot show parameter before control panel is launched."
 msgstr ""
 
 #: param.py:421

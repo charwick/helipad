@@ -129,3 +129,4 @@
 }
 
 .helipad_cpanel > .p-Widget { margin-bottom: 0.5em; }
+.helipad_accordion_hidden { display: none; } /* For some reason Ipywidgets throws 'Javascript Error: t is undefined' when accessing accordion layouts */

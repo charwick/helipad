@@ -395,11 +395,35 @@ class fStoreWithInterface(funcStore):
 		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
 
 		if name not in self: return False
-		if getattr(self[name], 'config', False): raise ValueError(ï('Cannot remove built-in parameters.'))
+		if getattr(self[name], 'config', False): raise ValueError(ï('Cannot hide or remove built-in parameters.'))
 		self._destroy(self[name])
 
 		del self[name]
 		return True
+
+	def hide(self, name: str):
+		if isinstance(name, (list, tuple)): return [self.remove(n) for n in name]
+		if name not in self or not self[name].element: return False
+		if getattr(self[name], 'config', False): raise ValueError(ï('Cannot hide or remove built-in parameters.'))
+
+		if isNotebook():
+			if getattr(self[name], 'per', True) or self[name].type=='checkgrid': self[name].element.add_class('helipad_accordion_hidden')
+			else: self[name].element.layout.display = 'none'
+		else:
+			if getattr(self[name], 'per', True) or self[name].type=='checkgrid': self[name].element.pack_forget()
+			else: self[name].element.master.pack_forget()
+
+	def show(self, name: str):
+		if not self.model.cpanel:
+			warnings.warn(ï('Cannot show parameter before control panel is launched.'), None, 2)
+			return False
+		
+		if isNotebook():
+			if getattr(self[name], 'per', True) or self[name].type=='checkgrid': self[name].element.remove_class('helipad_accordion_hidden')
+			else: self[name].element.layout.display = None
+		else:
+			if getattr(self[name], 'per', True) or self[name].type=='checkgrid': self[name].element.pack(fill='x')
+			else: self[name].element.master.pack(fill='x')
 
 	def _destroy(self, item):
 		if item.element:
@@ -469,7 +493,7 @@ class Params(fStoreWithInterface):
 		configs = {k:v for k,v in self.items() if getattr(v, 'config', False)}
 		super().clear()
 		self.update(configs)
-
+	
 	@property
 	def globals(self):
 		"""The subset of global parameters, i.e. those added with `per=None`. https://helipad.dev/functions/params/#globals"""

@@ -14,14 +14,17 @@ heli.agents.addBreed('rural', '#00CC00')
 
 #Constrain the parameter space to values resulting in H* = 100
 def constrain(model, var, val):
-	if var=='city': model.params['rent'].disabled(val)
+	if var=='city':
+		if val: model.params.hide('rent')
+		else: model.params.show('rent')
+		#model.params['rent'].disabled(val)
 	elif model.param('city'):
 		if var=='fixed':
-			model.params['rent'].enable() #Tkinter won't let you update the value of a disabled widget...
+			model.params['rent'].enable() #Tkinter won't let you update the value of a disabled widget…
 			model.param('rent', .04+.037*val)
 			model.params['rent'].disable()
 		# if var=='rent':
-		# 	model.params['fixed'].enable() #Tkinter won't let you update the value of a disabled widget...
+		# 	model.params['fixed'].enable() #Tkinter won't let you update the value of a disabled widget…
 		# 	model.param('fixed', 24.7777*val-.9284659)
 		# 	model.params['fixed'].disable()
 
@@ -76,6 +79,10 @@ heli.params['num_agent'].type = 'hidden'
 #================
 # AGENT BEHAVIOR
 #================
+
+@heli.hook
+def CpanelPostInit(cpanel):
+	constrain(cpanel.model, 'city', True)
 
 #This is here to make sure that the agents param gets reset at the beginning of each run
 #Otherwise the parameter persists between runs
