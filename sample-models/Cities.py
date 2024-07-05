@@ -15,18 +15,18 @@ heli.agents.addBreed('rural', '#00CC00')
 #Constrain the parameter space to values resulting in H* = 100
 def constrain(model, var, val):
 	if var=='city':
-		if val: model.params.hide('rent')
-		else: model.params.show('rent')
+		if val:
+			model.params.hide('rent')
+			model.params['fixed'].title = 'Cost of Living'
+		else:
+			model.params.show('rent')
+			model.params['fixed'].title = 'Fixed cost (χ)'
 		#model.params['rent'].disabled(val)
-	elif model.param('city'):
-		if var=='fixed':
-			model.params['rent'].enable() #Tkinter won't let you update the value of a disabled widget…
-			model.param('rent', .04+.037*val)
-			model.params['rent'].disable()
-		# if var=='rent':
-		# 	model.params['fixed'].enable() #Tkinter won't let you update the value of a disabled widget…
-		# 	model.param('fixed', 24.7777*val-.9284659)
-		# 	model.params['fixed'].disable()
+	# elif model.param('city'):
+	# 	if var=='fixed':
+	# 		model.params['rent'].enable() #Tkinter won't let you update the value of a disabled widget…
+	# 		model.param('rent', .04+.037*val)
+	# 		model.params['rent'].disable()
 
 heli.params.add('city', 'City?', 'check', True, desc='Whether agents have the possibility of moving to the city', runtime=False, callback=constrain)
 heli.params.add('lockH', 'Lock human capital', 'check', False, desc='Maintains the distribution of human capital when checked')

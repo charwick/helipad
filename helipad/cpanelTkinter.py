@@ -387,10 +387,14 @@ class expandableFrame(tk.Frame):
 		self.pady=pady
 		self.padx=padx
 
-		self.text = text
+		self.subframe = tk.Frame(self, padx=padx, pady=0, bg=bg)
+		self._open = tk.IntVar()
 		self.titleLabel = tk.Label(self, fg=fg, bg=bg, font=font, cursor='hand2')
 		self.titleLabel.bind('<Button-1>', self.toggle)
 		self.titleLabel.grid(row=0, column=1, sticky='we', pady=(pady, 2))
+		self.title = text
+		self.open = startOpen
+
 
 		#Possibility of adding buttons on either side
 		class btn(tk.Label):
@@ -424,10 +428,6 @@ class expandableFrame(tk.Frame):
 		self.buttons['left'].grid(row=0, column=0, sticky='w', padx=5)
 		self.buttons['right'].grid(row=0, column=2, sticky='e', padx=5)
 
-		self.subframe = tk.Frame(self, padx=padx, pady=0, bg=bg)
-		self._open = tk.IntVar()
-		self.open = startOpen
-
 	def toggle(self, event=None): self.open = not self.open
 
 	@property
@@ -437,12 +437,20 @@ class expandableFrame(tk.Frame):
 	def open(self, val):
 		if val: #open
 			self.subframe.grid(row=1, column=0, columnspan=3, padx=self.padx, pady=0, sticky='we')
-			self.titleLabel['text'] = self.text+' '+'▾'
+			self.titleLabel['text'] = self.title+' '+'▾'
 			self._open.set(1)
 		else: #close
 			self.subframe.grid_forget()
-			self.titleLabel['text'] = self.text+' '+'▸'
+			self.titleLabel['text'] = self.title+' '+'▸'
 			self._open.set(0)
+
+	@property
+	def title(self): return self._title
+
+	@title.setter
+	def title(self, val):
+		self._title = val
+		self.titleLabel['text'] = val+' '+('▾' if self.open else '▸')
 
 class textCheck(tk.Label):
 	"""A checkbox-like widget whose toggle is the entire element. `bg` and `fg` take a two-element color tuple for inactive and active states. https://helipad.dev/functions/textcheck/"""

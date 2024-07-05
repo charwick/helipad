@@ -7,7 +7,7 @@ package:
 
 source:
   url: https://pypi.io/packages/source/{{ name[0] }}/{{ name }}/helipad-{{ version }}.tar.gz
-  sha256: 5b5801daa7fbe8d435dc96504b65eed5670a21709845b113e17453877b366242
+  sha256: a6c63e0704c2fc09cc7acfef25c637b8587d11860ccf5c77524ed33038eba333
 
 build:
   noarch: python
@@ -17,10 +17,12 @@ build:
 requirements:
   host:
     - python >=3.8
+    - setuptools >=61.0
     - pip
   run:
     - python >=3.8
     - matplotlib-base
+    - pillow <=10.0.0 # Not necessary explicitly, but pin version because build fails on Conda with higher versions (missing DLL?). Check again next time
     - pandas
     - networkx
 

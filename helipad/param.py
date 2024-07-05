@@ -9,13 +9,33 @@ from helipad.helpers import warnings, ï, isNotebook, Item, funcStore
 class Param(Item):
 	"""Base class defining a model parameter that can be set before or during runtime. https://helipad.dev/functions/param/"""
 	def __init__(self, **kwargs):
+		self.element = None
 		super().__init__(**kwargs)
 		if not hasattr(self, 'per'): self.per=None
 		if not hasattr(self, 'value'): self.value = {b:self.defaultVal for b in kwargs['pKeys']} if self.per else self.defaultVal
-		self.element = None
 		self.reset() #Populate with default values
 
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
+
+	@property
+	def title(self): return self._title
+
+	#Update GUI when changing title
+	@title.setter
+	def title(self, val):
+		self._title = val
+		if getattr(self, 'config', False): return False
+		if self.element:
+			if isNotebook():
+				if self.element.__class__.__name__ == 'Accordion': self.element.set_title(0, val)
+				else: self.element.children[0].description = val
+			else:
+				if self.element.__class__.__name__ == 'expandableFrame' or self.type=='checkgrid': self.element.title = val
+				else:
+					for e in (self.element if self.type=='checkentry' else self.element.master).winfo_children():
+						if e.__class__.__name__ in ['Label', 'Checkbutton']:
+							e.config(text=val)
+							break
 
 	#Global generic:				int → int
 	#Per-breed universal generic:	int → dict{int}
@@ -356,14 +376,25 @@ class CheckgridParam(Param):
 class ParamGroup:
 	"""Define a collapsible group of parameters for display in the control panel. https://helipad.dev/functions/params/group/"""
 	def __init__(self, name: str, members, opened: bool):
+		self.element = None
 		self.title = name
 		self.members = members
-		self.element = None
 		self.open = opened
 
 		for p in members.values():
 			if p.per is not None or p.type=='checkgrid': raise TypeError(ï('Cannot add checkgrids or per-item parameters to groups.'))
 			p.group = name
+
+	@property
+	def title(self): return self._title
+
+	#Update GUI when changing title
+	@title.setter
+	def title(self, val):
+		self._title = val
+		if self.element:
+			if isNotebook(): self.element.set_title(0, val)
+			else: self.element.title = val
 
 	def get(self) -> dict:
 		"""A `dict` with values for all parameters in the group."""
@@ -417,7 +448,7 @@ class fStoreWithInterface(funcStore):
 		if not self.model.cpanel:
 			warnings.warn(ï('Cannot show parameter before control panel is launched.'), None, 2)
 			return False
-		
+
 		if isNotebook():
 			if getattr(self[name], 'per', True) or self[name].type=='checkgrid': self[name].element.remove_class('helipad_accordion_hidden')
 			else: self[name].element.layout.display = None
@@ -493,7 +524,7 @@ class Params(fStoreWithInterface):
 		configs = {k:v for k,v in self.items() if getattr(v, 'config', False)}
 		super().clear()
 		self.update(configs)
-	
+
 	@property
 	def globals(self):
 		"""The subset of global parameters, i.e. those added with `per=None`. https://helipad.dev/functions/params/#globals"""
