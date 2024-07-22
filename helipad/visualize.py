@@ -33,6 +33,12 @@ class BaseVisualization(ABC):
 	def event(self, t: int, color, **kwargs):
 		"""Called when an event is triggered, in order to be reflected in the visualization. https://helipad.dev/functions/basevisualization/event/"""
 
+	def onStart(self):
+		"""Called when the model is started. Called automatically from `model.start()`. https://helipad.dev/functions/basevisualization/onstart/"""
+
+	def onStop(self):
+		"""Called when the model is paused or ended. Called automatically from `model.stop()` and `model.terminate()`. https://helipad.dev/functions/basevisualization/onstop/"""
+
 	def terminate(self, model):
 		"""Cleanup on model termination. Called automatically from `model.terminate()`. https://helipad.dev/functions/basevisualization/terminate/"""
 
@@ -57,7 +63,7 @@ class MPLVisualization(BaseVisualization, dict):
 		if isNotebook():
 			from IPython import get_ipython
 			get_ipython().magic('matplotlib widget')
-		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it blocks the cpanel while running
+		else: matplotlib.use('TkAgg') #macosx would be preferable (Retina support), but it segfaults on closing as of MPL 3.9.1
 
 	def __repr__(self): return f'<{self.__class__.__name__} with {len(self)} plots>'
 
@@ -71,11 +77,14 @@ class MPLVisualization(BaseVisualization, dict):
 		#MPL can't take a method bound to an unhashable class (i.e. `dict`)
 		def sendEvent(event):
 			axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
+			sent = False
 			if axes is not None:
 				for p in self.activePlots.values():
 					if axes is p.axes:
 						p.MPLEvent(event)
+						sent = True
 						break
+				if not sent and event.name=='pick_event': self.pick(axes, event)
 
 			if event.name=='key_press_event' and event.key in self.keyListeners:
 				for f in self.keyListeners[event.key]: f(self.model, event)
@@ -134,6 +143,9 @@ class MPLVisualization(BaseVisualization, dict):
 		"""A `dict` of plots. This property is deprecated; the visualization object can be indexed directly."""
 		warnings.warn(ï('model.visual.plots is deprecated. Plots can be accessed by indexing the visualization object directly.'), FutureWarning, 2)
 		return self
+
+	def pick(self, axes, event):
+		"""Accepts any pick event not routed to an individual plot object. https://helipad.dev/functions/mplvisualization/pick/"""
 
 class TimeSeries(MPLVisualization):
 	"""A Matplotlib-based visualizer for displaying time series data on plots so the whole history of any given variable over the model's runtime can be seen at once. https://helipad.dev/functions/timeseries/"""
@@ -302,9 +314,17 @@ class Charts(MPLVisualization):
 		#Time slider
 		ref = self.model.params['refresh'].get()
 		self.fig.subplots_adjust(bottom=0.12) #Make room for the slider
-		sax = self.fig.add_axes([0.1,0.01,.75,0.03], facecolor='#EEF')
+		sax = self.fig.add_axes([0.05,0.01,.75,0.03], facecolor='#EEF')
 		self.timeslider = Slider(sax, 't=', 0, ref, valinit=ref, valstep=ref, closedmin=False)
 		self.timeslider.on_changed(self.scrub)
+
+		#Replay button
+		self.replaying = False
+		self.replay = self.fig.add_axes([0.9,0.01,.05,0.03], aspect='equal', picker=True)
+		# self.replay.text(0.5,0,'Replay', color='#333', horizontalalignment='center', verticalalignment='bottom')
+		self.replay.axis('off')
+		self.replay.fill([0,0,1], [0,1,0.5], color='#AAA') #Play button
+		self.replay.active = False
 
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
@@ -365,6 +385,48 @@ class Charts(MPLVisualization):
 	def event(self, t: int, color='#FDC', **kwargs):
 		ref = self.model.params['refresh'].get()
 		self.events[ceil(t/ref)*ref] = color
+
+	def onStart(self):
+		self.stopReplay() #Redraws here
+		self.replay.active = False
+		for p in self.replay.get_children():
+			if p.__class__.__name__ == 'Polygon': p.set_color('#AAA')
+
+	def onStop(self):
+		self.stopReplay(False)
+		self.replay.active = True
+		if plt.get_fignums(): #If window isn't closed
+			for p in self.replay.get_children():
+				if p.__class__.__name__ == 'Polygon': p.set_color('#000')
+			if self.fig.stale: self.fig.canvas.draw_idle()
+
+	def stopReplay(self, redraw=True):
+		"""Pauses replay of the model data. https://helipad.dev/functions/charts/stopreplay/"""
+		self.replaying = False
+		for p in self.replay.get_children():
+			if p.__class__.__name__ == 'Polygon': p.remove()
+		self.replay.fill([0,0,1], [0,1,0.5], color='#000') #Turn to a play button
+		if self.fig.stale and redraw: self.fig.canvas.draw_idle()
+
+	def startReplay(self):
+		"""Plays the accumulated data in the visualizer back over the model run. https://helipad.dev/functions/charts/startreplay/"""
+		self.replaying = True
+		for p in self.replay.get_children():
+			if p.__class__.__name__ == 'Polygon': p.remove()
+		self.replay.fill([0,0.25,0.25,0], [0,0,1,1], color='#000') #Turn to a pause button
+		self.replay.fill([0.5,0.75,0.75,0.5], [0,0,1,1], color='#000')
+		if self.timeslider.valmax==self.timeslider.val: self.timeslider.set_val(self.timeslider.valinit)
+		while self.replaying and self.timeslider.val < self.timeslider.valmax:
+			self.timeslider.set_val(self.timeslider.val + self.timeslider.valinit)
+			self.fig.patch.set_facecolor(self.events[int(self.timeslider.val)] if int(self.timeslider.val) in self.events else 'white')
+			if self.fig.stale: self.fig.canvas.draw_idle()
+			self.fig.canvas.flush_events() #Listen for user input
+		self.stopReplay()
+
+	def pick(self, axes, event):
+		if axes is self.replay and self.replay.active:
+			self.replaying = not self.replaying
+			if self.replaying: self.startReplay()
 
 #======================
 # PLOT-LEVEL VISUALIZERS
@@ -847,7 +909,7 @@ class AgentsPlot(ChartPlot):
 		try: self.draw(self.viz.scrubval)
 		except: self.rotateLayout()
 
-	def getPatchParamValue(self, patch, t: int=None):
+	def getPatchParamValue(self, patch, t: int=None): #Can specify t:int|None when we require Python 3.10
 		"""Gather historical patch data for use in color generation. https://helipad.dev/functions/agentsplot/getpatchparamvalue/"""
 		if t is not None: return patch.colorData[t]
 		if patch.dead: return float('nan')

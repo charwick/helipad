@@ -363,6 +363,7 @@ class Helipad:
 		self.doHooks('modelStart', [self, self.hasModel])
 		if not self.hasModel: self.setup()
 		self.running = True
+		if self.visual: self.visual.onStart()
 
 		if isNotebook(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
 		else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
@@ -370,6 +371,7 @@ class Helipad:
 	def stop(self, *args):
 		"""Pause the model, allowing it to be subsequently resumed. https://helipad.dev/functions/model/stop/"""
 		self.running = False
+		if self.visual: self.visual.onStop()
 		if self.cpanel:
 			self.cpanel.progress.stop()
 			self.cpanel.runButton.pause()
@@ -380,7 +382,9 @@ class Helipad:
 		if not self.hasModel: return
 		self.running = False
 		self.hasModel = False
-		if self.visual is not None: self.visual.terminate(self) #Clean up visualizations
+		if self.visual is not None:
+			if self.visual: self.visual.onStop()
+			self.visual.terminate(self) #Clean up visualizations
 
 		remainder = int(self.t % self.param('refresh')) #For some reason this returns a float sometimes?
 		if remainder > 0 and self.visual is not None and not self.visual.isNull: self.visual.update(self.data.getLast(remainder)) #Last update at the end
