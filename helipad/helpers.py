@@ -3,6 +3,7 @@ Helper classes and functions used internally in Helipad. This module should not 
 """
 
 import warnings
+from functools import cache
 from sys import __stdout__
 from io import BufferedWriter
 
@@ -19,16 +20,12 @@ def isIpy() -> bool:
 		return True
 	except NameError: return False
 
+@cache #get_ipython() comes back undefined inside callbacks. So cache the value once, the first time it runs.
 def isNotebook() -> bool:
 	"""Check whether Helipad is running in an interactive notebook."""
-	#get_ipython() comes back undefined inside callbacks. So cache the value once, the first time it runs.
-	#Can try @functools.cache when Python 3.9 is required
-	if '__helipad_ipy' not in globals():
-		try:
-			globals()['__helipad_ipy'] = 'InteractiveShell' in get_ipython().__class__.__name__
-		except NameError: globals()['__helipad_ipy'] = False
-
-	return __helipad_ipy
+	try:
+		return 'InteractiveShell' in get_ipython().__class__.__name__
+	except NameError: return False
 
 def isBuffered() -> bool:
 	"""Check whether the current Python script is running in a buffered or unbuffered console."""
