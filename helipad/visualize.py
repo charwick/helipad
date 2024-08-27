@@ -287,6 +287,7 @@ class Charts(MPLVisualization):
 		self.events = {}
 		self.plotTypes = {}
 		self.timeslider = None
+		self.replaying = False
 
 		for p in [BarChart, AgentsPlot, TimeSeriesPlot]: self.addPlotType(p)
 		model.params['refresh'].runtime=False
@@ -319,7 +320,6 @@ class Charts(MPLVisualization):
 		self.timeslider.on_changed(self.scrub)
 
 		#Replay button
-		self.replaying = False
 		self.replay = self.fig.add_axes([0.9,0.01,.05,0.03], aspect='equal', picker=True)
 		# self.replay.text(0.5,0,'Replay', color='#333', horizontalalignment='center', verticalalignment='bottom')
 		self.replay.axis('off')
@@ -400,7 +400,7 @@ class Charts(MPLVisualization):
 				if p.__class__.__name__ == 'Polygon': p.set_color('#000')
 			if self.fig.stale: self.fig.canvas.draw_idle()
 
-	def stopReplay(self, redraw=True):
+	def stopReplay(self, redraw: bool=True):
 		"""Pauses replay of the model data. https://helipad.dev/functions/charts/stopreplay/"""
 		self.replaying = False
 		for p in self.replay.get_children():

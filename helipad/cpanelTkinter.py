@@ -395,7 +395,6 @@ class expandableFrame(tk.Frame):
 		self.title = text
 		self.open = startOpen
 
-
 		#Possibility of adding buttons on either side
 		class btn(tk.Label):
 			def __init__(self2, *args, **kwargs):

@@ -135,7 +135,7 @@ class Helipad:
 		for f in self.hooks[place]: r = f(*args)
 		return r
 
-	def useVisual(self, viz: BaseVisualization):
+	def useVisual(self, viz: type[BaseVisualization]) -> BaseVisualization:
 		"""Register a visualization class for live model visualization. Visualization classes can be imported from `helipad.visualize`, or custom visualization classes can be subclassed from `BaseVisualization`. The visualization can then be launched later using model.launchVisual(). https://helipad.dev/functions/model/usevisual/"""
 		if hasattr(self, 'breed'):
 			warnings.warn(ï('Visualizations can only be registered on the top-level model.'), None, 2)
