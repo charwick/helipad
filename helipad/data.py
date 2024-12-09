@@ -4,7 +4,9 @@ Classes for collecting and exporting data from model runs. This module should no
 
 import os.path
 import pandas, numpy as np
-from helipad.helpers import Item, ï
+from helipad.helpers import ï
+from dataclasses import dataclass
+from typing import Callable
 
 #Don't try to subclass Pandas.dataframe; substantially slower and doesn't scale
 class Data:
@@ -20,12 +22,12 @@ class Data:
 	def __contains__(self, index): return index in self.columns
 	def __repr__(self): return f'<{self.__class__.__name__}: {len(self.reporters)} reporters>'
 
-	def addReporter(self, key: str, func, **kwargs):
+	def addReporter(self, key: str, func, smooth=0):
 		"""Register a column in the data to be collected each period. `func` can either be a function that takes the model object as its only argument and returns a value, or a string - either `model` or the name of a primitive. Kwargs are passed to the reporter class. https://helipad.dev/functions/data/addreporter/"""
 		func, children = func if isinstance(func, tuple) else (func, {})
 
 		if not callable(func): raise TypeError(ï('Second argument of addReporter must be callable.'))
-		self.reporters[key] = Reporter(name=key, func=func, children=children, **kwargs)
+		self.reporters[key] = Reporter(name=key, func=func, children=children, smooth=smooth)
 		return self.reporters[key]
 
 	def removeReporter(self, key: str):
@@ -147,14 +149,20 @@ class Data:
 		if hook is not None: df = hook
 		df.to_csv(file)
 
-class Reporter(Item):
+@dataclass
+class Reporter:
 	"""An interface defining a single column of data to be collected during a model run. https://helipad.dev/functions/reporter/"""
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
+	name: str
+	func: Callable
+	children: dict
+	smooth: int|float=0
+
+	def __post_init__(self):
 		self.data = []
 		self.children = {k:(fn, []) for k, fn in self.children.items()}
-		if 'smooth' not in kwargs: self.smooth = False
-		else: self.children[self.name+'-unsmooth'] = (None, [])
+		if self.smooth: self.children[self.name+'-unsmooth'] = (None, [])
+
+	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
 
 	def collect(self, model):
 		"""Run the reporter function and its children, and append the results to the data. https://helipad.dev/functions/reporter/collect/"""
@@ -165,8 +173,8 @@ class Reporter(Item):
 		else:
 			us = self.children[self.name+'-unsmooth'][1]
 			us.append(self.func(model))
-			#					  Old data 					   New data point
-			self.data.append(self.smooth*self.data[-1] + (1-self.smooth)*us[-1] if model.t>1 else us[-1])
+			#					  Old data 				New data point
+			self.data.append((self.smooth*self.data[-1] + us[-1])/(self.smooth+1) if model.t>1 else us[-1])
 
 	def clear(self):
 		"""Empty the reporter's collected data. https://helipad.dev/functions/reporter/clear/"""

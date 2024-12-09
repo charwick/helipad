@@ -8,6 +8,7 @@ from random import uniform
 from helipad import Helipad
 heli = Helipad()
 heli.name = 'Test'
+heli.timer = True
 
 #A handful of breeds and goods
 breeds = [
