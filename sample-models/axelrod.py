@@ -11,25 +11,10 @@
 from helipad import Helipad
 from numpy import mean, random
 
-heli = Helipad()
-heli.name = 'Axelrod Tournament'
-heli.agents.order = 'match'
-
-heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
-
-#Initial parameter values match the payoffs in Table 1
-heli.params.add('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.params.add('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.params.add('cd', 'C-D payoff', 'slider', dflt=0, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.params.add('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 0.5})
-heli.params.add('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
-heli.params.add('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
-
-@heli.button('Reset Wealth')
-def reset(model):
-	for a in model.agents['agent']: a.stocks['payoff'] = 0
-
-heli.goods.add('payoff','#009900')
+#===============
+# STRATEGIES
+# Return True to cooperate, and False to defect.
+#===============
 
 #Store associated colors and default-checked state to cycle over later
 strategies = {
@@ -46,18 +31,6 @@ strategies = {
 	'Feld': (False, '#000000', 'Plays tit-for-tat, but with P[Cooperate] declining to 0.5 as the rounds approach the end'),
 	'Joss': (False, '#CCCCCC', 'Tit-For-Tat, except cooperation is only with 90% probability'),
 }
-
-#Build the strategies toggle
-heli.params.add('strategies', 'Strategies', 'checkgrid',
-	opts = {k: (k, v[2] if len(v)>2 else None) for k,v in strategies.items()},
-	dflt = [k for k,v in strategies.items() if v[0]],
-	runtime=False, columns=2
-)
-
-#===============
-# STRATEGIES
-# Return True to cooperate, and False to defect.
-#===============
 
 def TFT(rnd, history, own):
 	if not history: return True
@@ -129,59 +102,88 @@ def Joss(rnd, history, own):
 # MODEL LOGIC
 #===============
 
-@heli.hook
-def match(agents, primitive, model, stage):
-	h1, h2 = ([], [])
-	for rnd in range(int(model.param('rounds'))):
-		#Play
-		response1 = globals()[agents[0].breed](rnd, h2, h1)
-		response2 = globals()[agents[1].breed](rnd, h1, h2)
-		h1.append(response1)
-		h2.append(response2)
+def setup():
+	heli = Helipad()
+	heli.name = 'Axelrod Tournament'
+	heli.agents.order = 'match'
 
-		#Payoffs
-		agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
-		agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
+	heli.params['num_agent'].type = 'hidden' #So we can postpone breed determination until the end
 
-#Visualization
-from helipad.visualize import TimeSeries
-viz = heli.useVisual(TimeSeries)
-plot = viz.addPlot('payoffs', 'Payoffs')
+	#Initial parameter values match the payoffs in Table 1
+	heli.params.add('cc', 'C-C payoff', 'slider', dflt=3, opts={'low': 0, 'high': 10, 'step': 0.5})
+	heli.params.add('dc', 'D-C payoff', 'slider', dflt=5, opts={'low': 0, 'high': 10, 'step': 0.5})
+	heli.params.add('cd', 'C-D payoff', 'slider', dflt=0, opts={'low': 0, 'high': 10, 'step': 0.5})
+	heli.params.add('dd', 'D-D payoff', 'slider', dflt=1, opts={'low': 0, 'high': 10, 'step': 0.5})
+	heli.params.add('rounds', 'Rounds per period', 'slider', dflt=200, opts={'low': 10, 'high': 1000, 'step': 10})
+	heli.params.add('n', 'Agents per strategy', 'slider', dflt=3, opts={'low': 1, 'high': 10, 'step': 1}, runtime=False)
 
-#Add breeds last-minute so we can toggle them in the control panel
-@heli.hook
-def modelPreSetup(model):
+	@heli.button('Reset Wealth')
+	def reset(model):
+		for a in model.agents['agent']: a.stocks['payoff'] = 0
 
-	#Clear breeds from the previous run
-	for b in model.agents['agent'].breeds:
-		model.data.removeReporter(b+'-proportion')
-	model.agents['agent'].breeds.clear()
+	heli.goods.add('payoff','#009900')
 
-	for k in model.param('strategies'):
-		model.agents.addBreed(k, strategies[k][1])
+	#Build the strategies toggle
+	heli.params.add('strategies', 'Strategies', 'checkgrid',
+		opts = {k: (k, v[2] if len(v)>2 else None) for k,v in strategies.items()},
+		dflt = [k for k,v in strategies.items() if v[0]],
+		runtime=False, columns=2
+	)
 
-	model.param('num_agent', len(model.agents['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
+	@heli.hook
+	def match(agents, primitive, model, stage):
+		h1, h2 = ([], [])
+		for rnd in range(int(model.param('rounds'))):
+			#Play
+			response1 = globals()[agents[0].breed](rnd, h2, h1)
+			response2 = globals()[agents[1].breed](rnd, h1, h2)
+			h1.append(response1)
+			h2.append(response2)
 
-	for b, d in model.agents['agent'].breeds.items():
-		model.data.addReporter(b+'-proportion', proportionReporter(b))
-		plot.addSeries(b+'-proportion', b, d.color)
+			#Payoffs
+			agents[0].stocks['payoff'] += model.param(('c' if response1 else 'd') + ('c' if response2 else 'd'))
+			agents[1].stocks['payoff'] += model.param(('c' if response2 else 'd') + ('c' if response1 else 'd'))
 
-#===============
-# CONFIGURATION
-#===============
+	#Visualization
+	from helipad.visualize import TimeSeries
+	viz = heli.useVisual(TimeSeries)
+	plot = viz.addPlot('payoffs', 'Payoffs')
 
-#Tally up the total payoff once each period, so we don't have to do it on every agent
-@heli.hook
-def dataCollect(data, t):
-	data.model.totalP = data.agentReporter('stocks', good='payoff', stat='sum')(data.model)
+	#Add breeds last-minute so we can toggle them in the control panel
+	@heli.hook
+	def modelPreSetup(model):
 
-def proportionReporter(breed):
-	def func(model):
-		return model.data.agentReporter('stocks', breed=breed, good='payoff', stat='sum')(model)/model.totalP
-	return func
+		#Clear breeds from the previous run
+		for b in model.agents['agent'].breeds:
+			model.data.removeReporter(b+'-proportion')
+		model.agents['agent'].breeds.clear()
+
+		for k in model.param('strategies'):
+			model.agents.addBreed(k, strategies[k][1])
+
+		model.param('num_agent', len(model.agents['agent'].breeds)*model.param('n')) #Three of each strategy, for speed
+
+		for b, d in model.agents['agent'].breeds.items():
+			model.data.addReporter(b+'-proportion', proportionReporter(b))
+			plot.addSeries(b+'-proportion', b, d.color)
+
+	#Tally up the total payoff once each period, so we don't have to do it on every agent
+	@heli.hook
+	def dataCollect(data, t):
+		data.model.totalP = data.agentReporter('stocks', good='payoff', stat='sum')(data.model)
+
+	def proportionReporter(breed):
+		def func(model):
+			return model.data.agentReporter('stocks', breed=breed, good='payoff', stat='sum')(model)/model.totalP
+		return func
+	
+	return heli
 
 #===============
 # LAUNCH THE GUI
 #===============
 
-heli.launchCpanel()
+#Only launch the cpanel if we haven't embedded
+if __name__ == '__main__':
+	heli = setup()
+	heli.launchCpanel()

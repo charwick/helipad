@@ -4,7 +4,6 @@
 
 from numpy import mean, array #, std
 from Helicopter import * #Building on the basic Helicopter model
-heli = setup()
 
 #===============
 # BANK CLASS
@@ -186,208 +185,215 @@ class Loan():
 # CONFIGURATION
 #===============
 
-heli.agents.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
-heli.name = 'Helicopter/OMO'
+def setup2():
+	heli = setup()
 
-#Disable the irrelevant checkboxes if the banking model isn't selected
-#Callback for the dist parameter
-@heli.hook('terminate') #Reset the disabled checkmarks when terminating a model
-def bankChecks(model, val=None):
-	nobank = model.param('dist')!='omo'
-	model.param('num_bank', 0 if nobank else 1)
-	for i in ['debt', 'rr', 'i']:
-		model.params['plots'].element.disabled(i, nobank)
-	for e in model.params['liqPref'].elements.values():
-		e.config(state='disabled' if nobank else 'normal')
+	heli.agents.addPrimitive('bank', Bank, dflt=1, priority=1, hidden=True)
+	heli.name = 'Helicopter/OMO'
 
-heli.hooks.add('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
+	#Disable the irrelevant checkboxes if the banking model isn't selected
+	#Callback for the dist parameter
+	@heli.hook('terminate') #Reset the disabled checkmarks when terminating a model
+	def bankChecks(model, val=None):
+		nobank = model.param('dist')!='omo'
+		model.param('num_bank', 0 if nobank else 1)
+		for i in ['debt', 'rr', 'i']:
+			model.params['plots'].element.disabled(i, nobank)
+		for e in model.params['liqPref'].elements.values():
+			e.config(state='disabled' if nobank else 'normal')
 
-# UPDATE CALLBACKS
+	heli.hooks.add('CpanelPostInit', lambda cpanel: bankChecks(cpanel.model))	#Set the disabled checkmarks on initialization
 
-def lpUpdater(model, var, breed, val):
-	if model.hasModel:
-		for a in model.agents['agent']:
-			if a.breed == breed: a.liqPref = val
+	# UPDATE CALLBACKS
 
-heli.params['dist'].opts = {
-	'prop': 'Helicopter/Proportional',
-	'lump': 'Helicopter/Lump Sum',
-	'omo': 'Open Market Operation'
-}
-#Since the param callback takes different parameters than the GUI callback
-heli.params['dist'].callback = lambda model, var, val: bankChecks(model, val)
-heli.param('dist','omo')
+	def lpUpdater(model, var, breed, val):
+		if model.hasModel:
+			for a in model.agents['agent']:
+				if a.breed == breed: a.liqPref = val
 
-heli.params.add('liqPref', 'Demand for Liquidity', 'slider', per='breed', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
+	heli.params['dist'].opts = {
+		'prop': 'Helicopter/Proportional',
+		'lump': 'Helicopter/Lump Sum',
+		'omo': 'Open Market Operation'
+	}
+	#Since the param callback takes different parameters than the GUI callback
+	heli.params['dist'].callback = lambda model, var, val: bankChecks(model, val)
+	heli.param('dist','omo')
 
-heli.visual.addPlot('debt', 'Debt', selected=False)
-heli.visual.addPlot('rr', 'Reserve Ratio', selected=False)
-heli.visual.addPlot('i', 'Interest Rate', selected=False)
+	heli.params.add('liqPref', 'Demand for Liquidity', 'slider', per='breed', dflt={'hobbit': 0.1, 'dwarf': 0.3}, opts={'low':0, 'high': 1, 'step': 0.01}, prim='agent', callback=lpUpdater, desc='The proportion of the agent\'s balances he desires to keep in cash')
 
-#================
-# AGENT BEHAVIOR
-#================
+	heli.visual.addPlot('debt', 'Debt', selected=False)
+	heli.visual.addPlot('rr', 'Reserve Ratio', selected=False)
+	heli.visual.addPlot('i', 'Interest Rate', selected=False)
 
-#
-# General
-#
+	#================
+	# AGENT BEHAVIOR
+	#================
 
-#Don't bother keeping track of the bank-specific variables unless the banking system is there
-#Do this here rather than at the beginning so we can decide at runtime
-
-def cashdemand(model):
-	return model.data.agentReporter('stocks', good=model.goods.money, stat='sum', prim='agent')(model)/model.data.agentReporter('balance', stat='sum', prim='agent')(model)
-
-@heli.hook
-def modelPreSetup(model):
-	if model.param('num_bank') > 0:
-		model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
-		model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
-		model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
-		model.data.addReporter('targetRR', model.data.agentReporter('targetRR', 'bank'))
-		model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
-		model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
-		model.data.addReporter('cashdemand', cashdemand)
-		model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
-		model.data.addReporter('M2', lambda model: model.cb.M2)
-
-		model.visual['money'].addSeries('defaults', 'Defaults', '#CC0000')
-		model.visual['money'].addSeries('M2', 'Money Supply', '#000000')
-		model.visual['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
-		model.visual['rr'].addSeries('targetRR', 'Target', '#777777')
-		model.visual['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
-		model.visual['i'].addSeries('i', 'Nominal interest', '#000000')
-		model.visual['i'].addSeries('r', 'Real interest', '#0000CC')
-		model.visual['i'].addSeries('inflation', 'Inflation', '#CC0000')
-		model.visual['i'].addSeries('cashdemand', '% cash held', '#00CC00')
-
-@heli.hook
-def modelPostSetup(model):
-	if hasattr(model.agents['store'][0], 'bank'):
-		model.agents['store'][0].pavg = 0
-		model.agents['store'][0].projects = []
-		model.agents['store'][0].defaults = 0
-
-@heli.hook
-def storeStep(agent, model, stage):
-	#Intertemporal transactions
-	if hasattr(agent, 'bank') and model.t > 0:
-		#Stipulate some demand for credit, we can worry about microfoundations later
-		agent.bank.amortize(agent, agent.bank.credit[agent.id].owe/1.5) #Pay back 2/3 of the outstanding balance each period
-		agent.bank.borrow(agent, model.cb.ngdp * (1-agent.bank.i)) #Borrow some amount rising in sales volume and declining in the interest rate
-
-#
-# Agents
-#
-
-#Choose a bank if necessary
-@heli.hook
-def baseAgentInit(agent, model):
-	if model.param('num_bank') > 0 and agent.primitive != 'bank':
-		agent.bank = model.agents['bank'][0]
-		agent.bank.setupAccount(agent)
-
-@heli.hook
-def agentInit(agent, model):
-	if model.param('num_bank') > 0:
-		agent.liqPref = model.param(('liqPref', agent.breed))
-
-@heli.hook
-def agentStep(agent, model, stage):
-	#Deposit cash in the bank at the end of each period
-	if hasattr(agent, 'bank'):
-		tCash = agent.liqPref * (1/(1+agent.bank.i)) * agent.balance #Slightly interest-elastic
-		agent.bank.deposit(agent, agent.stocks[agent.model.goods.money]-tCash)
-
-#Use the bank if the bank exists
-@heli.hook
-def buy(agent, partner, good, q, p):
-	if hasattr(agent, 'bank'):
-		bal = agent.bank.account(agent)
-		if p*q > bal:
-			amount = bal
-			leftover = (p*q - bal)/q
-		else:
-			amount = p*q
-			leftover = 0
-		agent.bank.transfer(agent, partner, amount)
-		return (q, leftover)
-
-#Use the bank if the bank exists
-@heli.hook
-def pay(agent, recipient, amount, model):
-	if hasattr(agent, 'bank') and recipient.primitive != 'bank' and agent.primitive != 'bank':
-		bal = agent.bank.account(agent)
-		if amount > bal: #If there are not enough funds
-			trans = bal
-			amount -= bal
-		else:
-			trans = amount
-			amount = 0
-		agent.bank.transfer(agent, recipient, trans)
-		return amount #Should be zero. Anything leftover gets paid in cash
-
-@heli.hook
-def checkBalance(agent, balance, model):
-	if hasattr(agent, 'bank') and agent.primitive != 'bank':
-		balance += agent.bank.account(agent)
-		return balance
-
-#
-# Central Bank
-#
-
-def cbstep(self):
-	#Record macroeconomic vars at the end of the last stage
-	#Getting demand has it lagged one period…
-	self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.goods.nonmonetary)
-	if not self.ngdpAvg: self.ngdpAvg = self.ngdp
-	self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
-
-	#Set macroeconomic targets
-	expand = 0
-	if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
-	if self.model.param('num_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
-	if expand != 0: self.expand(expand)
-CentralBank.step = cbstep
-
-def expand(self, amount):
-
-	#Deposit with each bank in proportion to their liabilities
-	if 'bank' in self.model.agents and self.model.param('num_bank') > 0:
-		self.stocks[self.model.goods.money] += amount
-		self.model.agents['bank'][0].deposit(self, amount) #Budget constraint taken care of in .pay()
-
-	elif self.model.param('dist') == 'lump':
-		amt = amount/self.model.param('num_agent')
-		for a in self.model.agents['agent']:
-			a.stocks[self.model.goods.money] += amt
-	else:
-		M0 = self.M0
-		for a in self.model.agents.all:
-			a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
-CentralBank.expand = expand
-
-def M2(self):
-	if 'bank' not in self.model.agents or self.model.param('num_bank') == 0: return self.M0
-	return sum(a.balance for a in self.model.agents.all)
-CentralBank.M2 = property(M2)
-
-#Price level
-#Average good prices at each store, then average all of those together weighted by the store's sale volume
-#Figure out whether to break this out or not
-def cbP(self):
-	# denom = 0
-	# numer = 0
-	if not 'store' in self.model.agents: return None
-	return mean(array(list(self.model.agents['store'][0].price.values())))
-	# for s in self.model.agents['store']:
-	# 	volume = sum(list(s.lastDemand.values()))
-	# 	numer += mean(array(list(s.price.values()))) * volume
-	# 	denom += volume
 	#
-	# if denom==0: return 1
-	# else: return numer/denom
-CentralBank.P = property(cbP)
+	# General
+	#
 
-heli.launchCpanel()
+	#Don't bother keeping track of the bank-specific variables unless the banking system is there
+	#Do this here rather than at the beginning so we can decide at runtime
+
+	def cashdemand(model):
+		return model.data.agentReporter('stocks', good=model.goods.money, stat='sum', prim='agent')(model)/model.data.agentReporter('balance', stat='sum', prim='agent')(model)
+
+	@heli.hook
+	def modelPreSetup(model):
+		if model.param('num_bank') > 0:
+			model.data.addReporter('defaults', model.data.agentReporter('defaultTotal', 'bank'))
+			model.data.addReporter('debt', model.data.agentReporter('loans', 'bank'))
+			model.data.addReporter('reserveRatio', model.data.agentReporter('reserveRatio', 'bank'))
+			model.data.addReporter('targetRR', model.data.agentReporter('targetRR', 'bank'))
+			model.data.addReporter('i', model.data.agentReporter('i', 'bank'))
+			model.data.addReporter('r', model.data.agentReporter('realInterest', 'bank'))
+			model.data.addReporter('cashdemand', cashdemand)
+			model.data.addReporter('inflation', model.data.agentReporter('inflation', 'bank'))
+			model.data.addReporter('M2', lambda model: model.cb.M2)
+
+			model.visual['money'].addSeries('defaults', 'Defaults', '#CC0000')
+			model.visual['money'].addSeries('M2', 'Money Supply', '#000000')
+			model.visual['debt'].addSeries('debt', 'Outstanding Debt', '#000000')
+			model.visual['rr'].addSeries('targetRR', 'Target', '#777777')
+			model.visual['rr'].addSeries('reserveRatio', 'Reserve Ratio', '#000000')
+			model.visual['i'].addSeries('i', 'Nominal interest', '#000000')
+			model.visual['i'].addSeries('r', 'Real interest', '#0000CC')
+			model.visual['i'].addSeries('inflation', 'Inflation', '#CC0000')
+			model.visual['i'].addSeries('cashdemand', '% cash held', '#00CC00')
+
+	@heli.hook
+	def modelPostSetup(model):
+		if hasattr(model.agents['store'][0], 'bank'):
+			model.agents['store'][0].pavg = 0
+			model.agents['store'][0].projects = []
+			model.agents['store'][0].defaults = 0
+
+	@heli.hook
+	def storeStep(agent, model, stage):
+		#Intertemporal transactions
+		if hasattr(agent, 'bank') and model.t > 0:
+			#Stipulate some demand for credit, we can worry about microfoundations later
+			agent.bank.amortize(agent, agent.bank.credit[agent.id].owe/1.5) #Pay back 2/3 of the outstanding balance each period
+			agent.bank.borrow(agent, model.cb.ngdp * (1-agent.bank.i)) #Borrow some amount rising in sales volume and declining in the interest rate
+
+	#
+	# Agents
+	#
+
+	#Choose a bank if necessary
+	@heli.hook
+	def baseAgentInit(agent, model):
+		if model.param('num_bank') > 0 and agent.primitive != 'bank':
+			agent.bank = model.agents['bank'][0]
+			agent.bank.setupAccount(agent)
+
+	@heli.hook
+	def agentInit(agent, model):
+		if model.param('num_bank') > 0:
+			agent.liqPref = model.param(('liqPref', agent.breed))
+
+	@heli.hook
+	def agentStep(agent, model, stage):
+		#Deposit cash in the bank at the end of each period
+		if hasattr(agent, 'bank'):
+			tCash = agent.liqPref * (1/(1+agent.bank.i)) * agent.balance #Slightly interest-elastic
+			agent.bank.deposit(agent, agent.stocks[agent.model.goods.money]-tCash)
+
+	#Use the bank if the bank exists
+	@heli.hook
+	def buy(agent, partner, good, q, p):
+		if hasattr(agent, 'bank'):
+			bal = agent.bank.account(agent)
+			if p*q > bal:
+				amount = bal
+				leftover = (p*q - bal)/q
+			else:
+				amount = p*q
+				leftover = 0
+			agent.bank.transfer(agent, partner, amount)
+			return (q, leftover)
+
+	#Use the bank if the bank exists
+	@heli.hook
+	def pay(agent, recipient, amount, model):
+		if hasattr(agent, 'bank') and recipient.primitive != 'bank' and agent.primitive != 'bank':
+			bal = agent.bank.account(agent)
+			if amount > bal: #If there are not enough funds
+				trans = bal
+				amount -= bal
+			else:
+				trans = amount
+				amount = 0
+			agent.bank.transfer(agent, recipient, trans)
+			return amount #Should be zero. Anything leftover gets paid in cash
+
+	@heli.hook
+	def checkBalance(agent, balance, model):
+		if hasattr(agent, 'bank') and agent.primitive != 'bank':
+			balance += agent.bank.account(agent)
+			return balance
+
+	#
+	# Central Bank
+	#
+
+	def cbstep(self):
+		#Record macroeconomic vars at the end of the last stage
+		#Getting demand has it lagged one period…
+		self.ngdp = sum(self.model.data.getLast('demand-'+good) * self.model.agents['store'][0].price[good] for good in self.model.goods.nonmonetary)
+		if not self.ngdpAvg: self.ngdpAvg = self.ngdp
+		self.ngdpAvg = (2 * self.ngdpAvg + self.ngdp) / 3
+
+		#Set macroeconomic targets
+		expand = 0
+		if self.ngdpTarget: expand = self.ngdpTarget - self.ngdpAvg
+		if self.model.param('num_bank') > 0: expand *= self.model.agents['bank'][0].reserveRatio
+		if expand != 0: self.expand(expand)
+	CentralBank.step = cbstep
+
+	def expand(self, amount):
+
+		#Deposit with each bank in proportion to their liabilities
+		if 'bank' in self.model.agents and self.model.param('num_bank') > 0:
+			self.stocks[self.model.goods.money] += amount
+			self.model.agents['bank'][0].deposit(self, amount) #Budget constraint taken care of in .pay()
+
+		elif self.model.param('dist') == 'lump':
+			amt = amount/self.model.param('num_agent')
+			for a in self.model.agents['agent']:
+				a.stocks[self.model.goods.money] += amt
+		else:
+			M0 = self.M0
+			for a in self.model.agents.all:
+				a.stocks[self.model.goods.money] += a.stocks[self.model.goods.money]/M0 * amount
+	CentralBank.expand = expand
+
+	def M2(self):
+		if 'bank' not in self.model.agents or self.model.param('num_bank') == 0: return self.M0
+		return sum(a.balance for a in self.model.agents.all)
+	CentralBank.M2 = property(M2)
+
+	#Price level
+	#Average good prices at each store, then average all of those together weighted by the store's sale volume
+	#Figure out whether to break this out or not
+	def cbP(self):
+		# denom = 0
+		# numer = 0
+		if not 'store' in self.model.agents: return None
+		return mean(array(list(self.model.agents['store'][0].price.values())))
+		# for s in self.model.agents['store']:
+		# 	volume = sum(list(s.lastDemand.values()))
+		# 	numer += mean(array(list(s.price.values()))) * volume
+		# 	denom += volume
+		#
+		# if denom==0: return 1
+		# else: return numer/denom
+	CentralBank.P = property(cbP)
+
+	return heli
+
+if __name__ == '__main__':
+	heli = setup2()
+	heli.launchCpanel()

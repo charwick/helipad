@@ -9,71 +9,77 @@
 from helipad import Helipad
 # from utility import CobbDouglas
 
-heli = Helipad()
-heli.name = 'Model Name'
-heli.agents.order = 'random' #Can be changed to 'linear' or 'match'
-heli.stages = 1 #Change to create a multi-stage model
+def setup():
+	heli = Helipad()
+	heli.name = 'Model Name'
+	heli.agents.order = 'random' #Can be changed to 'linear' or 'match'
+	heli.stages = 1 #Change to create a multi-stage model
 
-# heli.params.add('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
-# heli.goods.add('good1','hex color', lambda breed: endowment)
-# heli.agents.addBreed('name1', 'hex color')
-# heli.agents.addBreed('name2', 'hex color')
+	# heli.params.add('name', 'title', 'type (slider, menu, or check)', dflt=default, opts={depends on type})
+	# heli.goods.add('good1','hex color', lambda breed: endowment)
+	# heli.agents.addBreed('name1', 'hex color')
+	# heli.agents.addBreed('name2', 'hex color')
 
-#===============
-# BEHAVIOR
-# A list of hooks and their function signatures can be found at http://helipad-docs.nfshost.com/hooks/
-#===============
+	#===============
+	# BEHAVIOR
+	# A list of hooks and their function signatures can be found at http://helipad-docs.nfshost.com/hooks/
+	#===============
 
-#Any variables or properties the agent should keep track of should have default values set here.
-@heli.hook
-def agentInit(agent, model):
-	#agent.myAgentProperty = 0
-	#agent.utility = CobbDouglas(['good1'])
-	pass
+	#Any variables or properties the agent should keep track of should have default values set here.
+	@heli.hook
+	def agentInit(agent, model):
+		#agent.myAgentProperty = 0
+		#agent.utility = CobbDouglas(['good1'])
+		pass
 
-#Any global variables that should be kept track of should have default values set here.
-@heli.hook
-def modelPostSetup(model):
-	#model.myModelProperty = 0
-	pass
+	#Any global variables that should be kept track of should have default values set here.
+	@heli.hook
+	def modelPostSetup(model):
+		#model.myModelProperty = 0
+		pass
 
-#Agent logic should be written here.
-@heli.hook
-def agentStep(agent, model, stage):
-	pass	
+	#Agent logic should be written here.
+	@heli.hook
+	def agentStep(agent, model, stage):
+		pass	
 
-#Any global code to be run each period should be hooked to modelStep, modelPreStep, or modelPostStep.
-#modelStep will run as many times per period as there are stages. modelPreStep and modelPostStep
-#will run at the beginning and end of each period, respectively, and do not take a stage argument.
-@heli.hook
-def modelStep(model, stage):
-	pass
+	#Any global code to be run each period should be hooked to modelStep, modelPreStep, or modelPostStep.
+	#modelStep will run as many times per period as there are stages. modelPreStep and modelPostStep
+	#will run at the beginning and end of each period, respectively, and do not take a stage argument.
+	@heli.hook
+	def modelStep(model, stage):
+		pass
 
-#===============
-# DATA AND VISUALIZATION
-# Register reporters, plots, and series here
-#===============
+	#===============
+	# DATA AND VISUALIZATION
+	# Register reporters, plots, and series here
+	#===============
 
-from helipad.visualize import TimeSeries
-viz = heli.useVisual(TimeSeries)
+	from helipad.visualize import TimeSeries
+	viz = heli.useVisual(TimeSeries)
 
-#Reporters collect data from the model each period, generally from parameters set in agentInit and modelPostSetup.
+	#Reporters collect data from the model each period, generally from parameters set in agentInit and modelPostSetup.
 
-# heli.data.addReporter('myReporter1', heli.data.agentReporter('myAgentProperty', 'agent', stat='mean'))
-# heli.data.addReporter('myReporter2', heli.data.modelReporter('myModelProperty'))
+	# heli.data.addReporter('myReporter1', heli.data.agentReporter('myAgentProperty', 'agent', stat='mean'))
+	# heli.data.addReporter('myReporter2', heli.data.modelReporter('myModelProperty'))
 
-#Plots are areas on the graph where series can be drawn to keep track of reporter data in real time.
+	#Plots are areas on the graph where series can be drawn to keep track of reporter data in real time.
 
-myplot = viz.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
+	myplot = viz.addPlot('myplot', 'Custom Properties', logscale=False, selected=True)
 
-#Series draw reporter data on a plot. Here we draw two series on the same plot.
-#The Plot object can also be accessed later with heli['myplot'], so the following two methods are identical.
+	#Series draw reporter data on a plot. Here we draw two series on the same plot.
+	#The Plot object can also be accessed later with heli['myplot'], so the following two methods are identical.
 
-# myplot.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
-# heli['myplot'].addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
+	# myplot.addSeries('myplot', 'myReporter1', 'My Agent Property', 'hex color')
+	# heli['myplot'].addSeries('myplot', 'myReporter2', 'My Model Property', 'hex color')
+
+	return heli
 
 #===============
 # LAUNCH THE GUI
 #===============
 
-heli.launchCpanel()
+#Only launch the cpanel if we haven't embedded
+if __name__ == '__main__':
+	heli = setup()
+	heli.launchCpanel()
