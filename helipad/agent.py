@@ -17,6 +17,7 @@ class baseAgent:
 	angleUnit: str = 'deg'
 	fixed: bool = False
 	overdraft: str = 'continue-silent'
+	primitive: str = ''
 
 	#==================
 	# BASIC METHODS
@@ -24,10 +25,10 @@ class baseAgent:
 
 	def __init__(self, breed: str, aId: int, model):
 		self.breed = breed
-		self.id = int(aId)
+		self.id: int = int(aId)
 		self.model = model
-		self.age = 0
-		self.dead = False
+		self.age: int = 0
+		self.dead: bool = False
 		self.stocks = Stocks(breed, model.goods)
 		self.edges = Edges(self)
 		self.utils = 0
@@ -311,7 +312,7 @@ class baseAgent:
 		"""The patch under the agent's current position. https://helipad.dev/functions/baseagent/#patch"""
 		if self.position is not None: return self.model.patches.at(*self.position)
 
-	def transfer(self, dest):
+	def transfer(self, dest) -> None:
 		"""In a multi-level model, move the agent to a different instance of `MultiLevel` or the top-level model."""
 		origin = self.model
 		dest.agents[self.primitive].append(self)
@@ -350,8 +351,8 @@ class Patch(baseAgent):
 #or a boolean (False for undirected, True for agent1 to agent2)
 class Edge:
 	"""A connection between two agents as part of a network. https://helipad.dev/functions/edge/"""
-	def __init__(self, agent1: baseAgent, agent2: baseAgent, kind: str='edge', direction=None, weight=1):
-		self.active = True
+	def __init__(self, agent1: baseAgent, agent2: baseAgent, kind: str='edge', direction=None, weight=1) -> None:
+		self.active: bool = True
 		self.kind = kind
 		self.vertices = (agent1, agent2)
 		self.weight = weight
@@ -461,7 +462,7 @@ class Agents(MultiDict):
 		super().__init__()
 
 	#Allow retrieval by either primitive or agent ID
-	def __getitem__(self, val):
+	def __getitem__(self, val:str|int) -> baseAgent|list[baseAgent]|None:
 		if isinstance(val, int):
 			for p in super().values():
 				for a in p:
@@ -540,7 +541,7 @@ class Agents(MultiDict):
 		if not self.model.hasModel and not force: return val
 
 		if 'num_' in prim: prim = prim.split('_')[1] #Because the parameter callback passes num_{prim}
-		array = self[prim]
+		array: list = self[prim]
 		diff = val - len(array)
 
 		#Add agents

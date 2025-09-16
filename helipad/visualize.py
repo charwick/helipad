@@ -22,37 +22,37 @@ class BaseVisualization(ABC):
 	isNull: bool = True
 
 	@abstractmethod
-	def launch(self, title: str):
+	def launch(self, title: str) -> None:
 		"""Launch the visualization window (if in Tkinter) or cell (if in Jupyter). https://helipad.dev/functions/basevisualization/launch/"""
 
 	@abstractmethod
-	def refresh(self, data: dict):
+	def refresh(self, data: dict) -> None:
 		"""Update the visualization with new data and refresh the display. `data` is only data since the last visualization refresh. https://helipad.dev/functions/basevisualization/refresh/"""
 
 	@abstractmethod
-	def event(self, t: int, color, **kwargs):
+	def event(self, t: int, color, **kwargs) -> None:
 		"""Called when an event is triggered, in order to be reflected in the visualization. https://helipad.dev/functions/basevisualization/event/"""
 
-	def onStart(self):
+	def onStart(self) -> None:
 		"""Called when the model is started. Called automatically from `model.start()`. https://helipad.dev/functions/basevisualization/onstart/"""
 
-	def onStop(self):
+	def onStop(self) -> None:
 		"""Called when the model is paused or ended. Called automatically from `model.stop()` and `model.terminate()`. https://helipad.dev/functions/basevisualization/onstop/"""
 
-	def terminate(self, model):
+	def terminate(self, model) -> None:
 		"""Cleanup on model termination. Called automatically from `model.terminate()`. https://helipad.dev/functions/basevisualization/terminate/"""
 
 class MPLVisualization(BaseVisualization, dict):
 	"""Base class for visualizations using Matplotlib. https://helipad.dev/functions/mplvisualization/"""
 
-	def __init__(self, model):
+	def __init__(self, model) -> None:
 		self.model = model #Unhappy with this
 		self.selector = model.params.add('plots', ï('Plots'), 'checkgrid', [], opts={}, runtime=False, config=True)
-		self.dim = None
-		self.pos = (400, 0)
+		self.dim: tuple[int, int]|None = None
+		self.pos: tuple[int, int] = (400, 0)
 		self.fig = None
-		self.lastUpdate = None
-		self.keyListeners = {}
+		self.lastUpdate: int|None = None
+		self.keyListeners: dict = {}
 
 		def pause(model, event):
 			if model.hasModel and event.canvas is self.fig.canvas:
@@ -69,13 +69,13 @@ class MPLVisualization(BaseVisualization, dict):
 
 	# Subclasses should call super().launch **after** the figure is created.
 	@abstractmethod
-	def launch(self, title: str):
+	def launch(self, title: str) -> None:
 		if not isNotebook():
 			self.fig.canvas.manager.set_window_title(title)
 			if self.model.cpanel: self.model.cpanel.setAppIcon()
 
 		#MPL can't take a method bound to an unhashable class (i.e. `dict`)
-		def sendEvent(event):
+		def sendEvent(event) -> None:
 			axes = event.artist.axes if hasattr(event, 'artist') else event.inaxes
 			sent = False
 			if axes is not None:
@@ -114,7 +114,7 @@ class MPLVisualization(BaseVisualization, dict):
 			fm.window.wm_geometry(f'+{self.pos[0]}+{self.pos[1]}')
 
 	#Save window dimensions and position
-	def terminate(self, model):
+	def terminate(self, model) -> None:
 		if self.isNull: return
 		fm = self.fig.canvas.manager
 		if hasattr(fm, 'window'):
@@ -149,7 +149,7 @@ class MPLVisualization(BaseVisualization, dict):
 
 class TimeSeries(MPLVisualization):
 	"""A Matplotlib-based visualizer for displaying time series data on plots so the whole history of any given variable over the model's runtime can be seen at once. https://helipad.dev/functions/timeseries/"""
-	def __init__(self, model):
+	def __init__(self, model) -> None:
 		super().__init__(model)
 		self.verticals = []
 
@@ -161,7 +161,7 @@ class TimeSeries(MPLVisualization):
 
 		#Toggle legend boxes all at once
 		#Use event.canvas.figure and not self.fig so it pertains to the current window
-		def toggle(model, event):
+		def toggle(model, event) -> None:
 			for axes in event.canvas.figure.axes:
 				leg = axes.get_legend()
 				leg.set_visible(not leg.get_visible())
@@ -170,7 +170,7 @@ class TimeSeries(MPLVisualization):
 
 		#Delete the corresponding series when a reporter is removed
 		@model.hook('removeReporter')
-		def deleteSeries(data, key):
+		def deleteSeries(data, key) -> None:
 			for p in self.values():
 				for s in p.series:
 					if s.reporter==key:
@@ -184,10 +184,10 @@ class TimeSeries(MPLVisualization):
 
 		#Move the plots parameter to the end when the cpanel launches
 		@model.hook('CpanelPreLaunch')
-		def movePlotParam(model):
+		def movePlotParam(model) -> None:
 			model.params['plots'] = model.params.pop('plots')
 
-	def launch(self, title: str):
+	def launch(self, title: str) -> None:
 		if not self.activePlots: return #Windowless mode
 
 		self.resolution = 1
@@ -211,13 +211,13 @@ class TimeSeries(MPLVisualization):
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
 
-	def terminate(self, model):
+	def terminate(self, model) -> None:
 		super().terminate(model)
 		if self.isNull:
 			model.params['csv'].enable()
 			if not isinstance(model.param('stopafter'), str): model.params['stopafter'].enable()
 
-	def refresh(self, data: dict):
+	def refresh(self, data: dict) -> None:
 		newlen = len(next(data[x] for x in data))
 		if self.resolution > 1: data = {k: keepEvery(v, self.resolution) for k,v in data.items()}
 		time = newlen + len(next(iter(self.activePlots.values())).series[0].fdata)*self.resolution
@@ -255,7 +255,7 @@ class TimeSeries(MPLVisualization):
 		plot.selected = selected #Do this after CheckgridParam.addItem
 		return plot
 
-	def removePlot(self, name, reassign=None):
+	def removePlot(self, name: str|list, reassign: str|None=None) -> bool|None:
 		"""Remove a plot or plots and optionally reassign their series to a different plot. https://helipad.dev/functions/timeseries/removeplot/"""
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
@@ -273,7 +273,7 @@ class TimeSeries(MPLVisualization):
 		if name in self.selector.default: self.selector.default.remove(name)
 		return True
 
-	def event(self, t: int, color='#CC0000', linestyle: str='--', linewidth=1, **kwargs):
+	def event(self, t: int, color='#CC0000', linestyle: str='--', linewidth=1, **kwargs) -> None:
 		if self.fig is None: return
 		self.verticals.append([p.axes.axvline(x=t, color=color, linestyle=linestyle, linewidth=linewidth) for p in self.activePlots.values()])
 
@@ -282,7 +282,7 @@ class TimeSeries(MPLVisualization):
 
 class Charts(MPLVisualization):
 	"""A Matplotlib-based visualizer for a variety of visualizations that display data that reflects a single point in time. https://helipad.dev/functions/charts/"""
-	def __init__(self, model):
+	def __init__(self, model) -> None:
 		super().__init__(model)
 		self.events = {}
 		self.plotTypes = {}
@@ -293,7 +293,7 @@ class Charts(MPLVisualization):
 		model.params['refresh'].runtime=False
 		self.model = model # :(
 
-	def launch(self, title: str):
+	def launch(self, title: str) -> None:
 		if not self.activePlots: return #Windowless mode
 		from matplotlib.widgets import Slider
 
@@ -329,7 +329,7 @@ class Charts(MPLVisualization):
 		self.fig.canvas.draw_idle()
 		plt.show(block=False)
 
-	def refresh(self, data: dict):
+	def refresh(self, data: dict) -> None:
 		data = {k:v[-1] for k,v in data.items()}
 		t = self.model.t #cheating?
 		for c in self.activePlots.values(): c.update(data, t)
@@ -343,7 +343,7 @@ class Charts(MPLVisualization):
 		if self.fig.stale: self.fig.canvas.draw_idle()
 		self.fig.canvas.flush_events() #Listen for user input
 
-	def scrub(self, t: int):
+	def scrub(self, t: int) -> None:
 		"""Update the visualizer with the values from model time `t`."""
 		self.scrubval = t
 		for c in self.activePlots.values(): c.draw(t)
@@ -363,12 +363,14 @@ class Charts(MPLVisualization):
 		self[name].selected = selected #Do this after CheckgridParam.addItem
 		return self[name]
 
-	def addPlotType(self, clss):
+	def addPlotType(self, clss) -> None:
 		"""Registers a new plot type for the Charts visualizer. Registered plot types can then be added to the visualization area with `Charts.addPlot()`. https://helipad.dev/functions/charts/addplottype/"""
-		if not issubclass(clss, ChartPlot): raise TypeError(ï('New plot types must subclass ChartPlot.'))
+		try: assert issubclass(clss, ChartPlot)
+		except AssertionError: raise TypeError(ï('New plot types must subclass ChartPlot.'))
+		
 		self.plotTypes[clss.type] = clss
 
-	def removePlot(self, name):
+	def removePlot(self, name: str|list) -> bool|None:
 		"""Remove a plot or plots and optionally reassign their series to a different plot. https://helipad.dev/functions/timeseries/removeplot/"""
 		if self.model.cpanel: raise RuntimeError(ï('Cannot remove plots after control panel is drawn.'))
 		if isinstance(name, list):
@@ -382,17 +384,17 @@ class Charts(MPLVisualization):
 		del self[name]
 		return True
 
-	def event(self, t: int, color='#FDC', **kwargs):
+	def event(self, t: int, color='#FDC', **kwargs) -> None:
 		ref = self.model.params['refresh'].get()
 		self.events[ceil(t/ref)*ref] = color
 
-	def onStart(self):
+	def onStart(self) -> None:
 		self.stopReplay() #Redraws here
 		self.replay.active = False
 		for p in self.replay.get_children():
 			if p.__class__.__name__ == 'Polygon': p.set_color('#AAA')
 
-	def onStop(self):
+	def onStop(self) -> None:
 		self.stopReplay(False)
 		self.replay.active = True
 		if plt.get_fignums(): #If window isn't closed
@@ -400,7 +402,7 @@ class Charts(MPLVisualization):
 				if p.__class__.__name__ == 'Polygon': p.set_color('#000')
 			if self.fig.stale: self.fig.canvas.draw_idle()
 
-	def stopReplay(self, redraw: bool=True):
+	def stopReplay(self, redraw: bool=True) -> None:
 		"""Pauses replay of the model data. https://helipad.dev/functions/charts/stopreplay/"""
 		self.replaying = False
 		for p in self.replay.get_children():
@@ -408,7 +410,7 @@ class Charts(MPLVisualization):
 		self.replay.fill([0,0,1], [0,1,0.5], color='#000') #Turn to a play button
 		if self.fig.stale and redraw: self.fig.canvas.draw_idle()
 
-	def startReplay(self):
+	def startReplay(self) -> None:
 		"""Plays the accumulated data in the visualizer back over the model run. https://helipad.dev/functions/charts/startreplay/"""
 		self.replaying = True
 		for p in self.replay.get_children():
@@ -423,7 +425,7 @@ class Charts(MPLVisualization):
 			self.fig.canvas.flush_events() #Listen for user input
 		self.stopReplay()
 
-	def pick(self, axes, event):
+	def pick(self, axes, event) -> None:
 		if axes is self.replay and self.replay.active:
 			self.replaying = not self.replaying
 			if self.replaying: self.startReplay()
@@ -435,7 +437,7 @@ class Charts(MPLVisualization):
 
 class ChartPlot(Item):
 	"""Base class for creating a synchronic plot area in the Charts visualizer. Must interface with Matplotlib and specify `class.type`. Extra kwargs in `Charts.addPlot()` are passed to `ChartPlot.__init__()`. https://helipad.dev/functions/chartplot/"""
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs) -> None:
 		if 'projection' not in kwargs and not hasattr(self, 'projection'): self.projection = None
 		self.axes = None
 		super().__init__(**kwargs)
@@ -443,45 +445,45 @@ class ChartPlot(Item):
 	def __repr__(self): return f'<{self.__class__.__name__}: {self.name}>'
 
 	@property
-	def selected(self):
+	def selected(self) -> bool:
 		"""Whether the plot is currently queued for display. Do not modify this property directly; use ChartPlot.active() to ensure consistency with the GUI state. https://helipad.dev/functions/chartplot/#selected"""
 		return self.viz.model.params['plots'].get(self.name)
 
 	@selected.setter
 	def selected(self, val: bool): self.active(val)
 
-	def active(self, val: bool, updateGUI: bool=True):
+	def active(self, val: bool, updateGUI: bool=True) -> None:
 		"""Turn on or off the selected state of a plot in the control panel. https://helipad.dev/functions/chartplot/active/"""
 		self.viz.model.params['plots'].set(self.name, bool(val))
 		if updateGUI and not isNotebook() and hasattr(self, 'check'):
 			self.check.set(val)
 
 	@abstractmethod
-	def launch(self, axes):
+	def launch(self, axes) -> None:
 		"""Set up the plot's `axes` object when `Charts` launches the visualization window. Subclasses should call `super().launch(axes)` at the beginning of the method. https://helipad.dev/functions/chartplot/launch/"""
 		self.axes = axes
 		axes.set_title(self.label, fontdict={'fontsize':10})
 
 	@abstractmethod
-	def update(self, data: dict, t: int):
+	def update(self, data: dict, t: int) -> None:
 		"""Receive current model data and store it for future scrubbing. Values of `data` should only contain the most recent value of each column. This method is only for updating plot data; drawing code happens in `draw()`. https://helipad.dev/functions/chartplot/update/"""
 
 	@abstractmethod
-	def draw(self, t: int, forceUpdate: bool=False):
+	def draw(self, t: int, forceUpdate: bool=False) -> None:
 		"""Refresh the `axes` object to display new or historical data. This method is called after `ChartPlot.update()` when the visualizer receives new data, and when scrubbing the time bar. https://helipad.dev/functions/chartplot/draw/"""
 		if forceUpdate: self.viz.fig.canvas.draw_idle()
 
-	def remove(self):
+	def remove(self) -> None:
 		"""Removes the plot from the visualizer."""
 		self.viz.removePlot(self.name)
 
-	def MPLEvent(self, event):
+	def MPLEvent(self, event) -> None:
 		"""Catch `pick_event`, `key_press_event`, and `button_press_event` events that occur inside a particular plot. https://helipad.dev/functions/chartplot/mplevent/"""
 
 class TimeSeriesPlot(ChartPlot):
 	"""Visualize time series data on one or more variables. Can be used in either the `TimeSeries` or `Charts` visualizer. https://helipad.dev/functions/timeseriesplot/"""
 	type = 'timeseries'
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs) -> None:
 		self.series = []
 		self.scrubline = None
 		for p in ['logscale', 'stack']:
@@ -512,7 +514,7 @@ class TimeSeriesPlot(ChartPlot):
 		self.series.append(series)
 		return series
 
-	def launch(self, axes):
+	def launch(self, axes) -> None:
 		self.axes = axes
 		axes.margins(x=0)
 		if self.stack:
@@ -546,7 +548,7 @@ class TimeSeriesPlot(ChartPlot):
 		for series in self.series: #Make sure we start out with the user-set visibility
 			if series.label and not series._visible: series.visible = False
 
-	def update(self, data: dict, t: str):
+	def update(self, data: dict, t: str) -> None:
 		firstdata = next(iter(data.values()))
 		if isinstance(firstdata, list): newlen, res = len(firstdata), self.resolution
 		else:
@@ -560,7 +562,7 @@ class TimeSeriesPlot(ChartPlot):
 			elif serie.reporter in data: serie.fdata += data[serie.reporter] #Actual data
 			else: continue									#No data
 
-	def draw(self, t: int, forceUpdate: bool=False):
+	def draw(self, t: int, forceUpdate: bool=False) -> None:
 		if self.scrubline is not None:
 			self.scrubline.remove()
 			self.scrubline = None
@@ -589,7 +591,7 @@ class TimeSeriesPlot(ChartPlot):
 		else:
 			self.scrubline = self.axes.axvline(x=t, color='#330000')
 
-	def MPLEvent(self, event):
+	def MPLEvent(self, event) -> None:
 		#Toggle legend boxes one at a time if we're in the Charts visualizer
 		if hasattr(self.viz, 'scrub') and event.name=='key_press_event' and event.key=='t':
 			leg = self.axes.get_legend()
@@ -612,13 +614,13 @@ class TimeSeriesPlot(ChartPlot):
 class BarChart(ChartPlot):
 	"""A plot type that displays live-updating bar charts. https://helipad.dev/functions/barchart/"""
 	type = 'bar'
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs) -> None:
 		for arg in ['horizontal', 'logscale']:
 			if arg not in kwargs: kwargs[arg] = False
 		super().__init__(**kwargs)
 		self.bars = []
 
-	def addBar(self, reporter, label: str, color='blue', position=None):
+	def addBar(self, reporter, label: str, color='blue', position=None) -> None:
 		"""Register a data reporter as a bar on the current plot. To display error bars, use the `std` or `percentiles` arguments when creating the agent reporter. https://helipad.dev/functions/barchart/addbar/"""
 		if not isinstance(color, Color): color = Color(color)
 		bar = Item(reporter=reporter, label=label, color=color)
@@ -633,7 +635,7 @@ class BarChart(ChartPlot):
 		if position is None or position>=len(self.bars): self.bars.append(bar)
 		else: self.bars.insert(position-1, bar)
 
-	def launch(self, axes):
+	def launch(self, axes) -> None:
 		super().launch(axes)
 		axes.spines['top'].set_visible(False)
 		axes.spines['right'].set_visible(False)
@@ -662,7 +664,7 @@ class BarChart(ChartPlot):
 				axes.set_yscale('log')
 				axes.set_ylim(1/2, 2, auto=True)
 
-	def update(self, data: dict, t: int):
+	def update(self, data: dict, t: int) -> None:
 		getlim, setlim = (self.axes.get_xlim, self.axes.set_xlim) if self.horizontal else (self.axes.get_ylim, self.axes.set_ylim)
 		lims = list(getlim())
 		for b in self.bars:
@@ -681,7 +683,7 @@ class BarChart(ChartPlot):
 		setlim(lims)
 		self.axes.autoscale_view(tight=False)
 
-	def draw(self, t: int=None, forceUpdate: bool=False):
+	def draw(self, t: int=None, forceUpdate: bool=False) -> None:
 		if t is None: t=self.viz.scrubval
 		i = int(t/self.viz.model.param('refresh'))-1
 		for b in self.bars:
@@ -696,7 +698,7 @@ class BarChart(ChartPlot):
 class AgentsPlot(ChartPlot):
 	"""A plot visualizer used for displaying individual agents in various layouts. Agents can be plotted in a network structure, a spatial layout (or both at once), or a scatterplot comparing agents on two data dimensions. https://helipad.dev/functions/agentsplot/"""
 	type = 'agents'
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs) -> None:
 		if 'prim' not in kwargs: kwargs['prim'] = None
 		if 'kind' in kwargs:
 			warnings.warn(ï('The kind= argument is deprecated and has been replaced with network=.')) #Deprecated in Helipad 1.6; remove in Helipad 1.8
@@ -729,16 +731,16 @@ class AgentsPlot(ChartPlot):
 			'regWidth': 1
 		}
 
-	def launch(self, axes):
+	def launch(self, axes) -> None:
 		import networkx as nx, networkx.drawing.layout as lay
 		self.layouts = {l: getattr(lay, l+'_layout') for l in ['spring', 'circular', 'kamada_kawai', 'random', 'shell', 'spectral', 'spiral']}
 
-		def spatial_layout(G):
+		def spatial_layout(G) -> dict:
 			if self.projection == 'polar': #Calculate the right angle from the x coordinate without modifying the original tuples
 				return {i: (2*pi-(2*pi/self.viz.model.patches.dim[0] * data['position'][0])+1/2*pi, data['position'][1]) for i, data in G.nodes.items()}
 			else: return {i: data['position'] for i,data in G.nodes.items()}
 
-		def scatter_layout(G):
+		def scatter_layout(G) -> dict:
 			self.axes.set_xlabel(self.scatter[0])
 			self.axes.set_ylabel(self.scatter[1])
 			self.axes.spines['top'].set_visible(False)
@@ -773,7 +775,7 @@ class AgentsPlot(ChartPlot):
 
 		super().launch(axes)
 
-	def MPLEvent(self, event):
+	def MPLEvent(self, event) -> None:
 		if event.name=='key_press_event' and event.key=='l': self.rotateLayout()
 
 		elif event.name=='pick_event':
@@ -791,7 +793,7 @@ class AgentsPlot(ChartPlot):
 			if x > self.viz.model.patches.boundaries[0][1] or y > self.viz.model.patches.boundaries[1][1]: return
 			self.viz.model.doHooks('patchClick', [self.viz.model.patches.at(x,y), self, self.viz.scrubval])
 
-	def update(self, data: dict, t: int):
+	def update(self, data: dict, t: int) -> None:
 		G = self.viz.model.agents.network(self.network, self.prim, excludePatches=self.prim!='patch')
 
 		#Capture data for label, size, and scatterplot position
@@ -819,7 +821,7 @@ class AgentsPlot(ChartPlot):
 			nmin, nmax = min(lst), max(lst)
 			self.normal = plt.cm.colors.Normalize(nmin if not hasattr(self,'normal') or nmin<self.normal.vmin else self.normal.vmin, nmax if not hasattr(self,'normal') or nmax>self.normal.vmax else self.normal.vmax)
 
-	def draw(self, t: int=None, forceUpdate: bool=False):
+	def draw(self, t: int=None, forceUpdate: bool=False) -> None:
 		if t is None: t=self.viz.scrubval
 		self.axes.clear()
 		if self.layout not in ['spatial', 'scatter'] or self.projection=='polar': self.axes.axis('off')
@@ -886,7 +888,7 @@ class AgentsPlot(ChartPlot):
 
 		super().draw(t, forceUpdate)
 
-	def rotateLayout(self):
+	def rotateLayout(self) -> None:
 		"""Rotate the layout among the several NetworkX layout classes, plus spatial and scatterplot layouts. This method is called when pressing 'l' with the mouse over the plot. https://helipad.dev/functions/agentsplot/rotatelayout/"""
 		self.axes.set_yscale('linear') #Override default logscale keypress
 		if self.params['lockLayout']: return
@@ -909,7 +911,7 @@ class AgentsPlot(ChartPlot):
 		try: self.draw(self.viz.scrubval)
 		except: self.rotateLayout()
 
-	def getPatchParamValue(self, patch, t: int=None): #Can specify t:int|None when we require Python 3.10
+	def getPatchParamValue(self, patch, t: int|None=None):
 		"""Gather historical patch data for use in color generation. https://helipad.dev/functions/agentsplot/getpatchparamvalue/"""
 		if t is not None: return patch.colorData[t]
 		if patch.dead: return float('nan')
@@ -917,7 +919,7 @@ class AgentsPlot(ChartPlot):
 		elif 'good:' in self.params['patchProperty']: return patch.stocks[self.params['patchProperty'].split(':')[1]]
 		else: return getattr(patch, self.params['patchProperty'])
 
-	def config(self, param: str, val=None):
+	def config(self, param: str, val=None) -> None:
 		"""Sets options for the spatial plot. One argument will return the value; two arguments sets the parameter. See https://helipad.dev/functions/agentsplot/config/ for valid option names."""
 		if isinstance(param, dict):
 			for k,v in param.items(): self.config(k,v)
@@ -959,7 +961,7 @@ class Series(Item):
 
 		self.line.figure.canvas.draw_idle()
 
-	def toggle(self):
+	def toggle(self) -> None:
 		"""Toggles the visibility of the series. https://helipad.dev/functions/series/toggle/"""
 		self.visible = not self.visible
 
@@ -967,7 +969,7 @@ class Series(Item):
 # HELPER FUNCTIONS
 #======================
 
-def keepEvery(lst: list, n: int):
+def keepEvery(lst: list, n: int) -> list:
 	"""Reduce the resolution of a list."""
 	i,l = (1, [])
 	for k in lst:

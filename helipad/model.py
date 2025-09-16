@@ -17,7 +17,7 @@ class Helipad:
 	"""The main model object. https://helipad.dev/functions/model/"""
 	runInit = True #for multiple inheritance. Has to be a static property
 
-	def __init__(self, locale: str='en'):
+	def __init__(self, locale: str='en') -> None:
 		#Have to do this first so that i18n is available early.
 		#Put it in an obscure variable and then use helpers.ï() so we don't conflict with the REPL console, which overwrites _.
 		if not hasattr(self, 'breed'):
@@ -25,25 +25,25 @@ class Helipad:
 			builtins.__dict__['helipad_gettext'] = gettext.translation('helipad', localedir=os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))+'/locales', languages=[locale]).gettext
 
 		#Containers
-		self.agents = Agents(self)
-		self.data = Data(self)
-		self.params = Params(self)
-		self.shocks = Shocks(self)
-		self.events = Events()
-		self.hooks = Hooks()
-		self.goods = Goods(self)
+		self.agents: Agents = Agents(self)
+		self.data: Data = Data(self)
+		self.params: Params = Params(self)
+		self.shocks: Shocks = Shocks(self)
+		self.events: Events = Events()
+		self.hooks: Hooks = Hooks()
+		self.goods: Goods = Goods(self)
 
-		self.name = ''
-		self.patches = []
-		self.stages = 1
-		self.hasModel = False		#Have we initialized?
-		self.timer = False
-		self.visual = None
+		self.name: str = ''
+		self.patches: list = []
+		self.stages: int = 1
+		self.hasModel: bool = False		#Have we initialized?
+		self.timer: bool = False
+		self.visual: BaseVisualization|None = None
 		self.cpanel = None
 
-		self.t = None
-		self.running = False
-		self._cut = False
+		self.t: int|None = None
+		self.running: bool = False
+		self._cut: bool = False
 
 		#Default parameters
 		self.agents.addPrimitive('agent', Agent, dflt=50, low=1, high=100)
@@ -63,7 +63,7 @@ class Helipad:
 
 			#Privileged parameters
 			#Toggle the progress bar between determinate and indeterminate when stopafter gets changed
-			def switchPbar(model, name, val):
+			def switchPbar(model: Helipad, name, val):
 				if not model.hasModel or not model.cpanel or not getattr(model.cpanel, 'progress', False): return
 				if not val: model.cpanel.progress.determinate(False)
 				else:
@@ -80,8 +80,8 @@ class Helipad:
 
 			#Is v1 bigger than v2?
 			#There's a `packaging` function to do this, but let's not bloat our dependencies.
-			def vcompare(v1, v2):
-				(v1, v2) = (v1.split('.'), (v2.split('.')))
+			def vcompare(vs1: str, vs2: str) -> bool:
+				(v1, v2) = (vs1.split('.'), (vs2.split('.')))
 
 				#Pad major releases with zeroes to make comparable
 				maxl = max([len(v1), len(v2)])
@@ -95,20 +95,20 @@ class Helipad:
 
 			try:
 				pypi = xmlrpc.client.ServerProxy('https://pypi.org/pypi', context=ssl._create_unverified_context())
-				available = pypi.package_releases('helipad')
+				available: str = pypi.package_releases('helipad')
 				if vcompare(available[0], __version__):
 					print(ï('A Helipad update is available! Use `pip install -U helipad` to upgrade to version {}.').format(available[0]))
 			except: pass #Fail silently if we're not online
 
-	def __repr__(self):
+	def __repr__(self) -> str:
 		if self.name: return f'<Helipad: {self.name}>'
 		else: return '<Helipad object>'
 
-	def addButton(self, text: str, func, desc=None):
+	def addButton(self, text: str, func, desc=None) -> None:
 		"""Add a button to the control panel, in the shocks section, that runs `func` when pressed. This method is aliased by the `@model.button` function decorator, which is preferred. https://helipad.dev/functions/model/addbutton/"""
 		self.shocks.add(text, None, func, 'button', True, desc)
 
-	def param(self, param, val=None):
+	def param(self, param: str|tuple, val=None):
 		"""Get or set a model parameter, depending on whether there is one or two arguments. https://helipad.dev/functions/model/param/"""
 		if isinstance(param, tuple):
 			#Deprecated in Helipad 1.6.1, remove in 1.8
@@ -117,10 +117,10 @@ class Helipad:
 				item = param[2]
 			else: item = param[1] if len(param)>1 else None
 		else: item = None
-		param = self.params[param[0]] if isinstance(param, tuple) else self.params[param]
+		paramobj = self.params[param[0]] if isinstance(param, tuple) else self.params[param]
 
-		if val is not None: param.set(val, item)
-		else: return param.get(item)
+		if val is not None: paramobj.set(val, item)
+		else: return paramobj.get(item)
 
 	def doHooks(self, place: str, args: list):
 		"""Execute registered hooks at various places in the model and return the value of the last function in the list. https://helipad.dev/functions/model/dohooks/"""
@@ -135,19 +135,20 @@ class Helipad:
 		for f in self.hooks[place]: r = f(*args)
 		return r
 
-	def useVisual(self, viz: type[BaseVisualization]) -> BaseVisualization:
+	def useVisual(self, viz: type[BaseVisualization]) -> BaseVisualization|None:
 		"""Register a visualization class for live model visualization. Visualization classes can be imported from `helipad.visualize`, or custom visualization classes can be subclassed from `BaseVisualization`. The visualization can then be launched later using model.launchVisual(). https://helipad.dev/functions/model/usevisual/"""
 		if hasattr(self, 'breed'):
 			warnings.warn(ï('Visualizations can only be registered on the top-level model.'), None, 2)
 			return #Doesn't matter if it's not the top-level model
 
-		if viz is not None and not issubclass(viz, BaseVisualization):
-			raise RuntimeError(ï('Visualization class must inherit from BaseVisualization.'))
+		if viz is not None:
+			try: assert issubclass(viz, BaseVisualization)
+			except AssertionError: raise RuntimeError(ï('Visualization class must inherit from BaseVisualization.'))
 
 		self.visual = viz(self) if viz is not None else None
 		return self.visual
 
-	def setup(self):
+	def setup(self) -> None:
 		"""Gather the control panel settings and initialize the model. This function runs when the "New Model" button is pressed, and should not be called by user code. https://helipad.dev/functions/model/setup/"""
 		if self.hasModel: self.terminate()
 		self.doHooks('modelPreSetup', [self])
@@ -225,12 +226,13 @@ class Helipad:
 		self.hasModel = True
 		self.doHooks('modelPostSetup', [self])
 
-	def cutStep(self):
+	def cutStep(self) -> None:
 		"""When called from inside an `agentStep` or `match` hook, skip stepping the rest of the agents that stage and proceed to the next (or to the next period in single-stage models). https://helipad.dev/functions/model/cutstep/"""
 		self._cut = True
 
-	def step(self, stage: int=1):
+	def step(self, stage: int=1) -> int:
 		"""Step the model, i.e. run through the `step()` functions of all the agents and increment the timer by one. This method is called automatically while the model is running, and should not generally be called in user code. https://helipad.dev/functions/model/step/"""
+		assert self.t is not None
 		self.t += 1
 		self.doHooks('modelPreStep', [self])
 
@@ -368,7 +370,7 @@ class Helipad:
 		if isNotebook(): asyncio.ensure_future(self.run()) #If Jupyter, it already has an event loop
 		else: asyncio.run(self.run())	#If Tkinter, it needs an event loop
 
-	def stop(self, *args):
+	def stop(self, *args) -> None:
 		"""Pause the model, allowing it to be subsequently resumed. https://helipad.dev/functions/model/stop/"""
 		self.running = False
 		if self.visual: self.visual.onStop()
@@ -377,7 +379,7 @@ class Helipad:
 			self.cpanel.runButton.pause()
 		self.doHooks('modelStop', [self])
 
-	def terminate(self, evt=False):
+	def terminate(self, evt=False) -> None:
 		"""Terminate the running model and write the data to disk, if applicable. https://helipad.dev/functions/model/terminate/"""
 		if not self.hasModel: return
 		self.running = False
@@ -404,7 +406,8 @@ class Helipad:
 	#param is a string (for a global param), a name,object,item,primitive tuple (for per-breed or per-good params), or a list of such
 	def paramSweep(self, param, reporters=None):
 		"""Repeatedly run the model while systematically varying one or more parameter values. Possible values to be swept are specified when the parameter is registered. https://helipad.dev/functions/model/paramsweep/"""
-		if not self.param('stopafter'): raise RuntimeError(ï('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set.'))
+		try: assert self.param('stopafter')
+		except AssertionError: raise RuntimeError(ï('Can\'t do a parameter sweep without the value of the \'stopafter\' parameter set.'))
 
 		#Standardize format and get the Param objects
 		if not isinstance(param, list): param = [param]
@@ -443,7 +446,7 @@ class Helipad:
 
 	# Only works on Mac. Also Gnureadline borks everything, so don't install that.
 	# Has to be called *after* Cpanel.__init__() is called, or the cpanel object won't be available.
-	def debugConsole(self):
+	def debugConsole(self) -> None:
 		"""Launch a REPL console to interact with the model after launch. Requires to be run in a buffered console. `self` will refer to the model object."""
 		if sys.platform=='darwin' and isBuffered():
 			try:
@@ -613,9 +616,9 @@ class Events(funcStore):
 		class Event:
 			"""An event triggers on a certain user-defined criterion. When triggered, an event stores the data output at that time and registers on the visualizer. This class should not be instantiated directly; use Events.add() or the @model.event decorator instead. https://helipad.dev/functions/event/"""
 			def __init__(self, name: str, trigger, repeat: bool=False, **kwargs):
-				self.name = name
+				self.name: str = name
 				self.trigger = trigger
-				self.repeat = repeat
+				self.repeat: bool = repeat
 				self.kwargs = kwargs
 				self.data = []
 				self.triggered = []
@@ -674,7 +677,7 @@ class Goods(gandb):
 		return item
 
 	@property
-	def money(self):
+	def money(self) -> str|None:
 		"""The name of the good serving as a numeraire. This property is set by the `money` parameter of `Goods.add()`. https://helipad.dev/functions/goods/#money"""
 		for name,good in self.items():
 			if good.money: return name

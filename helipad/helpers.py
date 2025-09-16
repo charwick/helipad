@@ -34,7 +34,7 @@ def isBuffered() -> bool:
 #Replace with Dataclasses.dataclass(kw_only=True) when we can require Python 3.10
 class Item:
 	"""A generic extensible item class to store structured data. Kwargs are stored as object properties."""
-	def __init__(self, **kwargs):
+	def __init__(self, **kwargs) -> None:
 		for k,v in kwargs.items():
 			setattr(self, k, v)
 

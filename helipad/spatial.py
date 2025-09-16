@@ -123,7 +123,7 @@ class basePatches(list, ABC):
 		"""Reinstates a dead patch. https://helipad.dev/functions/basepatches/revive/"""
 
 	@abstractmethod
-	def at(self, x, y):
+	def at(self, x, y) -> Patch:
 		"""Return the patch at the specified coordinate. https://helipad.dev/functions/basepatches/at/"""
 
 	@abstractmethod
@@ -145,7 +145,7 @@ class PatchesRect(basePatches):
 	geometry: str = 'rect'
 
 	#Give patches and agents methods for their neighbors in the four cardinal directions
-	def __init__(self, dim, wrap=True, **kwargs):
+	def __init__(self, dim, wrap=True, **kwargs) -> None:
 		if isinstance(wrap, bool): wrap = (wrap, wrap)
 		if len(wrap) != 2: raise TypeError(ï('Invalid wrap parameter.'))
 		self.wrap = wrap
@@ -157,7 +157,7 @@ class PatchesRect(basePatches):
 		if 'noinstall' not in kwargs: RectFuncs.install()
 		super().__init__([])
 
-	def at(self, x, y): return self[round(x), round(y)]
+	def at(self, x, y) -> Patch: return self[round(x), round(y)]
 
 	def neighbors(self, model):
 		for patch in model.agents['patch']:
@@ -168,7 +168,7 @@ class PatchesRect(basePatches):
 			for n, weight in neighbors:
 				if n: patch.edges.add(n, 'space', weight=weight)
 
-	def place(self, agent: Patch):
+	def place(self, agent: Patch) -> None:
 		if not super().__len__(): self += [[] for i in range(self.dim[0])]
 		x=0
 		while len(self[x]) >= self.dim[1]: x+=1		#Find a column that's not full yet
@@ -180,7 +180,7 @@ class PatchesRect(basePatches):
 
 	def __len__(self): return self.dim[0] * self.dim[1]
 
-	def __getitem__(self, key):
+	def __getitem__(self, key) -> list[Patch]|Patch|None:
 		if isinstance(key, int): return super().__getitem__(key)
 		else:
 			if key[1] is None: return super().__getitem__(key[0])
@@ -203,11 +203,11 @@ class PatchesPolar(PatchesRect):
 	geometry: str = 'polar'
 	wrap = (True, False) #Wrap around, but not in-to-out.
 
-	def __init__(self, dim, **kwargs):
+	def __init__(self, dim, **kwargs) -> None:
 		PolarFuncs.install()
 		super().__init__(dim, noinstall=True, **kwargs)
 
-	def at(self, x, y): return self[floor(x), floor(y)]
+	def at(self, x, y) -> Patch: return self[floor(x), floor(y)]
 
 	#The usual 3-4 neighbors, but if corners are on, all patches in the center ring will be neighbors
 	def neighbors(self, model):
@@ -230,7 +230,7 @@ class PatchesPolar(PatchesRect):
 class PatchesGeo(basePatches):
 	"""Defines a set of patches with arbitrary polygonal shapes. https://helipad.dev/functions/patchesgeo/"""
 	geometry: str = 'geo'
-	def __init__(self, dim=None, wrap=True, corners=True, **kwargs):
+	def __init__(self, dim=None, wrap=True, corners=True, **kwargs) -> None:
 		import shapely
 		self.shapely = shapely
 		self.shapes = []
@@ -253,7 +253,7 @@ class PatchesGeo(basePatches):
 		Patch.position = property(center)
 		RectFuncs.install(patches=False)
 
-	def __getitem__(self, val):
+	def __getitem__(self, val) -> Patch|None:
 		if isinstance(val, str): patch = [p for p in self if p.name==val][0]
 		else: patch = super().__getitem__(val)
 		return patch if not patch.dead else None
@@ -299,7 +299,7 @@ class PatchesGeo(basePatches):
 
 		self.shapes.append(item)
 
-	def at(self, x, y):
+	def at(self, x, y) -> Patch:
 		pt = self.shapely.Point(x,y)
 		for p in self:
 			if p.polygon.covers(pt): return p if not p.dead else None
