@@ -94,6 +94,13 @@ class Param(Item):
 			else:
 				e.configure(state='disabled' if disable else 'normal')
 
+				textcolor = "#999" if disable else '#000'
+				def changetext(widget) -> None:
+					if widget.__class__.__name__ in ['Scale', 'Label']: widget.config(fg=textcolor)
+					else:
+						for w in widget.winfo_children(): changetext(w)
+				changetext(self.element if self.per else self.element.master)
+
 	def disable(self):
 		"""Disables the parameter's control panel GUI element so that it cannot be interacted with or changed by the user. https://helipad.dev/functions/param/disable/"""
 		self.disabled(True)
