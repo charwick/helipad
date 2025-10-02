@@ -226,7 +226,7 @@ class baseAgent:
 		newagent.id = maxid+1
 		for p in parents:
 			p.edges.add(newagent,'lineage', True) #Keep track of parent-child relationships
-		self.model.agents[self.primitive].append(newagent)
+		self.model.birthqueue.append(newagent)
 
 		self.model.doHooks(['baseAgentReproduce', self.primitive+'Reproduce'], [parents, newagent, self.model])
 		return newagent
@@ -234,10 +234,10 @@ class baseAgent:
 	def die(self, updateGUI: bool=True):
 		"""Remove the agent from the model's list of active agents and cut the agent's edges. https://helipad.dev/functions/baseagent/die/"""
 		if self.fixed: raise NotImplementedError(ï('Fixed primitives cannot die.'))
-		self.model.agents[self.primitive].remove(self)
 		for edge in self.edges.all: edge.cut()
 		self.dead = True
 		self.model.doHooks(['baseAgentDie', self.primitive+'Die'], [self])
+		# Model will queue removal of dead agents at the end of each period
 
 	@property
 	def parent(self):

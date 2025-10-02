@@ -235,7 +235,7 @@ def setup():
 		viz['rates'].addSeries(breed+'moveRate', breed.title()+' Moveaway Rate', d.color2)
 		viz['rates'].addSeries(breed+'birthrate', breed.title()+' Birthrate', d.color)
 
-		return heli
+	return heli
 
 #Only launch the cpanel if we haven't embedded
 if __name__ == '__main__':

@@ -26,6 +26,7 @@ class Helipad:
 
 		#Containers
 		self.agents: Agents = Agents(self)
+		self.birthqueue = []
 		self.data: Data = Data(self)
 		self.params: Params = Params(self)
 		self.shocks: Shocks = Shocks(self)
@@ -81,7 +82,7 @@ class Helipad:
 			#Is v1 bigger than v2?
 			#There's a `packaging` function to do this, but let's not bloat our dependencies.
 			def vcompare(vs1: str, vs2: str) -> bool:
-				(v1, v2) = (vs1.split('.'), (vs2.split('.')))
+				v1, v2 = list(map(int, vs1.split('.'))), list(map(int, vs2.split('.')))
 
 				#Pad major releases with zeroes to make comparable
 				maxl = max([len(v1), len(v2)])
@@ -252,25 +253,21 @@ class Helipad:
 			self.doHooks('modelStep', [self, self.stage])
 
 			#Sort agents and step them
-			for prim, lst in self.agents.items():
-				order = lst.order or self.agents.order
+			for prim, agentpool in self.agents.items():
+				order = agentpool.order or self.agents.order
 				if isinstance(order, list): order = order[self.stage-1]
-				if order == 'random': shuffle(lst)
+				if order == 'random': shuffle(agentpool)
 
 				#Can't do our regular doHooks() here since we want to pass the function to .sort()
 				#From the user's perspective though, this doesn't matter
 				#Do the more specific sorts last
 				ordhooks = (self.hooks['order'] if 'order' in self.hooks else []) + (self.hooks[prim+'Order'] if prim+'Order' in self.hooks else [])
-				for o in ordhooks: lst.sort(key=sortFunc(self, self.stage, o))
-
-				#Copy the agent list to keep it constant for a given loop because modifying it
-				#while looping (e.g. if an agent dies or reproduces) will screw up the looping
-				agentpool = list(lst)
+				for o in ordhooks: agentpool.sort(key=sortFunc(self, self.stage, o))
 
 				#Matching model
 				if 'match' in order:
 					matchN = int(mn[1]) if len(mn := order.split('-')) > 1 else 2
-					matchpool = list(lst)
+					matchpool = [a for a in agentpool if not a.dead]
 					while len(matchpool) > len(agentpool) % matchN and not self._cut:
 						agents = []
 						for a in range(matchN):
@@ -304,6 +301,11 @@ class Helipad:
 				else:
 					for a in agentpool:
 						if not self._cut: a.step(self.stage)
+				
+				#Add new agents, delete dead agents
+				agentpool[:] = [a for a in agentpool if not a.dead]
+				for a in self.birthqueue: self.agents[a.primitive].append(a)
+				self.birthqueue.clear()
 
 		self.data.collect(self)
 		for e in self.events.values():
@@ -458,7 +460,7 @@ class Helipad:
 			except ModuleNotFoundError: print(ï('Error initializing the debug console. Make sure the `readline` and `code` modules are installed.'))
 			except SystemExit: pass
 
-	def launchCpanel(self, console: bool=True):
+	def launchCpanel(self, console: bool=True) -> None:
 		"""Launch the control panel, either in a Tkinter or a Jupyter environment, as appropriate. https://helipad.dev/functions/model/launchcpanel/"""
 		if hasattr(self, 'breed'): warnings.warn(ï('Control panel can only be launched on the top-level model.'), None, 2)
 
@@ -491,7 +493,7 @@ class Helipad:
 
 		self.doHooks('GUIClose', [self]) #This only executes after all GUI elements have closed
 
-	def launchVisual(self):
+	def launchVisual(self) -> None:
 		"""Launch the visualization window from the class registered in `model.useVisual()`, and start the model. https://helipad.dev/functions/model/launchvisual/"""
 		if self.visual is None or self.visual.isNull:
 			if not self.cpanel:
