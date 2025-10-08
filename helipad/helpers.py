@@ -11,12 +11,12 @@ from io import BufferedWriter
 #Can't name it _ here because `import *` skips it
 def ï(text) -> str:
 	"""Internationalization. Named so as to avoid a conflict with `_` in the REPL console."""
-	return helipad_gettext(text)
+	return helipad_gettext(text) # type: ignore 
 
 def isIpy() -> bool:
 	"""Check for any Ipython environment, including Spyder, for event loop purposes."""
 	try:
-		__IPYTHON__
+		__IPYTHON__ # type: ignore 
 		return True
 	except NameError: return False
 
@@ -24,14 +24,14 @@ def isIpy() -> bool:
 def isNotebook() -> bool:
 	"""Check whether Helipad is running in an interactive notebook."""
 	try:
-		return 'InteractiveShell' in get_ipython().__class__.__name__
+		return 'InteractiveShell' in get_ipython().__class__.__name__ # type: ignore 
 	except NameError: return False
 
 def isBuffered() -> bool:
 	"""Check whether the current Python script is running in a buffered or unbuffered console."""
 	return isinstance(__stdout__.buffer, BufferedWriter)
 
-#Replace with Dataclasses.dataclass(kw_only=True) when we can require Python 3.10
+#Alas can't replace with dataclass(kw_only=True) without knowing the fields in advance
 class Item:
 	"""A generic extensible item class to store structured data. Kwargs are stored as object properties."""
 	def __init__(self, **kwargs) -> None:
