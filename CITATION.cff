@@ -5,21 +5,31 @@ authors:
   given-names: "Cameron"
   orcid: "https://orcid.org/0000-0003-2703-1627"
 title: "Helipad: A Framework for Agent-Based Modeling in Python"
-version: 1.6
+version: 1.6.3
 identifiers:
   - type: doi
-    value: 10.2139/ssrn.3870501
+    value: 10.5334/jors.547
 repository-code: 'https://github.com/charwick/helipad'
-date-released: 2023-01-14
+date-released: 2025-11-05
 url: "https://helipad.dev"
 abstract: >-
-  Helipad is an agent-based modeling framework for Python with a
-  shallow learning curve and powerful visualization capabilities.
+  Agent-based modeling tools commonly trade off usability against power and vice versa.
+  On the one hand, full development environments like NetLogo feature a shallow learning
+  curve, but have a relatively limited proprietary language. Others written in Python or
+  Matlab, for example, have the advantage of a full-featured language with a robust
+  community of third-party libraries, but are typically more skeletal and require more
+  setup and boilerplate in order to write a model. Helipad is introduced to fill this
+  gap. Helipad is a new agent-based modeling framework for Python with the goal of a
+  shallow learning curve, extensive flexibility, minimal boilerplate, and powerful yet
+  easy to set up visualization, in a full Python environment. We summarize Helipad’s
+  general architecture and capabilities, and briefly preview a variety of models from a
+  variety of disciplines, including multilevel models, matching models, network models,
+  spatial models, and others.
 keywords:
   - Agent based modeling
+  - Simulation software
   - Python
   - White paper
-  - Complex systems
 license: MIT
 preferred-citation:
   type: article
@@ -29,7 +39,9 @@ preferred-citation:
     orcid: "https://orcid.org/0000-0003-2703-1627"
   identifiers:
   - type: doi
-    value: 10.2139/ssrn.3870501
-  journal: "Working paper"
+    value: 10.5334/jors.547
+  journal: "Journal of Open Research Software"
+  volume: 13
+  issue: 1
   title: "Helipad: A Framework for Agent-Based Modeling in Python"
-  year: 2023
+  year: 2025
