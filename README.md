@@ -44,7 +44,7 @@ As of version 1.7, Helipad requires Python 3.10 or higher. The following librari
 
 If you use Helipad in your own research, please cite as follows:
 
-> Harwick, Cameron (2025). [https://openresearchsoftware.metajnl.com/articles/10.5334/jors.547](“Helipad: A Framework for Agent-Based Modeling in Python.”) _Journal of Open Research Software,_ 13(1). 
+> Harwick, Cameron (2025). [“Helipad: A Framework for Agent-Based Modeling in Python.”](https://openresearchsoftware.metajnl.com/articles/10.5334/jors.547) _Journal of Open Research Software,_ 13(1). 
 
 ## Version History
 
